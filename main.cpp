@@ -8,6 +8,17 @@
 #include <thread>
 #include <unistd.h>
 
+#include "GPUPointFinder.h"
+#include "binary_encoder.h"
+#include "ec_rho.h"
+#include "fmt/format.h"
+#include "hip_helper.h"
+#include "http_client.h"
+#include "log.h"
+#include "signal_handler.h"
+#include "util.h"
+
+
 #ifdef USE_MPI
 
 #include <mpi.h>
@@ -24,15 +35,6 @@
 
 #endif
 
-#include "GPUPointFinder.h"
-#include "binary_encoder.h"
-#include "ec_rho.h"
-#include "fmt/format.h"
-#include "hip_helper.h"
-#include "http_client.h"
-#include "log.h"
-#include "signal_handler.h"
-#include "util.h"
 
 #define DEFAULT_FILE_FORMAT_STRING "{}-gpu{}.dat"
 #define DEFAULT_DATA_DIRECTORY "data"
