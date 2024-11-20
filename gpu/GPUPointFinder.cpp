@@ -50,21 +50,41 @@ int get_cu_count(int device_id)
   return props.multiProcessorCount;
 }
 
+int get_warp_size(int device_id)
+{
+  hipDeviceProp_t props;
+ 
+  HIP_CALL(hipGetDeviceProperties(&props, device_id));
+
+  return props.warpSize;
+}
 
 }
 
 GPUPointFinder::GPUPointFinder(int device, uint32_t num_points, int dpbits)
 {
   assert(dpbits >= 16 && dpbits <= 63);
+  
 
   _device = device;
   _dpbits = dpbits;
 
-  int cu_count = get_cu_count(device);
+  int compute_units = get_cu_count(device);
+  int simd_width = get_warp_size(device);
 
   // Use these for now
-  _blocks = cu_count * 4;
-  _threads = 128;
+  _blocks = compute_units * 8;
+  _threads = simd_width;
+  
+  HIP_CALL(hipSetDevice(device));
+  LOG("Initializing GPU {}: {}", _device, get_gpu_name(_device));
+  LOG("Compute units: {}", compute_units);
+  LOG("SIMD width:    {}", simd_width);
+
+  // Give 256 points to each thread unless specified
+  if(num_points == 0) {
+    num_points = _blocks * _threads * 256;
+  }
 
   uint32_t total_threads = _blocks * _threads;
 
@@ -75,7 +95,7 @@ GPUPointFinder::GPUPointFinder(int device, uint32_t num_points, int dpbits)
   // Create DP mask
   _dpmask = ((uint64_t)1 << _dpbits) - 1;
 
-  // Using the number of DP bits and the number of paralle walks, we can
+  // Using the number of DP bits and the number of parallel walks, we can
   // approximate how many results we will get per iteration
   double prob = 1.0 / pow(2, _dpbits);
 
@@ -202,9 +222,7 @@ void GPUPointFinder::init()
 }
 
 void GPUPointFinder::init(const std::string& filename)
-{
-  LOG("Initializing GPU {}: {}", _device, get_gpu_name(_device));
-    
+{  
   allocate_buffers(_num_points);
   refill_staging();
 

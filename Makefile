@@ -40,7 +40,12 @@ export NVIDIA_INCLUDE=-I${CUDA_HOME}/include
 export HIPCC_CFLAGS_NVIDIA=-Wno-deprecated-declarations
 export CXX_CFLAGS_NVIDIA=-D__HIP_PLATFORM_NVIDIA__ -Wno-deprecated-declarations -Wno-return-local-addr
 export LIBS_NVIDIA=-lcuda -lcudart
-export LINKER_NVIDIA=-L${CUDA_HOME}/lib64 -L/mnt/c/Windows/System32/lxss/lib
+LINKER_NVIDIA=-L${CUDA_HOME}/lib64
+
+# For WSL systems
+LINKER_NVIDIA+=-L/mnt/c/Windows/System32/lxss/lib
+export LINKER_NVIDIA
+
 
 # AMD target
 export ROCM_INCLUDE=-I$(ROCM_HOME)/include

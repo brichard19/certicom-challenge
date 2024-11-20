@@ -60,8 +60,9 @@ namespace {
   std::string _data_file = "";
   std::string _data_dir = DEFAULT_DATA_DIRECTORY;
   std::string _results_dir;
-  
-  uint32_t _num_points = 1024 * 1024;
+
+  // System will choose number of points 
+  uint32_t _num_points = 0;
 
   // MPI variables
   bool _use_mpi = false;
