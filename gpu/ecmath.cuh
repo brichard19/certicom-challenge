@@ -183,63 +183,58 @@ __device__ void mul160x(const uint64_t* a, const uint64_t* b, uint64_t* product)
 // 160 x 160 -> 320 squaring
 __device__ void square160(const uint64_t* a, uint64_t* product)
 {
-  uint64_t tmp[5] = {0};
+  //uint64_t tmp[5] = {0};
   uint64_t high = 0;
 
   // a0 * a0
-  uint128_t t = (uint128_t)a[0] * a[0] + tmp[0];
-  tmp[0] = (uint64_t)t;
+  uint128_t t = (uint128_t)a[0] * a[0] + 0;
+  product[0] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a0 * a1 
-  t = (uint128_t)a[0] * a[1] + tmp[1] + high;
-  tmp[1] = (uint64_t)t;
+  t = (uint128_t)a[0] * a[1] + 0 + high;
+  product[1] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a0 * a2
-  t = (uint128_t)a[0] * a[2] + tmp[2] + high;
-  tmp[2] = (uint64_t)t;
+  t = (uint128_t)a[0] * a[2] + 0 + high;
+  product[2] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
-  tmp[3] = high;
+  product[3] = high;
 
   // a1 * a0
-  t = (uint128_t)a[1] * a[0] + tmp[1];
-  tmp[1] = (uint64_t)t;
+  t = (uint128_t)a[1] * a[0] + product[1];
+  product[1] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a1 * a1 
-  t = (uint128_t)a[1] * a[1] + tmp[2] + high;
-  tmp[2] = (uint64_t)t;
+  t = (uint128_t)a[1] * a[1] + product[2] + high;
+  product[2] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a1 * a2
-  t = (uint128_t)a[1] * a[2] + tmp[3] + high;
-  tmp[3] = (uint64_t)t;
+  t = (uint128_t)a[1] * a[2] + product[3] + high;
+  product[3] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
-  tmp[4] = high;
+  product[4] = high;
 
   // a2 * a0
-  t = (uint128_t)a[2] * a[0] + tmp[2];
-  tmp[2] = (uint64_t)t;
+  t = (uint128_t)a[2] * a[0] + product[2];
+  product[2] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a2 * a1 
-  t = (uint128_t)a[2] * a[1] + tmp[3] + high;
-  tmp[3] = (uint64_t)t;
+  t = (uint128_t)a[2] * a[1] + product[3] + high;
+  product[3] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a2 * a2
   // The final word is only at most 6 bits, so no 128-bit mul needed
-  uint64_t t64 = a[2] * a[2] + tmp[4] + high;
-  tmp[4] = t64;
+  uint64_t t64 = a[2] * a[2] + product[4] + high;
+  product[4] = t64;
 
-  product[0] = tmp[0];
-  product[1] = tmp[1];
-  product[2] = tmp[2];
-  product[3] = tmp[3];
-  product[4] = tmp[4];
 }
 
 __device__ void mont_mulDivR(const uint64_t* a, const uint64_t* b, uint64_t* product)
@@ -423,7 +418,7 @@ __device__ uint131_t mul(const uint131_t x, const uint131_t y)
 
 __device__ uint131_t square(const uint131_t& x)
 {
-  uint64_t product[5] = {0};
+  uint64_t product[5];
   uint131_t z;
   square160(x.v, product);
   mont_reduce(product, z.v);
