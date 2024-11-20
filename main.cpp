@@ -262,7 +262,7 @@ void main_loop()
       size_t total = pf->work_per_step() * steps;
 
       double perf = (double)total / t;
-      double iters = (double)steps / t;
+      double iters = (double)steps * pf->iters_per_step() / t;
 
       perf_timer.start();
 

@@ -370,8 +370,8 @@ void GPUPointFinder::allocate_buffers(int n)
 
 void GPUPointFinder::step()
 {
-
-  HIP_CALL(hipLaunchKernel((void*)do_step, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _dev_rx, _dev_ry,
+  for(int i = 0; i < _iters_per_step; i++) {
+    HIP_CALL(hipLaunchKernel((void*)do_step, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _dev_rx, _dev_ry,
                   _mbuf, _num_points,
                   _result_buf, _result_count,
                   _staging_buf, _staging_count,
@@ -379,11 +379,10 @@ void GPUPointFinder::step()
                   _counter,
                   _walk_start,
                   _dpmask));
-  if(!_first_run && !_verify_points) {
-    HIP_CALL(hipDeviceSynchronize());
+    _counter++;
   }
 
-  _counter++;
+  HIP_CALL(hipDeviceSynchronize());
 
   if(_first_run || _verify_points) {
     HIP_CALL(hipLaunchKernel((void*)sanity_check, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _num_points, _sanity_flag));
@@ -430,7 +429,12 @@ void GPUPointFinder::set_callback(std::function<void(const std::vector<Distingui
 
 size_t GPUPointFinder::work_per_step()
 {
-  return _num_points;
+  return _num_points * 4;
+}
+
+int GPUPointFinder::iters_per_step()
+{
+  return _iters_per_step;
 }
 
 

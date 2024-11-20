@@ -30,6 +30,7 @@ class DistinguishedPointFinder {
 
 public:
   virtual size_t work_per_step() = 0;
+  virtual int iters_per_step() = 0;
   virtual void set_callback(std::function<void(const std::vector<DistinguishedPoint>& p)> callback) = 0;
   virtual void init() = 0;
   virtual void init(const std::string& file) = 0;

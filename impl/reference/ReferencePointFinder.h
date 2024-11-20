@@ -79,6 +79,11 @@ public:
   {
     return _batch_size;
   }
+  
+  int work_per_step()
+  {
+    return 1;
+  }
 
   void set_callback(std::function<void(const std::vector<DistinguishedPoint>&)> callback)
   {

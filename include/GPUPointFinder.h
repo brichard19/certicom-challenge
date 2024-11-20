@@ -20,7 +20,7 @@ private:
   uint32_t _num_points = 1024 * 1024;
   int _NUM_R_POINTS = 32;
 
-
+  int _iters_per_step = 4;
   int _result_buf_size;
   int _staging_buf_size = 1024;
   int _report_count = 16;
@@ -84,6 +84,8 @@ public:
   virtual void save_progress(const std::string& file);
 
   virtual size_t work_per_step();
+  
+  virtual int iters_per_step();
 };
 
 #endif
