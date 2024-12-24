@@ -459,7 +459,7 @@ bool mul_perf_test()
   HIP_CALL(hipMalloc(&dev_c, sizeof(uint131_t) * n));
 
   hipDeviceProp_t props;
-  hipGetDeviceProperties(&props, 0);
+  HIP_CALL(hipGetDeviceProperties(&props, 0));
 
   int blocks = props.multiProcessorCount * 8;
 
@@ -481,8 +481,8 @@ bool mul_perf_test()
   t1 = get_time();
   printf("%f seconds\n", t1 - t0);
 
-  hipFree(dev_a);
-  hipFree(dev_c);
+  HIP_CALL(hipFree(dev_a));
+  HIP_CALL(hipFree(dev_c));
 
   return true;
 }
