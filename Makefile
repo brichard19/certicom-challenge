@@ -24,9 +24,9 @@ DEFINES+=-O2
 endif
 
 # MPI
-ifeq ($(USE_MPI),1)
+ifeq ($(BUILD_MPI),1)
 CXX=mpic++
-CFLAGS+=-DUSE_MPI
+CFLAGS+=-DBUILD_MPI
 INCLUDE+=-I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi
 endif
 
@@ -65,7 +65,7 @@ ROCM_LIB=$(ROCM_HOME)/lib
 
 INCLUDE+=-I$(CUR_DIR) -I$(CUR_DIR)/include -I$(CUR_DIR)/gpu -I$(CUR_DIR)/third_party/json11 -I$(CUR_DIR)/third_party/fmt/include
 
-ifeq ($(USE_MPI),1)
+ifeq ($(BUILD_MPI),1)
 MPI_LIBS+=-lmpi -lmpi_cxx
 MPI_LINKER+=-L/usr/lib/x86_64-linux-gnu/openmpi/lib
 endif

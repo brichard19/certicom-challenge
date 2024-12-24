@@ -19,7 +19,7 @@
 #include "util.h"
 
 
-#ifdef USE_MPI
+#ifdef BUILD_MPI
 
 #include <mpi.h>
 
@@ -68,8 +68,8 @@ namespace {
 
   // MPI variables
   bool _use_mpi = false;
-  int _world_size;
-  int _world_rank;
+  int _world_size = -1;
+  int _world_rank = -1;
 }
 
 // Saves distingusihed points to disk
@@ -96,13 +96,21 @@ void callback(const std::vector<DistinguishedPoint>& dps)
 
   LOG("Found {} distinguished points:", dps.size());
 
+  // Validate they are correct
   for(auto dp : dps) {
     assert(ecc::exists(dp.p));
     assert((dp.p.x.v[0] & dpmask) == 0);
-    //LOG("{} {} {}", to_str(dp.p.x), to_str(dp.p.y), dp.length);
   }
+  
+  if(_use_mpi == false) {
+    save_to_disk(dps);
+  } else {
+#ifdef BUILD_MPI
+    LOG("Rank {} reporting {} points", _world_rank, dps.size());
+    MPI_CALL(MPI_Send(dps.data(), dps.size() * sizeof(dps[0]), MPI_BYTE, 0, 0, MPI_COMM_WORLD));
+#endif
 
-  save_to_disk(dps);
+  }
 }
 
 
@@ -118,7 +126,7 @@ std::vector<uint8_t> encode_dp(const DistinguishedPoint& dp)
   // TODO: Compress further by removing the "distinguished bits", which
   // are all 0's. 
   memcpy(ptr, dp.p.x.v, 17);
-  
+ 
   // Append sign bit to x coordinate. The x coordinate is 131 bits,
   // so set the 132nd bit.
   uint8_t sign = is_odd(dp.p.y) ? 1 : 0;
@@ -136,6 +144,34 @@ std::vector<uint8_t> encode_dp(const DistinguishedPoint& dp)
   // TODO: User ID?
 
   return buf;
+}
+
+void mpi_recv_thread_function()
+{
+  int buf_size = 128 * 1024;
+  char* buf = new char[buf_size];
+
+  LOG("MPI thread started");
+
+  while(_running == true) {
+    MPI_Status status;
+    int num_bytes;
+    MPI_CALL(MPI_Recv(buf, buf_size, MPI_BYTE, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status));
+    MPI_CALL(MPI_Get_count(&status, MPI_BYTE, &num_bytes));
+
+    printf("Received %d bytes\n", num_bytes);
+
+    assert(num_bytes % sizeof(DistinguishedPoint) == 0);
+
+    int num_points = num_bytes / sizeof(DistinguishedPoint);
+    std::vector<DistinguishedPoint> dps(num_points);
+
+    memcpy(dps.data(), buf, num_bytes);
+
+    save_to_disk(dps);
+  }
+
+  delete buf;
 }
 
 void results_thread_function()
@@ -209,7 +245,6 @@ void results_thread_function()
     // TODO: Use base64 instead (smaller data)
     // Upload to server 
     std::string hex = util::to_hex(encoder.get_ptr(), encoder.get_size());
-    //LOG("{}", hex);
 
     try {
       HTTPClient http(_url, _port);
@@ -395,7 +430,7 @@ int main(int argc, char**argv)
   }
 
 
-#ifdef USE_MPI
+#ifdef BUILD_MPI
 
   // Initialize MPI, select device
   if(_use_mpi) {
@@ -443,15 +478,32 @@ int main(int argc, char**argv)
   set_signal_handler(signal_handler);
 
   // Start point reporter thread
-  std::thread results_thread(results_thread_function);
+  std::thread results_thread;
+
+  // If using MPI, only rank 0 reports results
+  if(_use_mpi == false || (_use_mpi == true && _world_rank == 0)) {
+    results_thread = std::thread(results_thread_function);
+  }
+
+  // Thread for receiving MPI messages
+  std::thread mpi_thread;
+  if(_use_mpi == true) {
+    mpi_thread = std::thread(mpi_recv_thread_function);
+  }
 
   // Run main loop
   main_loop();
 
   // Wait for point thread to finish
-  results_thread.join();
+  if(_use_mpi == false || (_use_mpi == true && _world_rank == 0)) {
+    results_thread.join();
+  }
 
-#ifdef USE_MPI
+  if(_use_mpi == true) {
+    mpi_thread.join();
+  }
+
+#ifdef BUILD_MPI
   // Cleanup MPI
   if(_use_mpi) {
     MPI_Finalize();
