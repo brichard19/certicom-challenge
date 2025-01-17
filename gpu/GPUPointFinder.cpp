@@ -64,7 +64,6 @@ int get_warp_size(int device_id)
 GPUPointFinder::GPUPointFinder(int device, uint32_t num_points, int dpbits)
 {
   assert(dpbits >= 16 && dpbits <= 63);
-  
 
   _device = device;
   _dpbits = dpbits;
@@ -99,13 +98,13 @@ GPUPointFinder::GPUPointFinder(int device, uint32_t num_points, int dpbits)
   // approximate how many results we will get per iteration
   double prob = 1.0 / pow(2, _dpbits);
 
-  // Can run ~128 iteration before buffer is full
-  _result_buf_size = 128 * (int)((double)_num_points * prob + 1.0);
+  // Can run ~65k iteration before buffer is full
+  _result_buf_size = 65536 * (int)((double)_num_points * prob + 1.0);
 
-  _report_count = (int)((double)_result_buf_size * 0.75);
+  _report_count = (int)((double)_result_buf_size * 0.85);
 
   // Calculate an appropriate size for the staging buffer
-  _staging_buf_size = (int)(((double)_num_points * prob + 1.0) * 1024);
+  _staging_buf_size = (int)(((double)_num_points * prob + 1.0) * 65536);
 
   // Refill after we reach 15%
   _staging_min = (int)((double)_staging_buf_size * 0.15);
@@ -154,9 +153,9 @@ void GPUPointFinder::load(const std::string& file_name)
 
 void GPUPointFinder::report_points()
 {
-  if(*_result_count > 0) {
-    LOG("Counter: {}", _counter);
-    int count = *_result_count;
+  int count = *_result_count;
+ 
+  if(count > 0) {
 
     std::vector<DistinguishedPoint> dps;
     for(int i = 0; i < count; i++) {
@@ -180,10 +179,6 @@ void GPUPointFinder::report_points()
     }
 
     *_result_count = 0;
-
-    if(*_staging_count <= _staging_min) {
-      refill_staging();
-    }
   }
 }
 
@@ -416,6 +411,9 @@ void GPUPointFinder::step()
     _first_run = false;
   }
 
+  if(*_staging_count <= _staging_min) {
+    refill_staging();
+  }
 
   if(*_result_count >= _report_count) {
     report_points();
