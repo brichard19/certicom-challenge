@@ -1,16 +1,18 @@
 
-// Functions for doing EC math on 131-bit numbers in montgomery form
-
 #ifndef _EC_MATH_CUH
 #define _EC_MATH_CUH
 
 typedef unsigned __int128 uint128_t;
 
-// Constants for ECCp-131 curve
-#include "eccp131.cuh"
+#if defined(CURVE_P131)
+#include "p131.cuh"
+#elif defined(CURVE_P79)
+#include "p79.cuh"
+#else
+#error "Curve not defined"
+#endif
 
-
-__device__ uint131_t sub131(uint131_t x, uint131_t y)
+__device__ uint131_t sub_p131(uint131_t x, uint131_t y)
 {
   uint131_t z;
 
@@ -46,7 +48,7 @@ __device__ uint131_t sub131(uint131_t x, uint131_t y)
   return z;
 }
 
-__device__ uint131_t sub79(uint131_t x, uint131_t y)
+__device__ uint131_t sub_p79(uint131_t x, uint131_t y)
 {
   uint131_t z = {{0}};
 
@@ -78,9 +80,9 @@ __device__ uint131_t sub79(uint131_t x, uint131_t y)
 __device__ uint131_t sub(uint131_t x, uint131_t y)
 {
   #if defined(CURVE_P131)
-    return sub131(x, y);
+    return sub_p131(x, y);
   #elif defined(CURVE_P79)
-    return sub79(x, y);
+    return sub_p79(x, y);
   #else
   #error "Curve is undefined"
   #endif
@@ -447,10 +449,8 @@ __device__ bool equal(const uint131_t& x, const uint131_t& y)
 }
 
 // Modular inverse using Fermat's method
-//__device__ uint131_t inv(const uint131_t& x)
-__device__ uint131_t inv(uint131_t x)
+__device__ uint131_t inv_p131(uint131_t& x)
 {
-#if defined(CURVE_P131)
   uint131_t z, t0, t1, t2, t3, t4, t5;
 
   t0 = square(x);
@@ -512,7 +512,10 @@ __device__ uint131_t inv(uint131_t x)
   z = mul(z, t0);
 
   return z;
-#elif defined(CURVE_P79)
+}
+
+__device__ uint131_t inv_p79(uint131_t& x)
+{
   uint131_t z, t0, t1, t2, t3, t4, t5, t6, t7;
   
   t6 = square(x);
@@ -553,11 +556,18 @@ __device__ uint131_t inv(uint131_t x)
   z = mul(x, z);
 
   return z;
-#else
-#error "Invalid curve"
-#endif
 }
 
+__device__ uint131_t inv(uint131_t x)
+{
+#if defined(CURVE_P131)
+  return inv_p131(x);
+#elif defined(CURVE_P79)
+  return inv_p79(x);
+#else
+#error "Curve not defined"
+#endif
+}
 
 // ECC functons
 

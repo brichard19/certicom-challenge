@@ -262,12 +262,6 @@ extern "C" __global__ void add_to_public_keys_gx(uint131_t* global_px, uint131_t
     add_to_public_keys(global_px, global_py, private_keys, _gx, _gy, mbuf, priv_key_bit, count);
 }
 
-extern "C" __global__ void add_to_public_keys_qx(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* mbuf, int priv_key_bit, int count)
-{
-    add_to_public_keys(global_px, global_py, private_keys, _qx, _qy, mbuf, priv_key_bit, count);
-}
-
-
 extern "C" __global__ void sanity_check(uint131_t* global_px, uint131_t* global_py, int count, int* errors)
 {
   int gid = get_global_id();
