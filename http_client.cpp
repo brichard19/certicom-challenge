@@ -62,9 +62,10 @@ HTTPClient::HTTPClient(const std::string hostname, int port)
 
 
 
-int HTTPClient::submit_points(const std::string& encoded_points)
+int HTTPClient::submit_points(const std::string& curve, const std::string& encoded_points)
 {
   json11::Json req = json11::Json::object{
+    {"curve", curve},
     {"points", encoded_points},
   };
 

@@ -32,7 +32,7 @@ class HTTPClient {
 public:
   HTTPClient(const std::string hostname, int port);
 
-  int submit_points(const std::string& encoded_results);
+  int submit_points(const std::string&curve, const std::string& encoded_results);
 };
 
 

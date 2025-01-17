@@ -46,8 +46,10 @@ namespace {
 
 #if defined(CURVE_P131)
   const int _dpbits = 32;
+  const std::string _curve_name = "p131";
 #elif defined(CURVE_P79)
   const int _dpbits = 28;
+  const std::string _curve_name = "p79";
 #else
 #error "Curve is undefined"
 #endif
@@ -90,7 +92,7 @@ void save_to_disk(const std::vector<DistinguishedPoint>& dps)
   std::filesystem::rename(tmp_name, file_name);
 }
 
-void callback(const std::vector<DistinguishedPoint>& dps)
+void dp_callback(const std::vector<DistinguishedPoint>& dps)
 {
   uint64_t dpmask = ((uint64_t)1 << _dpbits) - 1;
 
@@ -101,7 +103,7 @@ void callback(const std::vector<DistinguishedPoint>& dps)
     assert(ecc::exists(dp.p));
     assert((dp.p.x.v[0] & dpmask) == 0);
   }
-  
+
   if(_use_mpi == false) {
     save_to_disk(dps);
   } else {
@@ -118,22 +120,22 @@ void callback(const std::vector<DistinguishedPoint>& dps)
 // Encodes a DistinguishedPoint into a string of bytes
 std::vector<uint8_t> encode_dp(const DistinguishedPoint& dp)
 {
-  // 17 + 17 + 8 bytes
-  std::vector<uint8_t> buf(42);
+  // 17 + 17 + 1 + 8 bytes
+  std::vector<uint8_t> buf(43);
   uint8_t* ptr = buf.data();
 
-  // x-coordinate, 17 bytes
+  // x-coordinate: 17 bytes
   // TODO: Compress further by removing the "distinguished bits", which
   // are all 0's. 
   memcpy(ptr, dp.p.x.v, 17);
+  ptr += 17;
  
   // Append sign bit to x coordinate. The x coordinate is 131 bits,
   // so set the 132nd bit.
   uint8_t sign = is_odd(dp.p.y) ? 1 : 0;
-  ptr[16] |= (sign << 3);
-
-  ptr += 17;
-
+  *ptr = sign;
+  ptr++;
+ 
   // a-exponent, 17 bytes
   memcpy(ptr, dp.a.v, 17);
   ptr += 17;
@@ -141,13 +143,12 @@ std::vector<uint8_t> encode_dp(const DistinguishedPoint& dp)
   // Walk length, 8 bytes
   memcpy(ptr, &dp.length, sizeof(uint64_t));
 
-  // TODO: User ID?
-
   return buf;
 }
 
 void mpi_recv_thread_function()
 {
+#ifdef BUILD_MPI
   int buf_size = 128 * 1024;
   char* buf = new char[buf_size];
 
@@ -172,6 +173,7 @@ void mpi_recv_thread_function()
   }
 
   delete buf;
+#endif
 }
 
 void results_thread_function()
@@ -248,7 +250,7 @@ void results_thread_function()
 
     try {
       HTTPClient http(_url, _port);
-      http.submit_points(hex);
+      http.submit_points(_curve_name, hex);
       defer_upload = false;
     }catch(std::exception& ex) {
       LOG("Upload error: {}", ex.what());
@@ -277,7 +279,7 @@ void main_loop()
 
   pf->init(data_file_path);
 
-  pf->set_callback(callback);
+  pf->set_callback(dp_callback);
 
   util::Timer perf_timer;
   util::Timer save_timer;
