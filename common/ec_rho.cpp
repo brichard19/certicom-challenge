@@ -15,13 +15,13 @@ std::vector<RWPoint> get_rw_points()
     RWPoint rw;
 
     if(ecc::curve_name() == "ecp131") {
-      rw.a = make_uint131(_ecp131_a_str[i]);
-      rw.b = make_uint131(_ecp131_b_str[i]);
-      rw.p = ecc::ecpoint_t(make_uint131(_ecp131_x_str[i]), make_uint131(_ecp131_y_str[i]));
+      rw.a = make_uint131(_p131_a_str[i]);
+      rw.b = make_uint131(_p131_b_str[i]);
+      rw.p = ecc::ecpoint_t(make_uint131(_p131_x_str[i]), make_uint131(_p131_y_str[i]));
     } else if(ecc::curve_name() == "ecp79") {
-      rw.a = make_uint131(_ecp79_a_str[i]);
-      rw.b = make_uint131(_ecp79_b_str[i]);
-      rw.p = ecc::ecpoint_t(make_uint131(_ecp79_x_str[i]), make_uint131(_ecp79_y_str[i]));
+      rw.a = make_uint131(_p79_a_str[i]);
+      rw.b = make_uint131(_p79_b_str[i]);
+      rw.p = ecc::ecpoint_t(make_uint131(_p79_x_str[i]), make_uint131(_p79_y_str[i]));
     } else {
       throw std::runtime_error("No curve selected");
     }

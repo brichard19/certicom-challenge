@@ -22,6 +22,8 @@ const uint131_t _eccp131_qx = {{0xc83af1fe332475e3, 0xe38a3357a4b0bb01, 0x2}};
 
 const uint131_t _eccp131_qy = {{0xfe97756ed241b570, 0xb167247624e73021, 0x3}};
 
+// k such that k * k^-1 = -1 (mod R)
+// k = (r * r_inv -1) // p
 const uint131_t _eccp131_k = {{0xe0587d72985b105d, 0xf1fd54b0309e1ab9, 0x7cfd70cf}};
 
 const uint131_t _eccp131_one = {{0x6e7743da32b6d0c7, 0x88c614d64c1a8f0b, 0x00}};
@@ -31,7 +33,7 @@ const uint131_t _eccp131_p_minus_2 = {{0x194c43186b3abc09, 0x8e1d43f293469e33, 0
 // (P + 1) / 4
 const uint131_t _eccp131_sqrt = {{0xc65310c61aceaf03, 0x238750fca4d1a78c, 0x1}};
 
-// R
+// R mod p
 const uint131_t _eccp131_r = {{0x6e7743da32b6d0c7, 0x88c614d64c1a8f0b, 0x00}};
 
 // R^2
