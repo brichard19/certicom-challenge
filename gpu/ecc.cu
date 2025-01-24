@@ -10,26 +10,6 @@ __device__ void print_big_int(uint131_t& x)
   printf("%.16lX%.16lX%.16lX", x.v[2], x.v[1], x.v[0]);
 }
 
-// Set all public keys to point-at-infinity
-extern "C" __global__ void clear_public_keys(uint131_t* x, uint131_t* y, int count)
-{
-  int idx = get_global_id();
-  int dim = get_global_size();
-  
-  for(int i = idx; i < count; i += dim) {
-    set_point_at_infinity(x[i]);
-  }
-}
-
-extern "C" __global__ void reset_counters(uint64_t* start_pos, uint64_t value, int count)
-{
-  int idx = get_global_id();
-  int dim = get_global_size();
-  
-  for(int i = idx; i < count; i += dim) {
-    start_pos[i] = value;
-  }
-}
 
 __device__ int get_bit(uint131_t x, int bit)
 {
@@ -38,7 +18,7 @@ __device__ int get_bit(uint131_t x, int bit)
 
 
 // If the private key bit for P is 1, then add Q to P
-extern "C" __global__ void do_step(uint131_t* global_px, uint131_t* global_py,
+__device__ void do_step_impl(uint131_t* global_px, uint131_t* global_py,
                                    uint131_t* global_rx, uint131_t* global_ry,
                                    uint131_t* mbuf, int count,
                                    DPResult* result, int* result_count,
@@ -257,9 +237,45 @@ __device__ void batch_multiply_step(uint131_t* global_px, uint131_t* global_py, 
 }
 
 
+// Set all public keys to point-at-infinity
+extern "C" __global__ void clear_public_keys(uint131_t* x, uint131_t* y, int count)
+{
+  int idx = get_global_id();
+  int dim = get_global_size();
+  
+  for(int i = idx; i < count; i += dim) {
+    set_point_at_infinity(x[i]);
+  }
+}
+
+extern "C" __global__ void reset_counters(uint64_t* start_pos, uint64_t value, int count)
+{
+  int idx = get_global_id();
+  int dim = get_global_size();
+  
+  for(int i = idx; i < count; i += dim) {
+    start_pos[i] = value;
+  }
+}
+
+
 extern "C" __global__ void batch_multiply(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* mbuf, uint131_t* gx, uint131_t* gy, int priv_key_bit, int count)
 {
     batch_multiply_step(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
+}
+
+// If the private key bit for P is 1, then add Q to P
+extern "C" __global__ void do_step(uint131_t* global_px, uint131_t* global_py,
+                                   uint131_t* global_rx, uint131_t* global_ry,
+                                   uint131_t* mbuf, int count,
+                                   DPResult* result, int* result_count,
+                                   StagingPoint* staging, int* staging_count,
+                                   uint131_t* priv_key_a,
+                                   uint64_t counter,
+                                   uint64_t* start_pos,
+                                   uint64_t dpmask)
+{
+  do_step_impl(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, staging_count, priv_key_a, counter, start_pos, dpmask);
 }
 
 extern "C" __global__ void sanity_check(uint131_t* global_px, uint131_t* global_py, int count, int* errors)
