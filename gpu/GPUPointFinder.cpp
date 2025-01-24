@@ -268,12 +268,31 @@ void GPUPointFinder::init(const std::string& filename)
     HIP_CALL(hipLaunchKernel((void*)reset_counters, dim3(_blocks), dim3(_threads), 0, _walk_start, _counter, _num_points));
     HIP_CALL(hipDeviceSynchronize());
 
+    uint131_t* dev_gx = nullptr;
+    uint131_t* dev_gy = nullptr;
+
+    HIP_CALL(hipMallocManaged(&dev_gx, sizeof(uint131_t) * (ecc::curve_strength() + 1)));
+    HIP_CALL(hipMallocManaged(&dev_gy, sizeof(uint131_t) * (ecc::curve_strength() + 1)));
+
+    // Generate G, 2G, 4G, 8G ... nG for batch multiplication
+    ecc::ecpoint_t g = ecc::g();
+
+    for(int i = 0; i < ecc::curve_strength() + 1; i++) {
+      dev_gx[i] = g.x;
+      dev_gy[i] = g.y;
+
+      g = ecc::dbl(g);
+    }
+
     // Initialize keys
     int bits = ecc::curve_strength();
     for(int i = 0; i < bits; i++) {
-      HIP_CALL(hipLaunchKernel((void*)add_to_public_keys_gx, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _priv_key_a, _mbuf, i, _num_points));
+      HIP_CALL(hipLaunchKernel((void*)batch_multiply, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _priv_key_a, _mbuf, dev_gx, dev_gy, i, _num_points));
       HIP_CALL(hipDeviceSynchronize());
     }
+
+    hipFree(dev_gx);
+    hipFree(dev_gy);
 
     // Verify
     if(_verify_points) {

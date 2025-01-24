@@ -21,7 +21,7 @@ struct StagingPoint {
 extern "C" __global__ void clear_public_keys(uint131_t* x, uint131_t* y, int count);
 extern "C" __global__ void do_step(uint131_t* global_px, uint131_t* global_py, uint131_t* global_rx, uint131_t* global_ry, uint131_t* mbuf, int count, DPResult* result, int* result_count,
   StagingPoint* staging, int* staging_count, uint131_t* priv_key_a, uint64_t counter, uint64_t* start_pos, uint64_t dpmask);
-extern "C" __global__ void add_to_public_keys_gx(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* mbuf, int priv_key_bit, int count);
+extern "C" __global__ void batch_multiply(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* mbuf, uint131_t* gx, uint131_t* gy, int priv_key_bit, int count);
 extern "C" __global__ void sanity_check(uint131_t* global_px, uint131_t* global_py, int count, int* errors);
 extern "C" __global__ void reset_counters(uint64_t* start_pos, uint64_t value, int count);
 
