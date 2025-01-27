@@ -77,15 +77,13 @@ __device__ uint131_t sub_p79(uint131_t x, uint131_t y)
   return z;
 }
 
-__device__ uint131_t sub(uint131_t x, uint131_t y)
+template<int CURVE> __device__ uint131_t sub(uint131_t x, uint131_t y)
 {
-  #if defined(CURVE_P131)
+  if(CURVE == 131) {
     return sub_p131(x, y);
-  #elif defined(CURVE_P79)
+  } else if(CURVE == 79) {
     return sub_p79(x, y);
-  #else
-  #error "Curve is undefined"
-  #endif
+  }
 }
 
 
@@ -558,15 +556,13 @@ __device__ uint131_t inv_p79(uint131_t& x)
   return z;
 }
 
-__device__ uint131_t inv(uint131_t x)
+template<int CURVE> __device__ uint131_t inv(uint131_t x)
 {
-#if defined(CURVE_P131)
-  return inv_p131(x);
-#elif defined(CURVE_P79)
-  return inv_p79(x);
-#else
-#error "Curve not defined"
-#endif
+  if(CURVE == 131) {
+    return inv_p131(x);
+  } else if(CURVE == 79) {
+    return inv_p79(x);
+  }
 }
 
 // ECC functons

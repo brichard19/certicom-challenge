@@ -21,7 +21,6 @@ __device__ void print_uint131(const uint131_t& x)
   printf("%d %.16lx %.16lx %.16lx\n", gid, x.v[2], x.v[1], x.v[0]);
 }
 
-extern "C" __global__ void kernel_mul_test(const uint131_t* x, const uint131_t* y, uint131_t* z, int n);
 
 __constant__ uint131_t _r = {{0xd189e497ae0c5c29, 0x0cd212c781aea937, 0xe}};
 
@@ -138,16 +137,16 @@ __global__ void montgomery_perf_test(uint131_t* a, uint131_t* c, int n)
   }
 }
 
-extern "C" __global__ void kernel_sub_test(const uint131_t* x, const uint131_t* y, int n)
+template<int CURVE> __device__ void kernel_sub_test_impl(const uint131_t* x, const uint131_t* y, int n)
 {
   int gid = blockDim.x * blockIdx.x + threadIdx.x;
   int grid_size = blockDim.x * gridDim.x;
 
   for(int i = gid; i < n; i += grid_size) {
-    uint131_t s = sub(x[i], y[i]);
+    uint131_t s = sub<CURVE>(x[i], y[i]);
     uint131_t q = add(s, y[i]);
 
-    uint131_t s2 = sub(y[i], x[i]);
+    uint131_t s2 = sub<CURVE>(y[i], x[i]);
     uint131_t q2 = add(s2, x[i]);
 
     if(equal(x[i], q) == false || equal(y[i], q2) == false) {
@@ -164,19 +163,66 @@ extern "C" __global__ void kernel_sub_test(const uint131_t* x, const uint131_t* 
   }
 }
 
+extern "C" __global__ void kernel_sub_test(const uint131_t* x, const uint131_t* y, int n)
+{
+#if defined(CURVE_P131)
+  kernel_sub_test_impl<131>(x, y, n);
+#elif defined(CURVE_P79)
+  kernel_sub_test_impl<79>(x, y, n);
+#else
+#error "Curve not defined"
+#endif
+}
 
-extern "C" __global__ void kernel_mul_test(const uint131_t* x, const uint131_t* y, uint131_t* z, int n)
+template<int CURVE> __device__ void kernel_mul_test_impl(const uint131_t* x, const uint131_t* y, uint131_t* z, int n)
 {
   int gid = blockDim.x * blockIdx.x + threadIdx.x;
   int grid_size = blockDim.x * gridDim.x;
 
   // Test algebraic property (x - y) * z = xz - yz
   for(int i = gid; i < n; i += grid_size) {
-    uint131_t ls = mul(sub(x[i], y[i]), z[i]);
+    uint131_t ls = mul(sub<CURVE>(x[i], y[i]), z[i]);
 
     uint131_t rs1 = mul(x[i], z[i]);
     uint131_t rs2 = mul(y[i], z[i]);
-    uint131_t rs = sub(rs1, rs2);
+    uint131_t rs = sub<CURVE>(rs1, rs2);
+
+    //assert(equal(ls, rs));
+    if(equal(ls, rs) == false) {
+      printf("Error:\n");
+      print_uint131(ls);
+
+      print_uint131(rs1);
+      print_uint131(rs2);
+      print_uint131(rs);
+      assert(false);
+    }
+  }
+}
+
+extern "C" __global__ void kernel_mul_test(const uint131_t* x, const uint131_t* y, uint131_t* z, int n)
+{
+#if defined(CURVE_P131)
+  kernel_mul_test_impl<131>(x, y, z, n);
+#elif defined(CURVE_P79)
+  kernel_mul_test_impl<79>(x, y, z, n);
+#else
+#error "Curve not defined"
+#endif
+}
+
+template<int CURVE> __device__ void kernel_barrett_mul_test_impl(const uint131_t* x, const uint131_t* y, uint131_t* z, int n)
+{
+  int gid = blockDim.x * blockIdx.x + threadIdx.x;
+  int grid_size = blockDim.x * gridDim.x;
+
+  // Test algebraic property (x - y) * z = xz - yz
+  for(int i = gid; i < n; i += grid_size) {
+    uint131_t ls = barrett(sub<CURVE>(x[i], y[i]), z[i]);
+
+    uint131_t rs1 = barrett(x[i], z[i]);
+    uint131_t rs2 = barrett(y[i], z[i]);
+    uint131_t rs = sub<CURVE>(rs1, rs2);
 
     //assert(equal(ls, rs));
     if(equal(ls, rs) == false) {
@@ -193,46 +239,42 @@ extern "C" __global__ void kernel_mul_test(const uint131_t* x, const uint131_t* 
 
 extern "C" __global__ void kernel_barrett_mul_test(const uint131_t* x, const uint131_t* y, uint131_t* z, int n)
 {
-  int gid = blockDim.x * blockIdx.x + threadIdx.x;
-  int grid_size = blockDim.x * gridDim.x;
+#if defined(CURVE_P131)
+  kernel_barrett_mul_test_impl<131>(x, y, z, n);
+#elif defined(CURVE_P79)
+  kernel_barrett_mul_test_impl<79>(x, y, z, n);
+#else
+#error "Curve not defined"
+#endif
 
-  // Test algebraic property (x - y) * z = xz - yz
-  for(int i = gid; i < n; i += grid_size) {
-    uint131_t ls = barrett(sub(x[i], y[i]), z[i]);
-
-    uint131_t rs1 = barrett(x[i], z[i]);
-    uint131_t rs2 = barrett(y[i], z[i]);
-    uint131_t rs = sub(rs1, rs2);
-
-    //assert(equal(ls, rs));
-    if(equal(ls, rs) == false) {
-      printf("Error:\n");
-      print_uint131(ls);
-
-      print_uint131(rs1);
-      print_uint131(rs2);
-      print_uint131(rs);
-      assert(false);
-    }
-  }
 }
 
 // Test algebraic property (a - b)(a + b) = a^2 - b^2
-extern "C" __global__ void kernel_square_test(const uint131_t* x, const uint131_t* y, int n)
+template<int CURVE> __device__ void kernel_square_test_impl(const uint131_t* x, const uint131_t* y, int n)
 {
   int gid = blockDim.x * blockIdx.x + threadIdx.x;
   int grid_size = blockDim.x * gridDim.x;
 
   // Test algebraic property (x - y) * z = xz - yz
   for(int i = gid; i < n; i += grid_size) {
-    uint131_t ls = mul(sub(x[i], y[i]), add(x[i], y[i]));
-    uint131_t rs = sub(square(x[i]), square(y[i]));
+    uint131_t ls = mul(sub<CURVE>(x[i], y[i]), add(x[i], y[i]));
+    uint131_t rs = sub<CURVE>(square(x[i]), square(y[i]));
     assert(equal(ls, rs));
   }
 }
 
+extern "C" __global__ void kernel_square_test(const uint131_t* x, const uint131_t* y, int n)
+{
+#if defined(CURVE_P131)
+  kernel_square_test_impl<131>(x, y, n);
+#elif defined(CURVE_P79)
+  kernel_square_test_impl<79>(x, y, n);
+#else
+#error "Curve not defined"
+#endif
+}
 
-extern "C" __global__ void kernel_inv_test(const uint131_t* x, int n)
+template<int CURVE> __device__ void kernel_inv_test_impl(const uint131_t* x, int n)
 {
   int gid = blockDim.x * blockIdx.x + threadIdx.x;
   int grid_size = blockDim.x * gridDim.x;
@@ -240,11 +282,22 @@ extern "C" __global__ void kernel_inv_test(const uint131_t* x, int n)
   // Test algebraic property (x + y) * z = xz + yz
   for(int i = gid; i < n; i += grid_size) {
     uint131_t k = x[i]; 
-    uint131_t inverse = inv(k);
+    uint131_t inverse = inv<CURVE>(k);
     uint131_t prod = mul(k, inverse);
 
     assert(equal(prod, _one));
   }
+}
+
+extern "C" __global__ void kernel_inv_test(const uint131_t* x, int n)
+{
+#if defined(CURVE_P131)
+  kernel_inv_test_impl<131>(x, n);
+#elif defined(CURVE_P79)
+  kernel_inv_test_impl<79>(x, n);
+#else
+#error "Curve not defined"
+#endif
 }
 
 class IntRNG {

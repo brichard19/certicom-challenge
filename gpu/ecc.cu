@@ -13,12 +13,12 @@ __device__ void print_big_int(uint131_t& x)
 
 __device__ int get_bit(uint131_t x, int bit)
 {
-  return (int)(x.v[bit /64] >> (bit % 64)) & 1;
+  return (int)(x.v[bit / 64] >> (bit % 64)) & 1;
 }
 
 
 // If the private key bit for P is 1, then add Q to P
-__device__ void do_step_impl(uint131_t* global_px, uint131_t* global_py,
+template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t* global_py,
                                    uint131_t* global_rx, uint131_t* global_ry,
                                    uint131_t* mbuf, int count,
                                    DPResult* result, int* result_count,
@@ -72,14 +72,14 @@ __device__ void do_step_impl(uint131_t* global_px, uint131_t* global_py,
     uint131_t rx = global_rx[idx];
 
     // Point addition, rx - px
-    uint131_t t = sub(rx, px);
+    uint131_t t = sub<CURVE>(rx, px);
 
     inverse = mul(inverse, t);
     mbuf[i] = inverse;
   }
 
   // Perform inversion
-  inverse = inv(inverse);
+  inverse = inv<CURVE>(inverse);
 
   // Start at last element (undo final loop counter add)
   i -= dim;
@@ -109,7 +109,7 @@ __device__ void do_step_impl(uint131_t* global_px, uint131_t* global_py,
 
       // Cancel out from the inverse
       // e.g. abcde * e^-1 = abcd
-      uint131_t diff = sub(rx, px);
+      uint131_t diff = sub<CURVE>(rx, px);
       
       inverse = mul(inverse, diff);
 
@@ -118,16 +118,16 @@ __device__ void do_step_impl(uint131_t* global_px, uint131_t* global_py,
     }
 
     // Perform point addition
-    uint131_t rise = sub(ry, py); 
+    uint131_t rise = sub<CURVE>(ry, py); 
     s = mul(s, rise);
     uint131_t s2 = square(s);
 
-    uint131_t tmp1 = sub(s2, px);
-    uint131_t x = sub(tmp1, rx);
+    uint131_t tmp1 = sub<CURVE>(s2, px);
+    uint131_t x = sub<CURVE>(tmp1, rx);
 
-    uint131_t tmp2 = sub(px, x);
+    uint131_t tmp2 = sub<CURVE>(px, x);
     uint131_t tmp3 = mul(s, tmp2);
-    uint131_t y = sub(tmp3, py);
+    uint131_t y = sub<CURVE>(tmp3, py);
 
     global_px[i] = x;
     global_py[i] = y;
@@ -138,7 +138,7 @@ __device__ void do_step_impl(uint131_t* global_px, uint131_t* global_py,
 
 
 // If the private key bit for P is 1, then add Q to P
-__device__ void batch_multiply_step(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* global_qx, uint131_t* global_qy, uint131_t* mbuf, int priv_key_bit, int count)
+template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* global_qx, uint131_t* global_qy, uint131_t* mbuf, int priv_key_bit, int count)
 {
 
   int gid = get_global_id();
@@ -164,7 +164,7 @@ __device__ void batch_multiply_step(uint131_t* global_px, uint131_t* global_py, 
       t = _one;
     } else {
       // Point addition, qx - px
-      t = sub(qx, px);
+      t = sub<CURVE>(qx, px);
     }
 
     inverse = mul(inverse, t);
@@ -172,7 +172,7 @@ __device__ void batch_multiply_step(uint131_t* global_px, uint131_t* global_py, 
   }
 
   // Perform inversion
-  inverse = inv(inverse);
+  inverse = inv<CURVE>(inverse);
 
   // Start at last element (undo final loop counter add)
   i -= dim;
@@ -211,7 +211,7 @@ __device__ void batch_multiply_step(uint131_t* global_px, uint131_t* global_py, 
 
       // Cancel out from the inverse
       // e.g. abcde * e^-1 = abcd
-      uint131_t diff = sub(qx, px);
+      uint131_t diff = sub<CURVE>(qx, px);
       
       inverse = mul(inverse, diff);
 
@@ -220,25 +220,38 @@ __device__ void batch_multiply_step(uint131_t* global_px, uint131_t* global_py, 
     }
 
     // Perform point addition
-    uint131_t rise = sub(qy, py);
+    uint131_t rise = sub<CURVE>(qy, py);
     s = mul(s, rise);
     uint131_t s2 = square(s);
 
-    uint131_t tmp1 = sub(s2, px);
-    uint131_t x = sub(tmp1, qx);
+    uint131_t tmp1 = sub<CURVE>(s2, px);
+    uint131_t x = sub<CURVE>(tmp1, qx);
 
-    uint131_t tmp2 = sub(px, x);
+    uint131_t tmp2 = sub<CURVE>(px, x);
     uint131_t tmp3 = mul(s, tmp2);
-    uint131_t y = sub(tmp3, py);
+    uint131_t y = sub<CURVE>(tmp3, py);
 
     global_px[i] = x;
     global_py[i] = y;
   }
 }
 
+__device__ void sanity_check_impl(uint131_t* global_px, uint131_t* global_py, int count, int* errors)
+{
+  int gid = get_global_id();
+  int dim = get_global_size();
 
-// Set all public keys to point-at-infinity
-extern "C" __global__ void clear_public_keys(uint131_t* x, uint131_t* y, int count)
+  for(int i = gid; i < count; i += dim) {
+    uint131_t x = global_px[i];
+    uint131_t y = global_py[i];
+
+    if(point_exists(x, y) == false) {
+      atomicAdd(errors, 1);
+    }
+  }
+}
+
+__device__ void clear_public_keys_impl(uint131_t* x, uint131_t* y, int count)
 {
   int idx = get_global_id();
   int dim = get_global_size();
@@ -248,7 +261,7 @@ extern "C" __global__ void clear_public_keys(uint131_t* x, uint131_t* y, int cou
   }
 }
 
-extern "C" __global__ void reset_counters(uint64_t* start_pos, uint64_t value, int count)
+__device__ void reset_counters_impl(uint64_t* start_pos, uint64_t value, int count)
 {
   int idx = get_global_id();
   int dim = get_global_size();
@@ -258,10 +271,27 @@ extern "C" __global__ void reset_counters(uint64_t* start_pos, uint64_t value, i
   }
 }
 
+// Set all public keys to point-at-infinity
+extern "C" __global__ void clear_public_keys(uint131_t* x, uint131_t* y, int count)
+{
+  clear_public_keys_impl(x, y, count);
+}
+
+extern "C" __global__ void reset_counters(uint64_t* start_pos, uint64_t value, int count)
+{
+  reset_counters_impl(start_pos, value, count);
+}
+
 
 extern "C" __global__ void batch_multiply(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* mbuf, uint131_t* gx, uint131_t* gy, int priv_key_bit, int count)
 {
-    batch_multiply_step(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
+#if defined(CURVE_P131)
+    batch_multiply_step<131>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
+#elif defined(CURVE_P79)
+    batch_multiply_step<79>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
+#else
+#error "Curve not defined"
+#endif
 }
 
 // If the private key bit for P is 1, then add Q to P
@@ -275,20 +305,16 @@ extern "C" __global__ void do_step(uint131_t* global_px, uint131_t* global_py,
                                    uint64_t* start_pos,
                                    uint64_t dpmask)
 {
-  do_step_impl(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, staging_count, priv_key_a, counter, start_pos, dpmask);
+#if defined(CURVE_P131)
+  do_step_impl<131>(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, staging_count, priv_key_a, counter, start_pos, dpmask);
+#elif defined(CURVE_P79)
+  do_step_impl<79>(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, staging_count, priv_key_a, counter, start_pos, dpmask);
+#else
+#error "Curve not defined"
+#endif
 }
 
 extern "C" __global__ void sanity_check(uint131_t* global_px, uint131_t* global_py, int count, int* errors)
 {
-  int gid = get_global_id();
-  int dim = get_global_size();
-
-  for(int i = gid; i < count; i += dim) {
-    uint131_t x = global_px[i];
-    uint131_t y = global_py[i];
-
-    if(point_exists(x, y) == false) {
-      atomicAdd(errors, 1);
-    }
-  }
+  sanity_check_impl(global_px, global_py, count, errors);
 }
