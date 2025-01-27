@@ -65,6 +65,19 @@ GPUPointFinder::GPUPointFinder(int device, uint32_t num_points, int dpbits)
 {
   assert(dpbits >= 16 && dpbits <= 63);
 
+  std::string curve_name = ecc::curve_name();
+
+  if(curve_name == "ecp131") {
+    _do_step_ptr = (void*)do_step_p131;
+    _batch_multiply_ptr = (void*)batch_multiply_p131;
+  } else if(curve_name == "ecp79") {
+    _do_step_ptr = (void*)do_step_p79;
+    _batch_multiply_ptr = (void*)batch_multiply_p79;
+  } else {
+    LOG("Invalid curve!");
+    throw std::runtime_error("Invalid curve");
+  }
+
   _device = device;
   _dpbits = dpbits;
 
@@ -287,7 +300,7 @@ void GPUPointFinder::init(const std::string& filename)
     // Initialize keys
     int bits = ecc::curve_strength();
     for(int i = 0; i < bits; i++) {
-      HIP_CALL(hipLaunchKernel((void*)batch_multiply, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _priv_key_a, _mbuf, dev_gx, dev_gy, i, _num_points));
+      HIP_CALL(hipLaunchKernel(_batch_multiply_ptr, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _priv_key_a, _mbuf, dev_gx, dev_gy, i, _num_points));
       HIP_CALL(hipDeviceSynchronize());
     }
 
@@ -385,7 +398,7 @@ void GPUPointFinder::allocate_buffers(int n)
 void GPUPointFinder::step()
 {
   for(int i = 0; i < _iters_per_step; i++) {
-    HIP_CALL(hipLaunchKernel((void*)do_step, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _dev_rx, _dev_ry,
+    HIP_CALL(hipLaunchKernel(_do_step_ptr, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _dev_rx, _dev_ry,
                   _mbuf, _num_points,
                   _result_buf, _result_count,
                   _staging_buf, _staging_count,

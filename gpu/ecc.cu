@@ -283,19 +283,21 @@ extern "C" __global__ void reset_counters(uint64_t* start_pos, uint64_t value, i
 }
 
 
-extern "C" __global__ void batch_multiply(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* mbuf, uint131_t* gx, uint131_t* gy, int priv_key_bit, int count)
+
+
+extern "C" __global__ void sanity_check(uint131_t* global_px, uint131_t* global_py, int count, int* errors)
 {
-#if defined(CURVE_P131)
-    batch_multiply_step<131>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
-#elif defined(CURVE_P79)
-    batch_multiply_step<79>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
-#else
-#error "Curve not defined"
-#endif
+  sanity_check_impl(global_px, global_py, count, errors);
 }
 
-// If the private key bit for P is 1, then add Q to P
-extern "C" __global__ void do_step(uint131_t* global_px, uint131_t* global_py,
+
+extern "C" __global__ void batch_multiply_p79(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* mbuf, uint131_t* gx, uint131_t* gy, int priv_key_bit, int count)
+{
+    batch_multiply_step<79>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
+}
+
+
+extern "C" __global__ void do_step_p79(uint131_t* global_px, uint131_t* global_py,
                                    uint131_t* global_rx, uint131_t* global_ry,
                                    uint131_t* mbuf, int count,
                                    DPResult* result, int* result_count,
@@ -305,16 +307,26 @@ extern "C" __global__ void do_step(uint131_t* global_px, uint131_t* global_py,
                                    uint64_t* start_pos,
                                    uint64_t dpmask)
 {
-#if defined(CURVE_P131)
-  do_step_impl<131>(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, staging_count, priv_key_a, counter, start_pos, dpmask);
-#elif defined(CURVE_P79)
   do_step_impl<79>(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, staging_count, priv_key_a, counter, start_pos, dpmask);
-#else
-#error "Curve not defined"
-#endif
 }
 
-extern "C" __global__ void sanity_check(uint131_t* global_px, uint131_t* global_py, int count, int* errors)
+
+
+extern "C" __global__ void batch_multiply_p131(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* mbuf, uint131_t* gx, uint131_t* gy, int priv_key_bit, int count)
 {
-  sanity_check_impl(global_px, global_py, count, errors);
+    batch_multiply_step<131>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
+}
+
+
+extern "C" __global__ void do_step_p131(uint131_t* global_px, uint131_t* global_py,
+                                   uint131_t* global_rx, uint131_t* global_ry,
+                                   uint131_t* mbuf, int count,
+                                   DPResult* result, int* result_count,
+                                   StagingPoint* staging, int* staging_count,
+                                   uint131_t* priv_key_a,
+                                   uint64_t counter,
+                                   uint64_t* start_pos,
+                                   uint64_t dpmask)
+{
+  do_step_impl<131>(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, staging_count, priv_key_a, counter, start_pos, dpmask);
 }

@@ -15,6 +15,9 @@ private:
   const bool _verify_points = false;
 #endif
 
+  void* _do_step_ptr = nullptr;
+  void* _batch_multiply_ptr = nullptr;
+
   bool _first_run = true;
 
   uint32_t _num_points = 1024 * 1024;
