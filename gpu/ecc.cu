@@ -33,7 +33,15 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
   const int dim = get_global_size();
 
   int i = gid;
-  uint131_t inverse = _one;
+
+  uint131_t one;
+  if(CURVE == 131) {
+    one = _p131_one;
+  } else if(CURVE == 79) {
+    one = _p79_one;
+  }
+
+  uint131_t inverse = one;
 
 
   // Perform Qx - Px and then multiply them together
@@ -74,7 +82,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
     // Point addition, rx - px
     uint131_t t = sub<CURVE>(rx, px);
 
-    inverse = mul(inverse, t);
+    inverse = mul<CURVE>(inverse, t);
     mbuf[i] = inverse;
   }
 
@@ -105,13 +113,13 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
 
       // Multiply to cancel out all factors except the last one
       // e.g. abcd * (abcde)^-1 = e^-1
-      s = mul(inverse, m);
+      s = mul<CURVE>(inverse, m);
 
       // Cancel out from the inverse
       // e.g. abcde * e^-1 = abcd
       uint131_t diff = sub<CURVE>(rx, px);
       
-      inverse = mul(inverse, diff);
+      inverse = mul<CURVE>(inverse, diff);
 
     } else {
       s = inverse;
@@ -119,14 +127,14 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
 
     // Perform point addition
     uint131_t rise = sub<CURVE>(ry, py); 
-    s = mul(s, rise);
-    uint131_t s2 = square(s);
+    s = mul<CURVE>(s, rise);
+    uint131_t s2 = square<CURVE>(s);
 
     uint131_t tmp1 = sub<CURVE>(s2, px);
     uint131_t x = sub<CURVE>(tmp1, rx);
 
     uint131_t tmp2 = sub<CURVE>(px, x);
-    uint131_t tmp3 = mul(s, tmp2);
+    uint131_t tmp3 = mul<CURVE>(s, tmp2);
     uint131_t y = sub<CURVE>(tmp3, py);
 
     global_px[i] = x;
@@ -148,8 +156,16 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
   const uint131_t qy = global_qy[priv_key_bit];
 
   int i = gid;
-  uint131_t inverse = _one;
 
+  uint131_t one;
+  if(CURVE == 131) {
+    one = _p131_one;
+  } else if(CURVE == 79) {
+    one = _p79_one;
+  }
+
+  uint131_t inverse = one;
+  
   // Perform Qx - Px and then multiply them together
   for(; i < count; i+=dim) {
 
@@ -161,13 +177,13 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
     if(!bit || is_infinity(px) || equal(px, qx)) {
       
       // Nothing to do, just use 1
-      t = _one;
+      t = one;
     } else {
       // Point addition, qx - px
       t = sub<CURVE>(qx, px);
     }
 
-    inverse = mul(inverse, t);
+    inverse = mul<CURVE>(inverse, t);
     mbuf[i] = inverse;
   }
 
@@ -207,13 +223,13 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
 
       // Multiply to cancel out all factors except the last one
       // e.g. abcd * (abcde)^-1 = e^-1
-      s = mul(inverse, m);
+      s = mul<CURVE>(inverse, m);
 
       // Cancel out from the inverse
       // e.g. abcde * e^-1 = abcd
       uint131_t diff = sub<CURVE>(qx, px);
       
-      inverse = mul(inverse, diff);
+      inverse = mul<CURVE>(inverse, diff);
 
     } else {
       s = inverse;
@@ -221,14 +237,14 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
 
     // Perform point addition
     uint131_t rise = sub<CURVE>(qy, py);
-    s = mul(s, rise);
-    uint131_t s2 = square(s);
+    s = mul<CURVE>(s, rise);
+    uint131_t s2 = square<CURVE>(s);
 
     uint131_t tmp1 = sub<CURVE>(s2, px);
     uint131_t x = sub<CURVE>(tmp1, qx);
 
     uint131_t tmp2 = sub<CURVE>(px, x);
-    uint131_t tmp3 = mul(s, tmp2);
+    uint131_t tmp3 = mul<CURVE>(s, tmp2);
     uint131_t y = sub<CURVE>(tmp3, py);
 
     global_px[i] = x;
@@ -236,7 +252,7 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
   }
 }
 
-__device__ void sanity_check_impl(uint131_t* global_px, uint131_t* global_py, int count, int* errors)
+template<int CURVE> __device__ void sanity_check_impl(uint131_t* global_px, uint131_t* global_py, int count, int* errors)
 {
   int gid = get_global_id();
   int dim = get_global_size();
@@ -245,7 +261,7 @@ __device__ void sanity_check_impl(uint131_t* global_px, uint131_t* global_py, in
     uint131_t x = global_px[i];
     uint131_t y = global_py[i];
 
-    if(point_exists(x, y) == false) {
+    if(point_exists<CURVE>(x, y) == false) {
       atomicAdd(errors, 1);
     }
   }
@@ -284,10 +300,14 @@ extern "C" __global__ void reset_counters(uint64_t* start_pos, uint64_t value, i
 
 
 
-
-extern "C" __global__ void sanity_check(uint131_t* global_px, uint131_t* global_py, int count, int* errors)
+extern "C" __global__ void sanity_check_p131(uint131_t* global_px, uint131_t* global_py, int count, int* errors)
 {
-  sanity_check_impl(global_px, global_py, count, errors);
+  sanity_check_impl<131>(global_px, global_py, count, errors);
+}
+
+extern "C" __global__ void sanity_check_p79(uint131_t* global_px, uint131_t* global_py, int count, int* errors)
+{
+  sanity_check_impl<79>(global_px, global_py, count, errors);
 }
 
 

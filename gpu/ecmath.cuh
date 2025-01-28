@@ -3,14 +3,8 @@
 #define _EC_MATH_CUH
 
 typedef unsigned __int128 uint128_t;
-
-#if defined(CURVE_P131)
 #include "p131.cuh"
-#elif defined(CURVE_P79)
 #include "p79.cuh"
-#else
-#error "Curve not defined"
-#endif
 
 __device__ uint131_t sub_p131(uint131_t x, uint131_t y)
 {
@@ -34,15 +28,15 @@ __device__ uint131_t sub_p131(uint131_t x, uint131_t y)
   // Went below zero. Need to add P.
   if(borrow) {
     int carry = 0; 
-    uint64_t sum = z.v[0] + _p.v[0];
+    uint64_t sum = z.v[0] + _p131_p.v[0];
     z.v[0] = sum;
-    carry = sum < _p.v[0] ? 1 : 0;
+    carry = sum < _p131_p.v[0] ? 1 : 0;
     
-    sum = z.v[1] + _p.v[1] + carry;
+    sum = z.v[1] + _p131_p.v[1] + carry;
     z.v[1] = sum;
-    carry = sum < _p.v[1] ? 1 : 0;
+    carry = sum < _p131_p.v[1] ? 1 : 0;
     
-    z.v[2] = z.v[2] + _p.v[2] + carry;
+    z.v[2] = z.v[2] + _p131_p.v[2] + carry;
   }
 
   return z;
@@ -66,11 +60,11 @@ __device__ uint131_t sub_p79(uint131_t x, uint131_t y)
   // Went below zero. Need to add P.
   if(borrow) {
     int carry = 0; 
-    uint64_t sum = z.v[0] + _p.v[0];
+    uint64_t sum = z.v[0] + _p79_p.v[0];
     z.v[0] = sum;
-    carry = sum < _p.v[0] ? 1 : 0;
+    carry = sum < _p79_p.v[0] ? 1 : 0;
     
-    sum = z.v[1] + _p.v[1] + carry;
+    sum = z.v[1] + _p79_p.v[1] + carry;
     z.v[1] = sum;
   }
 
@@ -87,7 +81,7 @@ template<int CURVE> __device__ uint131_t sub(uint131_t x, uint131_t y)
 }
 
 
-__device__ uint131_t add(const uint131_t& x, const uint131_t& y)
+__device__ uint131_t add_p131(const uint131_t& x, const uint131_t& y)
 {
   uint131_t z = {{0}};
 
@@ -103,9 +97,9 @@ __device__ uint131_t add(const uint131_t& x, const uint131_t& y)
   // Reduce mod P
   bool gte = true;
   for(int i = 2; i >= 0; i--) {
-    if(z.v[i] > _p.v[i]) {
+    if(z.v[i] > _p131_p.v[i]) {
       break;
-    } else if(z.v[i] < _p.v[i]) {
+    } else if(z.v[i] < _p131_p.v[i]) {
       gte = false;
       break;
     }
@@ -115,13 +109,59 @@ __device__ uint131_t add(const uint131_t& x, const uint131_t& y)
   if(gte) {
     uint64_t borrow = 0;
     for(int i = 0; i < 3; i++) {
-      uint128_t diff = (uint128_t)z.v[i] - _p.v[i] - borrow;
+      uint128_t diff = (uint128_t)z.v[i] - _p131_p.v[i] - borrow;
       borrow = (uint64_t)(diff >> 64) & 1;
       z.v[i] = (uint64_t)diff;
     }
   }
 
   return z;
+}
+
+__device__ uint131_t add_p79(const uint131_t& x, const uint131_t& y)
+{
+  uint131_t z = {{0}};
+
+  uint64_t carry = 0;
+
+  for(int i = 0; i < 3; i++) {
+    uint128_t sum = (uint128_t)x.v[i] + y.v[i] + carry;
+
+    z.v[i] = (uint64_t)sum;
+    carry = (uint64_t)(sum >> 64);
+  }
+
+  // Reduce mod P
+  bool gte = true;
+  for(int i = 2; i >= 0; i--) {
+    if(z.v[i] > _p79_p.v[i]) {
+      break;
+    } else if(z.v[i] < _p79_p.v[i]) {
+      gte = false;
+      break;
+    }
+  }
+
+  // Subtract P
+  if(gte) {
+    uint64_t borrow = 0;
+    for(int i = 0; i < 3; i++) {
+      uint128_t diff = (uint128_t)z.v[i] - _p79_p.v[i] - borrow;
+      borrow = (uint64_t)(diff >> 64) & 1;
+      z.v[i] = (uint64_t)diff;
+    }
+  }
+
+  return z;
+}
+
+template<int CURVE> __device__ uint131_t add(const uint131_t& x, const uint131_t& y)
+{
+  if(CURVE == 131) {
+    return add_p131(x, y);
+  } else if(CURVE == 79) {
+    return add_p79(x, y);
+  }
 }
 
 
@@ -333,7 +373,7 @@ __device__ void mont_mulModR(const uint64_t* a, const uint64_t* b, uint64_t* pro
   product[2] &= 0xffffffff;
 }
 
-__device__ void mont_reduce(const uint64_t* t, uint64_t* y)
+template<int CURVE> __device__ void mont_reduce(const uint64_t* t, uint64_t* y)
 {
   // m1 = t_lo * k mod R
   // m2 = m1 * p / r
@@ -355,9 +395,21 @@ __device__ void mont_reduce(const uint64_t* t, uint64_t* y)
   uint64_t m1[3];
   uint64_t m2[3];
   uint64_t m3[3];
-  mont_mulModR(t_lo, _k.v, m1);
 
-  mont_mulDivR(m1, _p.v, m2);
+  uint131_t p;
+  uint131_t k;
+  if(CURVE == 131) {
+    p = _p131_p;
+    k = _p131_k;
+  } else if(CURVE == 79) {
+    p = _p79_p;
+    k = _p79_k;
+  } 
+  
+  mont_mulModR(t_lo, k.v, m1);
+  mont_mulDivR(m1, p.v, m2);
+  
+  //mont_mulDivR(m1, _p.v, m2);
  
   int carry = 1;
   uint64_t sum = t_hi[0] + m2[0] + carry;
@@ -374,9 +426,9 @@ __device__ void mont_reduce(const uint64_t* t, uint64_t* y)
   bool gte = true;
 
   for(int i = 2; i >= 0; i--) {
-    if(m3[i] > _p.v[i]) {
+    if(m3[i] > p.v[i]) {
       break;
-    } else if(m3[i] < _p.v[i]) {
+    } else if(m3[i] < p.v[i]) {
       gte = false;
       break;
     }
@@ -386,15 +438,15 @@ __device__ void mont_reduce(const uint64_t* t, uint64_t* y)
   if(gte) {
     int borrow = 0;
 
-    uint64_t diff = m3[0] - _p.v[0];
+    uint64_t diff = m3[0] - p.v[0];
     borrow = diff > m3[0] ? 1 : 0;
     m3[0] = diff;
     
-    diff = m3[1] - _p.v[1] - borrow;
+    diff = m3[1] - p.v[1] - borrow;
     borrow = diff > m3[1] ? 1 : 0;
     m3[1] = diff;
     
-    diff = m3[2] - _p.v[2] - borrow;
+    diff = m3[2] - p.v[2] - borrow;
     m3[2] = diff;
   }
 
@@ -406,30 +458,30 @@ __device__ void mont_reduce(const uint64_t* t, uint64_t* y)
 
 
 // Montgomery multiplication
-__device__ uint131_t mul(const uint131_t x, const uint131_t y)
+template<int CURVE> __device__ uint131_t mul(const uint131_t x, const uint131_t y)
 {
   uint64_t product[5];
   uint131_t z;
   mul160x(x.v, y.v, product);
-  mont_reduce(product, z.v);
+  mont_reduce<CURVE>(product, z.v);
 
   return z;
 }
 
-__device__ uint131_t square(const uint131_t& x)
+template<int CURVE> __device__ uint131_t square(const uint131_t& x)
 {
   uint64_t product[5];
   uint131_t z;
   square160(x.v, product);
-  mont_reduce(product, z.v);
+  mont_reduce<CURVE>(product, z.v);
 
   return z;
 }
 
-__device__ uint131_t square(uint131_t x, int n)
+template<int CURVE> __device__ uint131_t square(uint131_t x, int n)
 {
   for(int i = 0; i < n; i++) {
-    x = square(x);
+    x = square<CURVE>(x);
   }
 
   return x;
@@ -451,63 +503,63 @@ __device__ uint131_t inv_p131(uint131_t& x)
 {
   uint131_t z, t0, t1, t2, t3, t4, t5;
 
-  t0 = square(x);
-  t3 = mul(x, t0);
-  t4 = mul(x, t3);
-  t1 = mul(x, t4);
-  t2 = mul(t0, t1);
-  z = mul(t0, t2);
-  t4 = mul(t4, z);
-  t0 = mul(t0, t4);
-  t5 = mul(t3, t0);
-  t5 = square(t5, 5);
-  t5 = mul(t2, t5);
-  t5 = square(t5, 7);
-  t5 = mul(t2, t5);
-  t5 = square(t5, 4);
-  t5 = mul(t1, t5);
-  t5 = square(t5, 8);
-  t5 = mul(t0, t5);
-  t5 = square(t5, 2);
-  t5 = mul(t3, t5);
-  t5 = square(t5, 5);
-  t5 = mul(t1, t5);
-  t5 = square(t5, 6);
-  t5 = mul(z, t5);
-  t5 = square(t5, 3);
-  t5 = mul(t1, t5);
-  t5 = square(t5, 7);
-  t5 = mul(t4, t5);
-  t5 = square(t5, 6);
-  t5 = mul(t0, t5);
-  t5 = square(t5, 5);
-  t5 = mul(t3, t5);
-  t5 = square(t5, 4);
-  t5 = mul(t3, t5);
-  t5 = square(t5, 5);
-  t5 = mul(t3, t5);
-  t5 = square(t5, 5);
-  t5 = mul(t1, t5);
-  t5 = square(t5, 4);
-  t5 = mul(t3, t5);
-  t5 = square(t5, 4);
-  t5 = mul(x, t5);
-  t5 = square(t5, 6);
-  t5 = mul(t3, t5);
-  t5 = square(t5, 5);
-  t5 = mul(t3, t5);
-  t5 = square(t5, 8);
-  t4 = mul(t4, t5);
-  t4 = square(t4, 3);
-  t3 = mul(t3, t4);
-  t3 = square(t3, 5);
-  t2 = mul(t2, t3);
-  t2 = square(t2, 4);
-  t1 = mul(t1, t2);
-  t1 = square(t1, 5);
-  t0 = mul(t0, t1);
-  t0 = square(t0, 10);
-  z = mul(z, t0);
+  t0 = square<131>(x);
+  t3 = mul<131>(x, t0);
+  t4 = mul<131>(x, t3);
+  t1 = mul<131>(x, t4);
+  t2 = mul<131>(t0, t1);
+  z = mul<131>(t0, t2);
+  t4 = mul<131>(t4, z);
+  t0 = mul<131>(t0, t4);
+  t5 = mul<131>(t3, t0);
+  t5 = square<131>(t5, 5);
+  t5 = mul<131>(t2, t5);
+  t5 = square<131>(t5, 7);
+  t5 = mul<131>(t2, t5);
+  t5 = square<131>(t5, 4);
+  t5 = mul<131>(t1, t5);
+  t5 = square<131>(t5, 8);
+  t5 = mul<131>(t0, t5);
+  t5 = square<131>(t5, 2);
+  t5 = mul<131>(t3, t5);
+  t5 = square<131>(t5, 5);
+  t5 = mul<131>(t1, t5);
+  t5 = square<131>(t5, 6);
+  t5 = mul<131>(z, t5);
+  t5 = square<131>(t5, 3);
+  t5 = mul<131>(t1, t5);
+  t5 = square<131>(t5, 7);
+  t5 = mul<131>(t4, t5);
+  t5 = square<131>(t5, 6);
+  t5 = mul<131>(t0, t5);
+  t5 = square<131>(t5, 5);
+  t5 = mul<131>(t3, t5);
+  t5 = square<131>(t5, 4);
+  t5 = mul<131>(t3, t5);
+  t5 = square<131>(t5, 5);
+  t5 = mul<131>(t3, t5);
+  t5 = square<131>(t5, 5);
+  t5 = mul<131>(t1, t5);
+  t5 = square<131>(t5, 4);
+  t5 = mul<131>(t3, t5);
+  t5 = square<131>(t5, 4);
+  t5 = mul<131>(x, t5);
+  t5 = square<131>(t5, 6);
+  t5 = mul<131>(t3, t5);
+  t5 = square<131>(t5, 5);
+  t5 = mul<131>(t3, t5);
+  t5 = square<131>(t5, 8);
+  t4 = mul<131>(t4, t5);
+  t4 = square<131>(t4, 3);
+  t3 = mul<131>(t3, t4);
+  t3 = square<131>(t3, 5);
+  t2 = mul<131>(t2, t3);
+  t2 = square<131>(t2, 4);
+  t1 = mul<131>(t1, t2);
+  t1 = square<131>(t1, 5);
+  t0 = mul<131>(t0, t1);
+  t0 = square<131>(t0, 10);
+  z = mul<131>(z, t0);
 
   return z;
 }
@@ -516,42 +568,42 @@ __device__ uint131_t inv_p79(uint131_t& x)
 {
   uint131_t z, t0, t1, t2, t3, t4, t5, t6, t7;
   
-  t6 = square(x);
-  t0 = mul(x, t6);
-  z = square(t0);
-  t3 = mul(t6, z);
-  t2 = mul(t0, t3);
-  t7 = mul(x, t2);
-  t0 = mul(t3, t2);
-  t1 = mul(t6, t0);
-  t5 = mul(t6, t1);
-  t4 = mul(z, t5);
-  t3 = mul(t3, t4);
-  t7 = mul(t7, t3);
-  t6 = mul(t6, t7);
-  z = mul(z, t6);
-  t7 = square(t7, 7);
-  t6 = mul(t6, t7);
-  t6 = square(t6, 6);
-  t6 = mul(t3, t6);
-  t6 = square(t6, 8);
-  t5 = mul(t5, t6);
-  t5 = square(t5, 6);
-  t4 = mul(t4, t5);
-  t4 = square(t4, 11);
-  t3 = mul(t3, t4);
-  t3 = square(t3, 5);
-  t2 = mul(t2, t3);
-  t2 = square(t2, 7);
-  t1 = mul(t1, t2);
-  t1 = square(t1, 8);
-  t0 = mul(t0, t1);
-  t0 = square(t0, 8);
-  t0 = mul(z, t0);
-  t0 = square(t0, 6);
-  z = mul(z, t0);
-  z = square(z);
-  z = mul(x, z);
+  t6 = square<79>(x);
+  t0 = mul<79>(x, t6);
+  z = square<79>(t0);
+  t3 = mul<79>(t6, z);
+  t2 = mul<79>(t0, t3);
+  t7 = mul<79>(x, t2);
+  t0 = mul<79>(t3, t2);
+  t1 = mul<79>(t6, t0);
+  t5 = mul<79>(t6, t1);
+  t4 = mul<79>(z, t5);
+  t3 = mul<79>(t3, t4);
+  t7 = mul<79>(t7, t3);
+  t6 = mul<79>(t6, t7);
+  z = mul<79>(z, t6);
+  t7 = square<79>(t7, 7);
+  t6 = mul<79>(t6, t7);
+  t6 = square<79>(t6, 6);
+  t6 = mul<79>(t3, t6);
+  t6 = square<79>(t6, 8);
+  t5 = mul<79>(t5, t6);
+  t5 = square<79>(t5, 6);
+  t4 = mul<79>(t4, t5);
+  t4 = square<79>(t4, 11);
+  t3 = mul<79>(t3, t4);
+  t3 = square<79>(t3, 5);
+  t2 = mul<79>(t2, t3);
+  t2 = square<79>(t2, 7);
+  t1 = mul<79>(t1, t2);
+  t1 = square<79>(t1, 8);
+  t0 = mul<79>(t0, t1);
+  t0 = square<79>(t0, 8);
+  t0 = mul<79>(z, t0);
+  t0 = square<79>(t0, 6);
+  z = mul<79>(z, t0);
+  z = square<79>(z);
+  z = mul<79>(x, z);
 
   return z;
 }
@@ -578,13 +630,27 @@ __device__ void set_point_at_infinity(uint131_t& x)
   x.v[2] = (uint64_t)-1;
 }
 
-__device__ bool point_exists(uint131_t& x, uint131_t& y)
+template<int CURVE> __device__ bool point_exists(uint131_t& x, uint131_t& y)
 {
-  uint131_t y2 = square(y);
-  uint131_t x3 = mul(x, square(x));
-  uint131_t ax = mul(_a, x);
+  uint131_t a;
+  uint131_t b;
 
-  uint131_t rs = add(add(x3, ax), _b);
+  switch(CURVE) {
+    case 131:
+      a = _p131_a;
+      b = _p131_b;
+      break;
+    case 79:
+      a = _p79_a;
+      b = _p79_b;
+      break;
+  }
+
+  uint131_t y2 = square<CURVE>(y);
+  uint131_t x3 = mul<CURVE>(x, square<CURVE>(x));
+  uint131_t ax = mul<CURVE>(a, x);
+
+  uint131_t rs = add<CURVE>(add<CURVE>(x3, ax), b);
 
   return equal(y2, rs);
 }

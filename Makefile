@@ -4,18 +4,6 @@ DEFINES=
 CFLAGS=
 INCLUDE=
 
-ifeq ($(CURVE_P131),1)
-BIN_PREFIX:=p131-
-DEFINES+=-DCURVE_P131
-else ifeq ($(CURVE_P79),1)
-BIN_PREFIX:=p79-
-DEFINES+=-DCURVE_P79
-else
-# Default to P131
-BIN_PREFIX:=p131-
-DEFINES+=-DCURVE_P131
-endif
-
 # Debugging
 ifeq ($(DEBUG),1)
 DEFINES+=-DDEBUG -g
@@ -71,7 +59,7 @@ MPI_LINKER+=-L/usr/lib/x86_64-linux-gnu/openmpi/lib
 endif
 
 export BUILD_DIR
-export BIN_PREFIX
+export BIN_PREFIX=certicom-
 export LIB_DIR
 export BIN_DIR
 export INCLUDE

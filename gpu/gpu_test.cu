@@ -21,14 +21,28 @@ __device__ void print_uint131(const uint131_t& x)
   printf("%d %.16lx %.16lx %.16lx\n", gid, x.v[2], x.v[1], x.v[0]);
 }
 
+// 2^262 / p
+__constant__ uint131_t _p131_r = {{0xd189e497ae0c5c29, 0x0cd212c781aea937, 0xe}};
 
-__constant__ uint131_t _r = {{0xd189e497ae0c5c29, 0x0cd212c781aea937, 0xe}};
+// 2^158 / p
+__constant__ uint131_t _p79_r = {{0xebe9ca480764481f, 0xa5d1, 0x00}};
 
-__device__ uint131_t barrett(uint131_t a, uint131_t b)
+
+template<int CURVE> __device__ uint131_t barrett(uint131_t a, uint131_t b)
 {
   uint64_t ab[5];
   uint64_t abr[8] = {0};
 
+  uint131_t p;
+  uint131_t r;
+
+  if(CURVE == 131) {
+    p = _p131_p;
+    r = _p131_r;
+  } else if(CURVE == 79) {
+    p = _p79_p;
+    r = _p79_r;
+  }
 
   mul160x(a.v, b.v, ab); 
 
@@ -36,7 +50,7 @@ __device__ uint131_t barrett(uint131_t a, uint131_t b)
   for(int i = 0; i < 5; i++) {
     uint64_t high = 0;
     for(int j = 0; j < 3; j++) {
-      uint128_t prod = abr[i + j] + (uint128_t)ab[i] * _r.v[j] + high;
+      uint128_t prod = abr[i + j] + (uint128_t)ab[i] * r.v[j] + high;
       high = (uint64_t)(prod >> 64);
       abr[i + j] = (uint64_t)prod;
     }
@@ -48,16 +62,23 @@ __device__ uint131_t barrett(uint131_t a, uint131_t b)
   // printf("%.16lx %.16lx %.16lx\n", abr[2], abr[1], abr[0]);
 
   // Divide by 2^262
-  abr[0] = abr[4] >> 6 | abr[5] << 58;
-  abr[1] = abr[5] >> 6 | abr[6] << 58;
-  abr[2] = abr[6] >> 6 | abr[7] << 58;
-  abr[2] &= ((uint64_t)1 << 61) - 1;
+  if(CURVE == 131) {
+    abr[0] = abr[4] >> 6 | abr[5] << 58;
+    abr[1] = abr[5] >> 6 | abr[6] << 58;
+    abr[2] = abr[6] >> 6 | abr[7] << 58;
+    abr[2] &= ((uint64_t)1 << 61) - 1;
+  } else if(CURVE == 79) {
+    abr[0] = abr[3] >> 30 | abr[4] << 34;
+    abr[1] = abr[4] >> 30 | abr[5] << 34;
+    abr[2] = abr[5] >> 30 | abr[6] << 34;
+    abr[2] &= ((uint64_t)1 << 61) - 1;
+  }
 
   // printf("%.16lx %.16lx %.16lx\n", abr[2], abr[1], abr[0]);
 
   // Multiply by p
   uint64_t x[5];
-  mul160x(abr, _p.v, x);
+  mul160x(abr, p.v, x);
   //mont_mulModR(abr, _p.v, x);
 
   // Subtract from ab
@@ -76,9 +97,9 @@ __device__ uint131_t barrett(uint131_t a, uint131_t b)
   // Mod P
   bool gte = true;
   for(int i = 2; i >= 0; i--) {
-    if(x[i] > _p.v[i]) {
+    if(x[i] > p.v[i]) {
       break;
-    } else if(x[i] < _p.v[i]) {
+    } else if(x[i] < p.v[i]) {
       gte = false;
       break;
     }
@@ -87,15 +108,15 @@ __device__ uint131_t barrett(uint131_t a, uint131_t b)
   if(gte) {
     int borrow = 0;
 
-    uint64_t diff = x[0] - _p.v[0];
+    uint64_t diff = x[0] - p.v[0];
     borrow = diff > x[0] ? 1 : 0;
     x[0] = diff;
     
-    diff = x[1] - _p.v[1] - borrow;
+    diff = x[1] - p.v[1] - borrow;
     borrow = diff > x[1] ? 1 : 0;
     x[1] = diff;
     
-    diff = x[2] - _p.v[2] - borrow;
+    diff = x[2] - p.v[2] - borrow;
     x[2] = diff;
   }
 
@@ -107,30 +128,30 @@ __device__ uint131_t barrett(uint131_t a, uint131_t b)
   return z;
 }
 
-__global__ void barrett_perf_test(uint131_t* a, uint131_t* c, int n)
+template<int CURVE> __global__ void barrett_perf_test(uint131_t* a, uint131_t* c, int n)
 {
   int gid = blockIdx.x * blockDim.x + threadIdx.x;
   int grid_size = blockDim.x * gridDim.x;
 
   for(int i = gid; i < n; i += grid_size) {
-    uint131_t x = barrett(a[i], a[i]);
+    uint131_t x = barrett<CURVE>(a[i], a[i]);
     for(int j = 0; j < 128; j++) {
-      x = barrett(a[i], x);
+      x = barrett<CURVE>(a[i], x);
     }
 
     c[i] = x;
   }
 }
 
-__global__ void montgomery_perf_test(uint131_t* a, uint131_t* c, int n)
+template<int CURVE> __global__ void montgomery_perf_test(uint131_t* a, uint131_t* c, int n)
 {
   int gid = blockIdx.x * blockDim.x + threadIdx.x;
   int grid_size = blockDim.x * gridDim.x;
 
   for(int i = gid; i < n; i += grid_size) {
-    uint131_t x = mul(a[i], a[i]);
+    uint131_t x = mul<CURVE>(a[i], a[i]);
     for(int j = 0; j < 128; j++) {
-      x = mul(a[i], x);
+      x = mul<CURVE>(a[i], x);
     }
 
     c[i] = x;
@@ -144,10 +165,10 @@ template<int CURVE> __device__ void kernel_sub_test_impl(const uint131_t* x, con
 
   for(int i = gid; i < n; i += grid_size) {
     uint131_t s = sub<CURVE>(x[i], y[i]);
-    uint131_t q = add(s, y[i]);
+    uint131_t q = add<CURVE>(s, y[i]);
 
     uint131_t s2 = sub<CURVE>(y[i], x[i]);
-    uint131_t q2 = add(s2, x[i]);
+    uint131_t q2 = add<CURVE>(s2, x[i]);
 
     if(equal(x[i], q) == false || equal(y[i], q2) == false) {
       print_uint131(x[i]);
@@ -163,15 +184,9 @@ template<int CURVE> __device__ void kernel_sub_test_impl(const uint131_t* x, con
   }
 }
 
-extern "C" __global__ void kernel_sub_test(const uint131_t* x, const uint131_t* y, int n)
+template<int CURVE> __global__ void kernel_sub_test(const uint131_t* x, const uint131_t* y, int n)
 {
-#if defined(CURVE_P131)
-  kernel_sub_test_impl<131>(x, y, n);
-#elif defined(CURVE_P79)
-  kernel_sub_test_impl<79>(x, y, n);
-#else
-#error "Curve not defined"
-#endif
+  kernel_sub_test_impl<CURVE>(x, y, n);
 }
 
 template<int CURVE> __device__ void kernel_mul_test_impl(const uint131_t* x, const uint131_t* y, uint131_t* z, int n)
@@ -181,10 +196,10 @@ template<int CURVE> __device__ void kernel_mul_test_impl(const uint131_t* x, con
 
   // Test algebraic property (x - y) * z = xz - yz
   for(int i = gid; i < n; i += grid_size) {
-    uint131_t ls = mul(sub<CURVE>(x[i], y[i]), z[i]);
+    uint131_t ls = mul<CURVE>(sub<CURVE>(x[i], y[i]), z[i]);
 
-    uint131_t rs1 = mul(x[i], z[i]);
-    uint131_t rs2 = mul(y[i], z[i]);
+    uint131_t rs1 = mul<CURVE>(x[i], z[i]);
+    uint131_t rs2 = mul<CURVE>(y[i], z[i]);
     uint131_t rs = sub<CURVE>(rs1, rs2);
 
     //assert(equal(ls, rs));
@@ -200,15 +215,9 @@ template<int CURVE> __device__ void kernel_mul_test_impl(const uint131_t* x, con
   }
 }
 
-extern "C" __global__ void kernel_mul_test(const uint131_t* x, const uint131_t* y, uint131_t* z, int n)
+template<int CURVE> __global__ void kernel_mul_test(const uint131_t* x, const uint131_t* y, uint131_t* z, int n)
 {
-#if defined(CURVE_P131)
-  kernel_mul_test_impl<131>(x, y, z, n);
-#elif defined(CURVE_P79)
-  kernel_mul_test_impl<79>(x, y, z, n);
-#else
-#error "Curve not defined"
-#endif
+  kernel_mul_test_impl<CURVE>(x, y, z, n);
 }
 
 template<int CURVE> __device__ void kernel_barrett_mul_test_impl(const uint131_t* x, const uint131_t* y, uint131_t* z, int n)
@@ -218,10 +227,10 @@ template<int CURVE> __device__ void kernel_barrett_mul_test_impl(const uint131_t
 
   // Test algebraic property (x - y) * z = xz - yz
   for(int i = gid; i < n; i += grid_size) {
-    uint131_t ls = barrett(sub<CURVE>(x[i], y[i]), z[i]);
+    uint131_t ls = barrett<CURVE>(sub<CURVE>(x[i], y[i]), z[i]);
 
-    uint131_t rs1 = barrett(x[i], z[i]);
-    uint131_t rs2 = barrett(y[i], z[i]);
+    uint131_t rs1 = barrett<CURVE>(x[i], z[i]);
+    uint131_t rs2 = barrett<CURVE>(y[i], z[i]);
     uint131_t rs = sub<CURVE>(rs1, rs2);
 
     //assert(equal(ls, rs));
@@ -237,16 +246,9 @@ template<int CURVE> __device__ void kernel_barrett_mul_test_impl(const uint131_t
   }
 }
 
-extern "C" __global__ void kernel_barrett_mul_test(const uint131_t* x, const uint131_t* y, uint131_t* z, int n)
+template<int CURVE> __global__ void kernel_barrett_mul_test(const uint131_t* x, const uint131_t* y, uint131_t* z, int n)
 {
-#if defined(CURVE_P131)
-  kernel_barrett_mul_test_impl<131>(x, y, z, n);
-#elif defined(CURVE_P79)
-  kernel_barrett_mul_test_impl<79>(x, y, z, n);
-#else
-#error "Curve not defined"
-#endif
-
+  kernel_barrett_mul_test_impl<CURVE>(x, y, z, n);
 }
 
 // Test algebraic property (a - b)(a + b) = a^2 - b^2
@@ -257,21 +259,15 @@ template<int CURVE> __device__ void kernel_square_test_impl(const uint131_t* x, 
 
   // Test algebraic property (x - y) * z = xz - yz
   for(int i = gid; i < n; i += grid_size) {
-    uint131_t ls = mul(sub<CURVE>(x[i], y[i]), add(x[i], y[i]));
-    uint131_t rs = sub<CURVE>(square(x[i]), square(y[i]));
+    uint131_t ls = mul<CURVE>(sub<CURVE>(x[i], y[i]), add<CURVE>(x[i], y[i]));
+    uint131_t rs = sub<CURVE>(square<CURVE>(x[i]), square<CURVE>(y[i]));
     assert(equal(ls, rs));
   }
 }
 
-extern "C" __global__ void kernel_square_test(const uint131_t* x, const uint131_t* y, int n)
+template<int CURVE> __global__ void kernel_square_test(const uint131_t* x, const uint131_t* y, int n)
 {
-#if defined(CURVE_P131)
-  kernel_square_test_impl<131>(x, y, n);
-#elif defined(CURVE_P79)
-  kernel_square_test_impl<79>(x, y, n);
-#else
-#error "Curve not defined"
-#endif
+  kernel_square_test_impl<CURVE>(x, y, n);
 }
 
 template<int CURVE> __device__ void kernel_inv_test_impl(const uint131_t* x, int n)
@@ -283,21 +279,19 @@ template<int CURVE> __device__ void kernel_inv_test_impl(const uint131_t* x, int
   for(int i = gid; i < n; i += grid_size) {
     uint131_t k = x[i]; 
     uint131_t inverse = inv<CURVE>(k);
-    uint131_t prod = mul(k, inverse);
+    uint131_t prod = mul<CURVE>(k, inverse);
 
-    assert(equal(prod, _one));
+    if(CURVE == 131) {
+      assert(equal(prod, _p131_one));
+    } else {
+      assert(equal(prod, _p79_one));
+    }
   }
 }
 
-extern "C" __global__ void kernel_inv_test(const uint131_t* x, int n)
+template<int CURVE> __global__ void kernel_inv_test(const uint131_t* x, int n)
 {
-#if defined(CURVE_P131)
-  kernel_inv_test_impl<131>(x, n);
-#elif defined(CURVE_P79)
-  kernel_inv_test_impl<79>(x, n);
-#else
-#error "Curve not defined"
-#endif
+  kernel_inv_test_impl<CURVE>(x, n);
 }
 
 class IntRNG {
@@ -323,37 +317,35 @@ public:
 IntRNG _rng;
 
 
-uint131_t gen_key()
+template<int CURVE> uint131_t gen_key()
 {
   uint131_t k;
 
   for(int i = 0; i < 3; i++) {
     k.v[i] = _rng.next();
   }
-  
-#if defined(CURVE_P131)
+
+  if(CURVE == 131) {
     k.v[2] %= 5;
     k.v[1] %= 0x8e1d43f293469e33;
-#elif defined(CURVE_P79)
+  } else if(CURVE == 79) {
     k.v[2] = 0;
     k.v[1] %= (0x62ce + 1);
     k.v[0] %= 0x5177412aca899cf5;
-#else
-#error "Curve is undefined"
-#endif
+  }
 
   return k;
 }
 
 
-template<class... T> hipError_t hipLaunchKernel(void* kernel, dim3 gridDim, dim3 blockDim, size_t sharedMem, T... args)
-{
-  std::vector<void*> ptr = {&args...};
+// template<class... T> hipError_t hipLaunchKernel(void* kernel, dim3 gridDim, dim3 blockDim, size_t sharedMem, T... args)
+// {
+//   std::vector<void*> ptr = {&args...};
 
-  return hipLaunchKernel(kernel, gridDim, blockDim, ptr.data(), sharedMem, 0);
-}
+//   return hipLaunchKernel(kernel, gridDim, blockDim, ptr.data(), sharedMem, 0);
+// }
 
-bool mul_test()
+template<int C> bool mul_test()
 {
   int n = TEST_SIZE;
   uint131_t* x_dev = nullptr;
@@ -368,13 +360,14 @@ bool mul_test()
   HIP_CALL(hipMallocManaged(&z_dev, sizeof(uint131_t) * n));
 
   for(int i = 0; i < n; i++) {
-    x_dev[i] = gen_key();
-    y_dev[i] = gen_key();
-    z_dev[i] = gen_key();
+    x_dev[i] = gen_key<C>();
+    y_dev[i] = gen_key<C>();
+    z_dev[i] = gen_key<C>();
   }
 
   std::cout << "MUL test" << std::endl;
-  HIP_CALL(hipLaunchKernel((void*)kernel_mul_test, dim3(8, 1, 1), dim3(32, 1, 1), 0, x_dev, y_dev, z_dev, n));
+  //HIP_CALL(hipLaunchKernel((void*)kernel_mul_test, dim3(8, 1, 1), dim3(32, 1, 1), 0, x_dev, y_dev, z_dev, n));
+  kernel_mul_test<C><<<8, 32>>>(x_dev, y_dev, z_dev, n);
   HIP_CALL(hipDeviceSynchronize());
 
   HIP_CALL(hipFree(x_dev));
@@ -385,7 +378,7 @@ bool mul_test()
 }
 
 
-bool mul_barrett_test()
+template<int C> bool mul_barrett_test()
 {
   int n = TEST_SIZE;
   uint131_t* x_dev = nullptr;
@@ -394,19 +387,18 @@ bool mul_barrett_test()
 
   std::vector<uint131_t> z_host(n);
 
-
   HIP_CALL(hipMallocManaged(&x_dev, sizeof(uint131_t) * n));
   HIP_CALL(hipMallocManaged(&y_dev, sizeof(uint131_t) * n));
   HIP_CALL(hipMallocManaged(&z_dev, sizeof(uint131_t) * n));
 
   for(int i = 0; i < n; i++) {
-    x_dev[i] = gen_key();
-    y_dev[i] = gen_key();
-    z_dev[i] = gen_key();
+    x_dev[i] = gen_key<C>();
+    y_dev[i] = gen_key<C>();
+    z_dev[i] = gen_key<C>();
   }
 
   std::cout << "Barrett MUL test" << std::endl;
-  HIP_CALL(hipLaunchKernel((void*)kernel_barrett_mul_test, dim3(8, 1, 1), dim3(32, 1, 1), 0, x_dev, y_dev, z_dev, n));
+  kernel_barrett_mul_test<C><<<8, 32>>>(x_dev, y_dev, z_dev, n);
   HIP_CALL(hipDeviceSynchronize());
 
   HIP_CALL(hipFree(x_dev));
@@ -416,7 +408,7 @@ bool mul_barrett_test()
   return true;
 }
 
-bool inv_test()
+template<int C> bool inv_test()
 {
   int n = TEST_SIZE;
   uint131_t* x_dev = nullptr;
@@ -424,11 +416,11 @@ bool inv_test()
   HIP_CALL(hipMallocManaged(&x_dev, sizeof(uint131_t) * n));
 
   for(int i = 0; i < n; i++) {
-    x_dev[i] = gen_key();
+    x_dev[i] = gen_key<C>();
   }
 
   std::cout << "INV test" << std::endl;
-  HIP_CALL(hipLaunchKernel((void*)kernel_inv_test, dim3(8, 1, 1), dim3(32, 1, 1), 0, x_dev, n));
+  kernel_inv_test<C><<<8, 32>>>(x_dev, n);
   HIP_CALL(hipDeviceSynchronize());
 
   HIP_CALL(hipFree(x_dev));
@@ -437,7 +429,7 @@ bool inv_test()
 }
 
 
-bool square_test()
+template<int C> bool square_test()
 {
   int n = TEST_SIZE;
   uint131_t* x_dev = nullptr;
@@ -450,12 +442,12 @@ bool square_test()
   HIP_CALL(hipMallocManaged(&y_dev, sizeof(uint131_t) * n));
 
   for(int i = 0; i < n; i++) {
-    x_dev[i] = gen_key();
-    y_dev[i] = gen_key();
+    x_dev[i] = gen_key<C>();
+    y_dev[i] = gen_key<C>();
   }
 
   std::cout << "SQR test" << std::endl;
-  HIP_CALL(hipLaunchKernel((void*)kernel_square_test, dim3(8, 1, 1), dim3(32, 1, 1), 0, x_dev, y_dev, n));
+  kernel_square_test<C><<<8, 32>>>(x_dev, y_dev, n);
   HIP_CALL(hipDeviceSynchronize());
 
   HIP_CALL(hipFree(x_dev));
@@ -464,7 +456,7 @@ bool square_test()
   return true;
 }
 
-bool sub_test()
+template<int C> bool sub_test()
 {
   int n = TEST_SIZE;
   uint131_t* x_dev = nullptr;
@@ -477,12 +469,12 @@ bool sub_test()
   HIP_CALL(hipMallocManaged(&y_dev, sizeof(uint131_t) * n));
 
   for(int i = 0; i < n; i++) {
-    x_dev[i] = gen_key();
-    y_dev[i] = gen_key();
+    x_dev[i] = gen_key<C>();
+    y_dev[i] = gen_key<C>();
   }
 
   std::cout << "SUB test" << std::endl;
-  HIP_CALL(hipLaunchKernel((void*)kernel_sub_test, dim3(8, 1, 1), dim3(32, 1, 1), 0, x_dev, y_dev, n));
+  kernel_sub_test<C><<<8, 32>>>(x_dev, y_dev, n);
   HIP_CALL(hipDeviceSynchronize());
 
   HIP_CALL(hipFree(x_dev));
@@ -502,7 +494,7 @@ std::string get_gpu_name(int device_id)
 
 
 
-bool mul_perf_test()
+template<int C> bool mul_perf_test()
 {
   int n = 64 * 1024 * 1024;
   uint131_t* dev_a = nullptr;
@@ -519,7 +511,7 @@ bool mul_perf_test()
   printf("Barrett:\n");
   double t0 = get_time();
   for(int i = 0; i < 3; i++) {
-    HIP_CALL(hipLaunchKernel((void*)barrett_perf_test, dim3(blocks, 1, 1), dim3(32, 1, 1), 0, dev_a, dev_c, n));
+    barrett_perf_test<C><<<blocks, 32>>>(dev_a, dev_c, n);
   }
   HIP_CALL(hipDeviceSynchronize());
   double t1 = get_time();
@@ -528,7 +520,7 @@ bool mul_perf_test()
   printf("Montgomery:\n");
   t0 = get_time();
   for(int i = 0; i < 3; i++) {
-    HIP_CALL(hipLaunchKernel((void*)montgomery_perf_test, dim3(blocks, 1, 1), dim3(32, 1, 1), 0, dev_a, dev_c, n));
+    montgomery_perf_test<C><<<blocks, 32>>>(dev_a, dev_c, n);
   }
   HIP_CALL(hipDeviceSynchronize());
   t1 = get_time();
@@ -548,12 +540,21 @@ int main(int argc, char**argv)
 
   std::cout << name << std::endl;
 
-  pass &= sub_test();
-  pass &= mul_test();
-  pass &= mul_barrett_test();
-  pass &= square_test();
-  pass &= inv_test();
-  pass &= mul_perf_test();
+  std::cout << "Running P131 tests" << std::endl;
+  pass &= sub_test<131>();
+  pass &= mul_test<131>();
+  //pass &= mul_barrett_test<131>();
+  pass &= square_test<131>();
+  pass &= inv_test<131>();
+  pass &= mul_perf_test<131>();
+  
+  std::cout << "Running P79 tests" << std::endl;
+  pass &= sub_test<79>();
+  pass &= mul_test<79>();
+  //pass &= mul_barrett_test<79>();
+  pass &= square_test<79>();
+  pass &= inv_test<79>();
+  pass &= mul_perf_test<79>();
 
   return 0;
 }

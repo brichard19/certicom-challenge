@@ -69,14 +69,6 @@ void benchmark(int hip_device)
 
 int main(int argc, char**argv)
 {
-#if defined(CURVE_P131)
-  ecc::set_curve("ecp131");
-#elif defined(CURVE_P79)
-  ecc::set_curve("ecp79");
-#else
-#error "Curve is undefined"
-#endif
-
   int device = 0;
 
   while(true) {
@@ -105,6 +97,20 @@ int main(int argc, char**argv)
         exit(1);
     }
   }
+
+  if(optind == argc) {
+    std::cout << "Curve name required" << std::endl;
+    return 1;
+  }
+
+  std::string curve_name = std::string(argv[optind]);
+
+  if(curve_name != "ecp131" && curve_name != "ecp79") {
+    std::cout << "Invalid curve name" << std::endl;
+    return 1;
+  }
+
+  ecc::set_curve(curve_name);
 
   // Check device ID
   int device_count = 0;

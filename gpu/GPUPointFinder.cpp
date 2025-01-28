@@ -70,9 +70,11 @@ GPUPointFinder::GPUPointFinder(int device, uint32_t num_points, int dpbits)
   if(curve_name == "ecp131") {
     _do_step_ptr = (void*)do_step_p131;
     _batch_multiply_ptr = (void*)batch_multiply_p131;
+    _sanity_check_ptr = (void*)sanity_check_p131;
   } else if(curve_name == "ecp79") {
     _do_step_ptr = (void*)do_step_p79;
     _batch_multiply_ptr = (void*)batch_multiply_p79;
+    _sanity_check_ptr = (void*)sanity_check_p79;
   } else {
     LOG("Invalid curve!");
     throw std::runtime_error("Invalid curve");
@@ -255,7 +257,7 @@ void GPUPointFinder::init(const std::string& filename)
     // Check sanity
     *_sanity_flag = 0;
 
-    HIP_CALL(hipLaunchKernel((void*)sanity_check, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _num_points, _sanity_flag));
+    HIP_CALL(hipLaunchKernel((void*)_sanity_check_ptr, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _num_points, _sanity_flag));
     HIP_CALL(hipDeviceSynchronize());
 
     if(*_sanity_flag != 0) {
@@ -412,7 +414,7 @@ void GPUPointFinder::step()
   HIP_CALL(hipDeviceSynchronize());
 
   if(_first_run || _verify_points) {
-    HIP_CALL(hipLaunchKernel((void*)sanity_check, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _num_points, _sanity_flag));
+    HIP_CALL(hipLaunchKernel((void*)_sanity_check_ptr, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _num_points, _sanity_flag));
     HIP_CALL(hipDeviceSynchronize());
 
     if(*_sanity_flag != 0) {

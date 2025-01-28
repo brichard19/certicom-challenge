@@ -44,16 +44,6 @@ namespace {
   const double _save_interval = 600.0;
   const double _perf_interval = 5.0;
 
-#if defined(CURVE_P131)
-  const int _dpbits = 32;
-  const std::string _curve_name = "p131";
-#elif defined(CURVE_P79)
-  const int _dpbits = 28;
-  const std::string _curve_name = "p79";
-#else
-#error "Curve is undefined"
-#endif
-
   std::string _url = "127.0.0.1";
   int _port = 8080;
 
@@ -72,6 +62,9 @@ namespace {
   bool _use_mpi = false;
   int _world_size = -1;
   int _world_rank = -1;
+
+  int _dpbits = 32;
+  std::string _curve_name;
 }
 
 // Saves distingusihed points to disk
@@ -357,15 +350,6 @@ bool init_directories()
 
 int main(int argc, char**argv)
 {
-
-#if defined(CURVE_P131)
-  ecc::set_curve("ecp131");
-#elif defined(CURVE_P79)
-  ecc::set_curve("ecp79");
-#else
-#error "Curve is undefined"
-#endif
-
   bool gpu_flag = false;
 
   while(true) {
@@ -413,14 +397,33 @@ int main(int argc, char**argv)
 
       default:
         std::cout << "Invalid argument" << std::endl;
-        exit(1);
+        return 1;
     }
+  }
+
+  if(optind == argc) {
+    std::cout << "Curve not specified" << std::endl;
+    return 1;
+  }
+
+  _curve_name = std::string(argv[optind]);
+  if(_curve_name != "ecp131" && _curve_name != "ecp79") {
+    std::cout << "Invalid curve " << _curve_name << std::endl;
+    return 1;
+  }
+
+  if(_curve_name == "ecp131") {
+    _dpbits = 32;
+  } else if(_curve_name == "ecp79") {
+    _dpbits = 24;
   }
 
   if(_use_mpi && gpu_flag) {
     std::cout << "-g flag incompable when using MPI" << std::endl;
     return 1;
   }
+
+  ecc::set_curve(_curve_name);
 
   // Check device ID
   int device_count = 0;
