@@ -30,7 +30,7 @@ void benchmark(int hip_device)
     double t = perf_timer.elapsed();
 
     // Print performance info
-    if(t >= 5.0) {
+    if(t >= 3.0) {
       size_t total = pf->work_per_step() * steps;
 
       double perf = (double)total / t;
@@ -46,7 +46,7 @@ void benchmark(int hip_device)
     }
 
     // Exit after 30 seconds
-    if(run_timer.elapsed() >= 60) {
+    if(run_timer.elapsed() >= 15) {
       break;
     }
   }
@@ -61,7 +61,8 @@ void benchmark(int hip_device)
   }
 
   double avg = sum / (ara.size() - 1);
-      
+  
+  std::cout << std::endl;
   std::cout << (avg / 1e6) << " MKeys/sec" << std::endl;
 
   delete pf;
