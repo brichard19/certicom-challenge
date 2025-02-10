@@ -58,6 +58,8 @@ private:
   int _blocks = 1;
   int _threads = 32;
 
+  bool _benchmark = false;
+
   std::vector<uint131_t> _rx;
   std::vector<uint131_t> _ry;
 
@@ -73,7 +75,7 @@ private:
 
 public:
 
-  GPUPointFinder(int device, uint32_t num_points, int dpbits);
+  GPUPointFinder(int device, uint32_t num_points, int dpbits, bool benchmark = false);
 
   virtual ~GPUPointFinder();
 

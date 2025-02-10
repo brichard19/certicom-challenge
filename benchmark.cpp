@@ -10,7 +10,7 @@
 
 void benchmark(int hip_device)
 {
-  DistinguishedPointFinder* pf = new GPUPointFinder(hip_device, 0, 63);
+  DistinguishedPointFinder* pf = new GPUPointFinder(hip_device, 0, 63, true);
 
   pf->init();
 

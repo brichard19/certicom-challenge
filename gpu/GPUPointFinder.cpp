@@ -61,9 +61,11 @@ int get_warp_size(int device_id)
 
 }
 
-GPUPointFinder::GPUPointFinder(int device, uint32_t num_points, int dpbits)
+GPUPointFinder::GPUPointFinder(int device, uint32_t num_points, int dpbits, bool benchmark)
 {
   assert(dpbits >= 16 && dpbits <= 63);
+
+  _benchmark = benchmark;
 
   std::string curve_name = ecc::curve_name();
 
@@ -234,7 +236,11 @@ void GPUPointFinder::init()
 void GPUPointFinder::init(const std::string& filename)
 {  
   allocate_buffers(_num_points);
-  refill_staging();
+
+  // Don't need staging for benchmark, avoid costly refill
+  if(_benchmark == false) {
+    refill_staging();
+  }
 
   // Initialize random walk points
   std::vector<RWPoint> rw = get_rw_points();
@@ -399,10 +405,14 @@ void GPUPointFinder::allocate_buffers(int n)
 
 void GPUPointFinder::step()
 {
+
+  // We don't need result buf for benchmark
+  DPResult* result_buf = _benchmark ? nullptr : _result_buf;
+
   for(int i = 0; i < _iters_per_step; i++) {
     HIP_CALL(hipLaunchKernel(_do_step_ptr, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _dev_rx, _dev_ry,
                   _mbuf, _num_points,
-                  _result_buf, _result_count,
+                  result_buf, _result_count,
                   _staging_buf, _staging_count,
                   _priv_key_a,
                   _counter,
@@ -445,12 +455,15 @@ void GPUPointFinder::step()
     _first_run = false;
   }
 
-  if(*_staging_count <= _staging_min) {
-    refill_staging();
-  }
+  // Don't need to check these during benchmark
+  if(_benchmark == false) {
+    if(*_staging_count <= _staging_min) {
+      refill_staging();
+    }
 
-  if(*_result_count >= _report_count) {
-    report_points();
+    if(*_result_count >= _report_count) {
+      report_points();
+    }
   }
 }
 
