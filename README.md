@@ -9,7 +9,7 @@ My implementaion for solving the Certicom challenge [(PDF)](https://github.com/b
 
 The target is the 131-bit prime curve. The 79-bit curve is included for testing purposes.
 
-#Implementation
+# Implementation
 - Parallel Pollards rho algorithm with R-adding walks.
 - Distinguished points are uploaded to central server. Currently the server code is not implemented, so the upload gets skipped.
 - All math is done in  [Montgomery form](https://en.wikipedia.org/wiki/Montgomery_modular_multiplication "Montgomery form") with R = 2^160
