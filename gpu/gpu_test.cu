@@ -44,7 +44,7 @@ template<int CURVE> __device__ uint131_t barrett(uint131_t a, uint131_t b)
     r = _p79_r;
   }
 
-  mul160x(a.v, b.v, ab); 
+  mul_full(a.v, b.v, ab); 
 
   // multiply by r
   for(int i = 0; i < 5; i++) {
@@ -57,9 +57,6 @@ template<int CURVE> __device__ uint131_t barrett(uint131_t a, uint131_t b)
     abr[i + 3] = high;
   }
   
-  // printf("%.16lx %.16lx\n", abr[7], abr[6]);
-  // printf("%.16lx %.16lx %.16lx\n", abr[5], abr[4], abr[3]);
-  // printf("%.16lx %.16lx %.16lx\n", abr[2], abr[1], abr[0]);
 
   // Divide by 2^262
   if(CURVE == 131) {
@@ -74,12 +71,10 @@ template<int CURVE> __device__ uint131_t barrett(uint131_t a, uint131_t b)
     abr[2] &= ((uint64_t)1 << 61) - 1;
   }
 
-  // printf("%.16lx %.16lx %.16lx\n", abr[2], abr[1], abr[0]);
 
   // Multiply by p
   uint64_t x[5];
-  mul160x(abr, p.v, x);
-  //mont_mulModR(abr, _p.v, x);
+  mul_full(abr, p.v, x);
 
   // Subtract from ab
   uint64_t diff = ab[0] - x[0];
@@ -338,12 +333,6 @@ template<int CURVE> uint131_t gen_key()
 }
 
 
-// template<class... T> hipError_t hipLaunchKernel(void* kernel, dim3 gridDim, dim3 blockDim, size_t sharedMem, T... args)
-// {
-//   std::vector<void*> ptr = {&args...};
-
-//   return hipLaunchKernel(kernel, gridDim, blockDim, ptr.data(), sharedMem, 0);
-// }
 
 template<int C> bool mul_test()
 {
@@ -366,7 +355,6 @@ template<int C> bool mul_test()
   }
 
   std::cout << "MUL test" << std::endl;
-  //HIP_CALL(hipLaunchKernel((void*)kernel_mul_test, dim3(8, 1, 1), dim3(32, 1, 1), 0, x_dev, y_dev, z_dev, n));
   kernel_mul_test<C><<<8, 32>>>(x_dev, y_dev, z_dev, n);
   HIP_CALL(hipDeviceSynchronize());
 

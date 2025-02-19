@@ -312,8 +312,8 @@ void GPUPointFinder::init(const std::string& filename)
       HIP_CALL(hipDeviceSynchronize());
     }
 
-    hipFree(dev_gx);
-    hipFree(dev_gy);
+    HIP_IGNORE(hipFree(dev_gx));
+    HIP_IGNORE(hipFree(dev_gy));
 
     // Verify
     if(_verify_points) {
@@ -358,20 +358,20 @@ void GPUPointFinder::init(const std::string& filename)
 
 void GPUPointFinder::free_buffers()
 {
-  HIP_CALL(hipFree(_mbuf));
-  HIP_CALL(hipFree(_dev_x));
-  HIP_CALL(hipFree(_dev_y));
-  HIP_CALL(hipFree(_dev_rx));
-  HIP_CALL(hipFree(_dev_ry));
+  HIP_IGNORE(hipFree(_mbuf));
+  HIP_IGNORE(hipFree(_dev_x));
+  HIP_IGNORE(hipFree(_dev_y));
+  HIP_IGNORE(hipFree(_dev_rx));
+  HIP_IGNORE(hipFree(_dev_ry));
 
-  HIP_CALL(hipFree(_priv_key_a));
-  HIP_CALL(hipFree(_result_buf));
-  HIP_CALL(hipFree(_result_count));
-  HIP_CALL(hipFree(_staging_buf));
-  HIP_CALL(hipFree(_staging_count));
-  HIP_CALL(hipFree(_sanity_flag));
+  HIP_IGNORE(hipFree(_priv_key_a));
+  HIP_IGNORE(hipFree(_result_buf));
+  HIP_IGNORE(hipFree(_result_count));
+  HIP_IGNORE(hipFree(_staging_buf));
+  HIP_IGNORE(hipFree(_staging_count));
+  HIP_IGNORE(hipFree(_sanity_flag));
 
-  HIP_CALL(hipFree(_walk_start));
+  HIP_IGNORE(hipFree(_walk_start));
 }
 
 void GPUPointFinder::allocate_buffers(int n)

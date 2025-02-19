@@ -166,7 +166,7 @@ template<int CURVE> __device__ uint131_t add(const uint131_t& x, const uint131_t
 
 
 // 160 x 160 -> 320 multiplication
-__device__ void mul160x(const uint64_t* a, const uint64_t* b, uint64_t* product)
+__device__ void mul_full(const uint64_t* a, const uint64_t* b, uint64_t* product)
 {
   uint64_t high = 0;
 
@@ -221,7 +221,7 @@ __device__ void mul160x(const uint64_t* a, const uint64_t* b, uint64_t* product)
 }
 
 // 160 x 160 -> 320 squaring
-__device__ void square160(const uint64_t* a, uint64_t* product)
+__device__ void square_full(const uint64_t* a, uint64_t* product)
 {
   //uint64_t tmp[5] = {0};
   uint64_t high = 0;
@@ -462,7 +462,7 @@ template<int CURVE> __device__ uint131_t mul(const uint131_t x, const uint131_t 
 {
   uint64_t product[5];
   uint131_t z;
-  mul160x(x.v, y.v, product);
+  mul_full(x.v, y.v, product);
   mont_reduce<CURVE>(product, z.v);
 
   return z;
@@ -472,7 +472,7 @@ template<int CURVE> __device__ uint131_t square(const uint131_t& x)
 {
   uint64_t product[5];
   uint131_t z;
-  square160(x.v, product);
+  square_full(x.v, product);
   mont_reduce<CURVE>(product, z.v);
 
   return z;

@@ -14,5 +14,7 @@
   }\
 }\
 
+#define HIP_IGNORE(func) \
+(void)func\
 
 #endif

@@ -1,3 +1,4 @@
+TARGET_PLATFORMS=nvidia amd
 CXX=g++
 
 DEFINES=
@@ -18,14 +19,12 @@ CFLAGS+=-DBUILD_MPI
 INCLUDE+=-I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi
 endif
 
-TARGET_PLATFORMS=amd nvidia
-
 CUDA_HOME=/usr/local/cuda
 ROCM_HOME=/opt/rocm
 
 # Nvidia target
 export NVIDIA_INCLUDE=-I${CUDA_HOME}/include
-export HIPCC_CFLAGS_NVIDIA=-Wno-deprecated-declarations
+export HIPCC_CFLAGS_NVIDIA=-Wno-deprecated-declarations -Xptxas -v
 export CXX_CFLAGS_NVIDIA=-D__HIP_PLATFORM_NVIDIA__ -Wno-deprecated-declarations -Wno-return-local-addr
 export LIBS_NVIDIA=-lcuda -lcudart
 LINKER_NVIDIA=-L${CUDA_HOME}/lib64
