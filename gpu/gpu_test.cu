@@ -30,7 +30,8 @@ __constant__ uint131_t _p79_r = {{0xebe9ca480764481f, 0xa5d1, 0x00}};
 
 template<int CURVE> __device__ uint131_t barrett(uint131_t a, uint131_t b)
 {
-  uint64_t ab[5];
+  //uint64_t ab[5];
+  uint262_t ab;
   uint64_t abr[8] = {0};
 
   uint131_t p;
@@ -44,57 +45,59 @@ template<int CURVE> __device__ uint131_t barrett(uint131_t a, uint131_t b)
     r = _p79_r;
   }
 
-  mul_full(a.v, b.v, ab); 
+  //mul_full(a.v, b.v, ab); 
+  ab = mul_131(a, b);
 
   // multiply by r
   for(int i = 0; i < 5; i++) {
     uint64_t high = 0;
     for(int j = 0; j < 3; j++) {
-      uint128_t prod = abr[i + j] + (uint128_t)ab[i] * r.v[j] + high;
+      uint128_t prod = abr[i + j] + (uint128_t)ab.v[i] * r.v[j] + high;
       high = (uint64_t)(prod >> 64);
       abr[i + j] = (uint64_t)prod;
     }
     abr[i + 3] = high;
   }
   
-
+  uint131_t abrdiv;
   // Divide by 2^262
   if(CURVE == 131) {
-    abr[0] = abr[4] >> 6 | abr[5] << 58;
-    abr[1] = abr[5] >> 6 | abr[6] << 58;
-    abr[2] = abr[6] >> 6 | abr[7] << 58;
-    abr[2] &= ((uint64_t)1 << 61) - 1;
+    abrdiv.v[0] = abr[4] >> 6 | abr[5] << 58;
+    abrdiv.v[1] = abr[5] >> 6 | abr[6] << 58;
+    abrdiv.v[2] = abr[6] >> 6 | abr[7] << 58;
+    abrdiv.v[2] &= ((uint64_t)1 << 61) - 1;
   } else if(CURVE == 79) {
-    abr[0] = abr[3] >> 30 | abr[4] << 34;
-    abr[1] = abr[4] >> 30 | abr[5] << 34;
-    abr[2] = abr[5] >> 30 | abr[6] << 34;
-    abr[2] &= ((uint64_t)1 << 61) - 1;
+    abrdiv.v[0] = abr[3] >> 30 | abr[4] << 34;
+    abrdiv.v[1] = abr[4] >> 30 | abr[5] << 34;
+    abrdiv.v[2] = abr[5] >> 30 | abr[6] << 34;
+    abrdiv.v[2] &= ((uint64_t)1 << 61) - 1;
   }
 
 
   // Multiply by p
-  uint64_t x[5];
-  mul_full(abr, p.v, x);
+  //uint64_t x[5];
+  //mul_full(abr, p.v, x);
+  uint262_t x = mul_131(abrdiv, p);
 
   // Subtract from ab
-  uint64_t diff = ab[0] - x[0];
-  x[0] = diff;
-  int borrow = diff > ab[0] ? 1 : 0;
+  uint64_t diff = ab.v[0] - x.v[0];
+  x.v[0] = diff;
+  int borrow = diff > ab.v[0] ? 1 : 0;
 
-  diff = ab[1] - x[1] - borrow;
-  x[1] = diff;
-  borrow = diff > ab[1] ? 1 : 0;
+  diff = ab.v[1] - x.v[1] - borrow;
+  x.v[1] = diff;
+  borrow = diff > ab.v[1] ? 1 : 0;
 
-  diff = ab[2] - x[2] - borrow;
-  x[2] = diff;
-  borrow = diff > ab[2] ? 1 : 0;
+  diff = ab.v[2] - x.v[2] - borrow;
+  x.v[2] = diff;
+  borrow = diff > ab.v[2] ? 1 : 0;
 
   // Mod P
   bool gte = true;
   for(int i = 2; i >= 0; i--) {
-    if(x[i] > p.v[i]) {
+    if(x.v[i] > p.v[i]) {
       break;
-    } else if(x[i] < p.v[i]) {
+    } else if(x.v[i] < p.v[i]) {
       gte = false;
       break;
     }
@@ -103,21 +106,21 @@ template<int CURVE> __device__ uint131_t barrett(uint131_t a, uint131_t b)
   if(gte) {
     int borrow = 0;
 
-    uint64_t diff = x[0] - p.v[0];
-    borrow = diff > x[0] ? 1 : 0;
-    x[0] = diff;
+    uint64_t diff = x.v[0] - p.v[0];
+    borrow = diff > x.v[0] ? 1 : 0;
+    x.v[0] = diff;
     
-    diff = x[1] - p.v[1] - borrow;
-    borrow = diff > x[1] ? 1 : 0;
-    x[1] = diff;
+    diff = x.v[1] - p.v[1] - borrow;
+    borrow = diff > x.v[1] ? 1 : 0;
+    x.v[1] = diff;
     
-    diff = x[2] - p.v[2] - borrow;
-    x[2] = diff;
+    diff = x.v[2] - p.v[2] - borrow;
+    x.v[2] = diff;
   }
 
   uint131_t z;
   for(int i = 0; i < 3; i++) {
-    z.v[i] = x[i];
+    z.v[i] = x.v[i];
   }
 
   return z;

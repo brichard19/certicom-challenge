@@ -6,38 +6,91 @@ typedef unsigned __int128 uint128_t;
 #include "p131.cuh"
 #include "p79.cuh"
 
+__device__ uint131_t sub_raw(const uint131_t& x, const uint131_t& y)
+{
+  uint131_t z;
+  int borrow = 0;
+
+  uint128_t diff = (uint128_t)x.w.v0 - y.w.v0 - borrow;
+  z.w.v0 = (uint64_t)diff;
+  borrow = (int)(diff >> 64) & 1;
+  
+  diff = (uint128_t)x.w.v1 - y.w.v1 - borrow;
+  z.w.v1 = (uint64_t)diff;
+  borrow = (int)(diff >> 64) & 1;
+
+  z.w.v2 = x.w.v2 - y.w.v2 - borrow;
+
+  // Sign extend
+  z.w.padding = z.w.v2 & 0x80000000 ? -1 : 0;
+
+  return z;
+}
+
+__device__ uint131_t add_raw(const uint131_t& x, const uint131_t& y, int carry_in = 0)
+{
+
+  uint131_t z;
+  int carry = carry_in;
+  
+  uint128_t sum = (uint128_t)x.w.v0 + y.w.v0 + carry;
+  z.w.v0 = (uint64_t)sum;
+  carry = (uint64_t)(sum >> 64);
+  
+  sum = (uint128_t)x.w.v1 + y.w.v1 + carry;
+  z.w.v1 = (uint64_t)sum;
+  carry = (uint64_t)(sum >> 64);
+ 
+  z.w.v2 = x.w.v2 + y.w.v2 + carry;
+
+  // Padding
+  z.w.padding = 0;
+
+  return z;
+}
+
+// if x is less than y
+__device__ int is_less_than(uint131_t& x, uint131_t& y)
+{
+  uint131_t diff = sub_raw(x, y);
+
+  return (diff.w.v2 >> 31) & 1;
+}
+
 __device__ uint131_t sub_p131(uint131_t x, uint131_t y)
 {
   uint131_t z;
 
   int borrow = 0;
   
-  uint64_t diff = x.v[0] - y.v[0];
-  z.v[0] = diff;
-  borrow = diff > x.v[0] ? 1 : 0;
+  uint64_t diff = x.w.v0 - y.w.v0;
+  z.w.v0 = diff;
+  borrow = diff > x.w.v0 ? 1 : 0;
   
-  diff = x.v[1] - y.v[1] - borrow;
-  z.v[1] = diff;
-  borrow = diff > x.v[1] ? 1 : 0;
+  diff = x.w.v1 - y.w.v1 - borrow;
+  z.w.v1 = diff;
+  borrow = diff > x.w.v1 ? 1 : 0;
  
   // High word is only 3 bits
-  diff = x.v[2] - y.v[2] - borrow;
-  z.v[2] = diff;
+  diff = x.w.v2 - y.w.v2 - borrow;
+  z.w.v2 = diff;
   borrow = diff & 0x08;
 
   // Went below zero. Need to add P.
   if(borrow) {
     int carry = 0; 
-    uint64_t sum = z.v[0] + _p131_p.v[0];
-    z.v[0] = sum;
-    carry = sum < _p131_p.v[0] ? 1 : 0;
+    uint64_t sum = z.w.v0 + _p131_p.w.v0;
+    z.w.v0 = sum;
+    carry = sum < _p131_p.w.v0 ? 1 : 0;
     
-    sum = z.v[1] + _p131_p.v[1] + carry;
-    z.v[1] = sum;
-    carry = sum < _p131_p.v[1] ? 1 : 0;
+    sum = z.w.v1 + _p131_p.w.v1 + carry;
+    z.w.v1 = sum;
+    carry = sum < _p131_p.w.v1 ? 1 : 0;
     
-    z.v[2] = z.v[2] + _p131_p.v[2] + carry;
+    z.w.v2 = z.w.v2 + _p131_p.w.v2 + carry;
   }
+
+  z.w.padding = 0;
 
   return z;
 }
@@ -48,24 +101,24 @@ __device__ uint131_t sub_p79(uint131_t x, uint131_t y)
 
   int borrow = 0;
   
-  uint64_t diff = x.v[0] - y.v[0];
-  z.v[0] = diff;
-  borrow = diff > x.v[0] ? 1 : 0;
+  uint64_t diff = x.w.v0 - y.w.v0;
+  z.w.v0 = diff;
+  borrow = diff > x.w.v0 ? 1 : 0;
  
   // High word is only 15 bits
-  diff = x.v[1] - y.v[1] - borrow;
-  z.v[1] = diff;
+  diff = x.w.v1 - y.w.v1 - borrow;
+  z.w.v1 = diff;
   borrow = diff & 0x8000;
  
   // Went below zero. Need to add P.
   if(borrow) {
     int carry = 0; 
-    uint64_t sum = z.v[0] + _p79_p.v[0];
-    z.v[0] = sum;
-    carry = sum < _p79_p.v[0] ? 1 : 0;
+    uint64_t sum = z.w.v0 + _p79_p.w.v0;
+    z.w.v0 = sum;
+    carry = sum < _p79_p.w.v0 ? 1 : 0;
     
-    sum = z.v[1] + _p79_p.v[1] + carry;
-    z.v[1] = sum;
+    sum = z.w.v1 + _p79_p.w.v1 + carry;
+    z.w.v1 = sum;
   }
 
   return z;
@@ -80,78 +133,25 @@ template<int CURVE> __device__ uint131_t sub(uint131_t x, uint131_t y)
   }
 }
 
-
 __device__ uint131_t add_p131(const uint131_t& x, const uint131_t& y)
 {
-  uint131_t z = {{0}};
-
-  uint64_t carry = 0;
-
-  for(int i = 0; i < 3; i++) {
-    uint128_t sum = (uint128_t)x.v[i] + y.v[i] + carry;
-
-    z.v[i] = (uint64_t)sum;
-    carry = (uint64_t)(sum >> 64);
-  }
+  uint131_t z = add_raw(x, y);
 
   // Reduce mod P
-  bool gte = true;
-  for(int i = 2; i >= 0; i--) {
-    if(z.v[i] > _p131_p.v[i]) {
-      break;
-    } else if(z.v[i] < _p131_p.v[i]) {
-      gte = false;
-      break;
-    }
+  if(is_less_than(_p131_p, z)) {
+    z = sub_raw(z, _p131_p);
   }
-
-  // Subtract P
-  if(gte) {
-    uint64_t borrow = 0;
-    for(int i = 0; i < 3; i++) {
-      uint128_t diff = (uint128_t)z.v[i] - _p131_p.v[i] - borrow;
-      borrow = (uint64_t)(diff >> 64) & 1;
-      z.v[i] = (uint64_t)diff;
-    }
-  }
-
   return z;
 }
 
 __device__ uint131_t add_p79(const uint131_t& x, const uint131_t& y)
 {
-  uint131_t z = {{0}};
-
-  uint64_t carry = 0;
-
-  for(int i = 0; i < 3; i++) {
-    uint128_t sum = (uint128_t)x.v[i] + y.v[i] + carry;
-
-    z.v[i] = (uint64_t)sum;
-    carry = (uint64_t)(sum >> 64);
-  }
+  uint131_t z = add_raw(x, y);
 
   // Reduce mod P
-  bool gte = true;
-  for(int i = 2; i >= 0; i--) {
-    if(z.v[i] > _p79_p.v[i]) {
-      break;
-    } else if(z.v[i] < _p79_p.v[i]) {
-      gte = false;
-      break;
-    }
+  if(is_less_than(_p79_p, z)) {
+    z = sub_raw(z, _p79_p);
   }
-
-  // Subtract P
-  if(gte) {
-    uint64_t borrow = 0;
-    for(int i = 0; i < 3; i++) {
-      uint128_t diff = (uint128_t)z.v[i] - _p79_p.v[i] - borrow;
-      borrow = (uint64_t)(diff >> 64) & 1;
-      z.v[i] = (uint64_t)diff;
-    }
-  }
-
   return z;
 }
 
@@ -165,236 +165,256 @@ template<int CURVE> __device__ uint131_t add(const uint131_t& x, const uint131_t
 }
 
 
-// 160 x 160 -> 320 multiplication
-__device__ void mul_full(const uint64_t* a, const uint64_t* b, uint64_t* product)
+
+
+// 131 x 131 -> 262 multiplication
+__device__ uint262_t mul_131(const uint131_t& a, const uint131_t& b)
 {
+  uint262_t tmp;
   uint64_t high = 0;
 
   // a0 * b0
-  uint128_t t = (uint128_t)a[0] * b[0] + 0;
-  product[0] = (uint64_t)t;
+  uint128_t t = (uint128_t)a.w.v0 * b.w.v0;
+  tmp.v[0] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a0 * b1 
-  t = (uint128_t)a[0] * b[1] + 0 + high;
-  product[1] = (uint64_t)t;
+  t = (uint128_t)a.w.v0 * b.w.v1 + high;
+  tmp.v[1] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a0 * b2
-  t = (uint128_t)a[0] * b[2] + 0 + high;
-  product[2] = (uint64_t)t;
+  t = (uint128_t)a.w.v0 * b.w.v2 + high;
+  tmp.v[2] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
-  product[3] = high;
+  tmp.v[3] = high;
 
   // a1 * b0
-  t = (uint128_t)a[1] * b[0] + product[1];
-  product[1] = (uint64_t)t;
+  t = (uint128_t)a.w.v1 * b.w.v0 + tmp.v[1];
+  tmp.v[1] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a1 * b1 
-  t = (uint128_t)a[1] * b[1] + product[2] + high;
-  product[2] = (uint64_t)t;
+  t = (uint128_t)a.w.v1 * b.w.v1 + tmp.v[2] + high;
+  tmp.v[2] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a1 * b2
-  t = (uint128_t)a[1] * b[2] + product[3] + high;
-  product[3] = (uint64_t)t;
+  t = (uint128_t)a.w.v1 * b.w.v2 + tmp.v[3] + high;
+  tmp.v[3] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
-  product[4] = high;
+  tmp.v[4] = high;
 
   // a2 * b0
-  t = (uint128_t)a[2] * b[0] + product[2];
-  product[2] = (uint64_t)t;
+  t = (uint128_t)a.w.v2* b.w.v0 + tmp.v[2];
+  tmp.v[2] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a2 * b1 
-  t = (uint128_t)a[2] * b[1] + product[3] + high;
-  product[3] = (uint64_t)t;
+  t = (uint128_t)a.w.v2 * b.w.v1 + tmp.v[3] + high;
+  tmp.v[3] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a2 * b2
   // The final word is only at most 6 bits, so no 128-bit mul needed
-  uint64_t t64 = a[2] * b[2] + product[4] + high;
-  product[4] = t64;
+  uint64_t t64 = a.w.v2 * b.w.v2 + tmp.v[4] + high;
+  tmp.v[4] = t64;
+
+  return tmp;
 }
 
-// 160 x 160 -> 320 squaring
-__device__ void square_full(const uint64_t* a, uint64_t* product)
+
+
+// 131 x 131 -> 262 multiplication
+__device__ uint262_t square_131(const uint131_t& a)
 {
-  //uint64_t tmp[5] = {0};
+  uint262_t tmp;
   uint64_t high = 0;
 
   // a0 * a0
-  uint128_t t = (uint128_t)a[0] * a[0] + 0;
-  product[0] = (uint64_t)t;
+  uint128_t t = (uint128_t)a.w.v0 * a.w.v0;
+  tmp.v[0] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a0 * a1 
-  t = (uint128_t)a[0] * a[1] + 0 + high;
-  product[1] = (uint64_t)t;
+  t = (uint128_t)a.w.v0 * a.w.v1 + high;
+  tmp.v[1] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a0 * a2
-  t = (uint128_t)a[0] * a[2] + 0 + high;
-  product[2] = (uint64_t)t;
+  t = (uint128_t)a.w.v0 * a.w.v2 + high;
+  tmp.v[2] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
-  product[3] = high;
+  tmp.v[3] = high;
 
   // a1 * a0
-  t = (uint128_t)a[1] * a[0] + product[1];
-  product[1] = (uint64_t)t;
+  t = (uint128_t)a.w.v1 * a.w.v0 + tmp.v[1];
+  tmp.v[1] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a1 * a1 
-  t = (uint128_t)a[1] * a[1] + product[2] + high;
-  product[2] = (uint64_t)t;
+  t = (uint128_t)a.w.v1 * a.w.v1 + tmp.v[2] + high;
+  tmp.v[2] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a1 * a2
-  t = (uint128_t)a[1] * a[2] + product[3] + high;
-  product[3] = (uint64_t)t;
+  t = (uint128_t)a.w.v1 * a.w.v2 + tmp.v[3] + high;
+  tmp.v[3] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
-  product[4] = high;
+  tmp.v[4] = high;
 
   // a2 * a0
-  t = (uint128_t)a[2] * a[0] + product[2];
-  product[2] = (uint64_t)t;
+  t = (uint128_t)a.w.v2 * a.w.v0 + tmp.v[2];
+  tmp.v[2] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a2 * a1 
-  t = (uint128_t)a[2] * a[1] + product[3] + high;
-  product[3] = (uint64_t)t;
+  t = (uint128_t)a.w.v2 * a.w.v1 + tmp.v[3] + high;
+  tmp.v[3] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a2 * a2
   // The final word is only at most 6 bits, so no 128-bit mul needed
-  uint64_t t64 = a[2] * a[2] + product[4] + high;
-  product[4] = t64;
+  uint64_t t64 = a.w.v2 * a.w.v2 + tmp.v[4] + high;
+  tmp.v[4] = t64;
 
+  return tmp;
 }
 
-__device__ void mont_mulDivR(const uint64_t* a, const uint64_t* b, uint64_t* product)
+
+
+// One in put is 131 bits, the other is 160 bits
+// Output is 131 bits
+__device__ uint131_t mul_shift_160(const uint160_t& a, const uint131_t& b)
 {
-  uint64_t tmp[5] = {0};
+  uint64_t tmp[5];
   uint64_t high = 0;
 
   // a0 * b0
-  uint128_t t = (uint128_t)a[0] * b[0] + tmp[0];
-  //tmp[0] = (uint64_t)t;
+  uint128_t t = (uint128_t)a.w.v0 * b.w.v0;
   high = (uint64_t)(t >> 64);
 
   // a0 * b1 
-  t = (uint128_t)a[0] * b[1] + tmp[1] + high;
+  t = (uint128_t)a.w.v0 * b.w.v1 + high;
   tmp[1] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a0 * b2
-  t = (uint128_t)a[0] * b[2] + tmp[2] + high;
+  t = (uint128_t)a.w.v0 * b.w.v2 + high;
   tmp[2] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   tmp[3] = high;
 
   // a1 * b0
-  t = (uint128_t)a[1] * b[0] + tmp[1];
+  t = (uint128_t)a.w.v1 * b.w.v0 + tmp[1];
   tmp[1] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
-
+  
   // a1 * b1 
-  t = (uint128_t)a[1] * b[1] + tmp[2] + high;
+  t = (uint128_t)a.w.v1 * b.w.v1 + tmp[2] + high;
   tmp[2] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
-
+  
   // a1 * b2
-  t = (uint128_t)a[1] * b[2] + tmp[3] + high;
+  t = (uint128_t)a.w.v1 * b.w.v2 + tmp[3] + high;
   tmp[3] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
-
+  
   tmp[4] = high;
-
+  
   // a2 * b0
-  t = (uint128_t)a[2] * b[0] + tmp[2];
+  t = (uint128_t)a.w.v2 * b.w.v0 + tmp[2];
   tmp[2] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
-
+  
   // a2 * b1 
-  t = (uint128_t)a[2] * b[1] + tmp[3] + high;
+  t = (uint128_t)a.w.v2 * b.w.v1 + tmp[3] + high;
   tmp[3] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
-
+  
   // a2 * b2
-  // The final word is only at most 6 bits, so no 128-bit mul needed
-  uint64_t t64 = a[2] * b[2] + tmp[4] + high;
+  // The final word is only at most 35 bits, so no 128-bit mul needed
+  uint64_t t64 = (uint64_t)a.w.v2 * b.w.v2 + tmp[4] + high;
   tmp[4] = t64;
 
-  product[0] = (tmp[2] >> 32) | ((tmp[3] & 0xffffffff) << 32);
-  product[1] = (tmp[3] >> 32) | ((tmp[4] & 0xffffffff) << 32);
-  product[2] = (tmp[4] >> 32);
+  uint131_t product;
+  // Divide by 2^160
+  product.w.v0 = (tmp[2] >> 32) | ((tmp[3] & 0xffffffff) << 32);
+  product.w.v1 = (tmp[3] >> 32) | ((tmp[4] & 0xffffffff) << 32);
+  product.w.v2 = (tmp[4] >> 32);
 
+  return product;
 }
 
-__device__ void mont_mulModR(const uint64_t* a, const uint64_t* b, uint64_t* product)
+
+
+__device__ uint160_t mul_mod_160(const uint160_t& a, const uint131_t& b)
 {
+  uint160_t tmp;
   uint64_t high = 0;
 
   // a0 * b0
-  uint128_t t = (uint128_t)a[0] * b[0] + 0;
-  product[0] = (uint64_t)t;
+  uint128_t t = (uint128_t)a.w.v0 * b.w.v0;
+  tmp.w.v0 = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a0 * b1 
-  t = (uint128_t)a[0] * b[1] + 0 + high;
-  product[1] = (uint64_t)t;
+  t = (uint128_t)a.w.v0 * b.w.v1 + high;
+  tmp.w.v1 = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a0 * b2
-  t = (uint128_t)a[0] * b[2] + 0 + high;
-  product[2] = (uint64_t)t;
+  t = (uint128_t)a.w.v0 * b.w.v2 + high;
+  tmp.w.v2 = (uint32_t)t;
 
   // a1 * b0
-  t = (uint128_t)a[1] * b[0] + product[1];
-  product[1] = (uint64_t)t;
+  t = (uint128_t)a.w.v1 * b.w.v0 + tmp.w.v1;
+  tmp.w.v1 = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a0 * b1 
-  t = (uint128_t)a[1] * b[1] + product[2] + high;
-  product[2] = (uint64_t)t;
+  t = (uint128_t)a.w.v1 * b.w.v1 + tmp.w.v2 + high;
+  tmp.w.v2 = (uint32_t)t;
 
   // a2 * b0
-  t = (uint128_t)a[2] * b[0] + product[2];
-  product[2] = (uint64_t)t;
+  t = (uint128_t)a.w.v2 * b.w.v0 + tmp.w.v2;
+  tmp.w.v2 = (uint64_t)t;
 
+  tmp.w.v2 &= 0xffffffff;
 
-  // Mod 2^160
-  product[2] &= 0xffffffff;
+  return tmp;
+
 }
 
-template<int CURVE> __device__ void mont_reduce(const uint64_t* t, uint64_t* y)
+
+template<int CURVE> __device__ uint131_t mont_reduce(const uint262_t& t)
 {
   // m1 = t_lo * k mod R
   // m2 = m1 * p / r
   // m3 = m2 + t_hi + 1
 
-  // low 160 bits since we need to mod 2^160
-  uint64_t t_lo[3];
-  for(int i = 0; i < 3; i++) {
-    t_lo[i] = t[i];
-  }
-  t_lo[2] &= 0xffffffff;
+  uint160_t t_lo; 
+  t_lo.w.v0 = t.v[0];
+  t_lo.w.v1 = t.v[1];
+  t_lo.w.v2 = (uint32_t)t.v[2];
+  t_lo.w.padding = 0;
 
   // Remaining high bits (102 bits)
-  uint64_t t_hi[3];
-  t_hi[0] = (t[2] >> 32) | ((t[3] & 0xffffffff) << 32);
-  t_hi[1] = (t[3] >> 32) | ((t[4] & 0xffffffff) << 32);
-  t_hi[2] = 0;
-  
-  uint64_t m1[3];
-  uint64_t m2[3];
-  uint64_t m3[3];
+  uint131_t t_hi;
+
+  t_hi.w.v0 = (t.v[2] >> 32) | ((t.v[3] & 0xffffffff) << 32);
+  t_hi.w.v1 = (t.v[3] >> 32) | ((t.v[4] & 0xffffffff) << 32);
+  t_hi.w.v2 = 0;
+  t_hi.w.padding = 0;
+
+  uint160_t m1;
+  uint131_t m2;
+  uint131_t m3;
 
   uint131_t p;
   uint131_t k;
@@ -405,77 +425,35 @@ template<int CURVE> __device__ void mont_reduce(const uint64_t* t, uint64_t* y)
     p = _p79_p;
     k = _p79_k;
   } 
-  
-  mont_mulModR(t_lo, k.v, m1);
-  mont_mulDivR(m1, p.v, m2);
-  
-  //mont_mulDivR(m1, _p.v, m2);
+
+  m1 = mul_mod_160(t_lo, k);
+
+  m2 = mul_shift_160(m1, p);
  
-  int carry = 1;
-  uint64_t sum = t_hi[0] + m2[0] + carry;
-  m3[0] = sum;
-  carry = sum < t_hi[0] ? 1 : 0;
-  
-  sum = t_hi[1] + m2[1] + carry;
-  m3[1] = sum;
-  carry = sum < t_hi[1] ? 1 : 0;
+  // Not sure if this is correct, but carry always seems to be 1.
+  m3 = add_raw(t_hi, m2, 1);
 
-  sum = t_hi[2] + m2[2] + carry;
-  m3[2] = sum;
-
-  bool gte = true;
-
-  for(int i = 2; i >= 0; i--) {
-    if(m3[i] > p.v[i]) {
-      break;
-    } else if(m3[i] < p.v[i]) {
-      gte = false;
-      break;
-    }
+  if(is_less_than(p, m3)) {
+    m3 = sub_raw(m3, p);
   }
+  return m3;
 
-  // Subtract P
-  if(gte) {
-    int borrow = 0;
-
-    uint64_t diff = m3[0] - p.v[0];
-    borrow = diff > m3[0] ? 1 : 0;
-    m3[0] = diff;
-    
-    diff = m3[1] - p.v[1] - borrow;
-    borrow = diff > m3[1] ? 1 : 0;
-    m3[1] = diff;
-    
-    diff = m3[2] - p.v[2] - borrow;
-    m3[2] = diff;
-  }
-
-  for(int i = 0; i < 3; i++) {
-    y[i] = m3[i];
-  }
 }
 
 
 
-// Montgomery multiplication
-template<int CURVE> __device__ uint131_t mul(const uint131_t x, const uint131_t y)
+template<int CURVE> __device__ uint131_t mul(uint131_t x, uint131_t y)
 {
-  uint64_t product[5];
-  uint131_t z;
-  mul_full(x.v, y.v, product);
-  mont_reduce<CURVE>(product, z.v);
-
-  return z;
+  uint262_t product = mul_131(x, y);
+  return mont_reduce<CURVE>(product);
 }
 
-template<int CURVE> __device__ uint131_t square(const uint131_t& x)
-{
-  uint64_t product[5];
-  uint131_t z;
-  square_full(x.v, product);
-  mont_reduce<CURVE>(product, z.v);
 
-  return z;
+
+template<int CURVE> __device__ uint131_t square(uint131_t x)
+{
+  uint262_t product = square_131(x);
+  return mont_reduce<CURVE>(product);
 }
 
 template<int CURVE> __device__ uint131_t square(uint131_t x, int n)
@@ -489,13 +467,7 @@ template<int CURVE> __device__ uint131_t square(uint131_t x, int n)
 
 __device__ bool equal(const uint131_t& x, const uint131_t& y)
 {
-  for(int i = 0; i < 3; i++) {
-    if(x.v[i] != y.v[i]) {
-      return false;
-    }
-  }
-
-  return true;
+  return x.w.v0 == y.w.v0 && x.w.v1 == y.w.v1 && x.w.v2 == y.w.v2;
 }
 
 // Modular inverse using Fermat's method
