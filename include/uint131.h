@@ -6,7 +6,6 @@
 #include <string>
 
 union uint131_t {
-  uint64_t v[3];
   struct {
     uint64_t v0;
     uint64_t v1;
@@ -16,7 +15,6 @@ union uint131_t {
 };
 
 union uint160_t {
-  uint64_t v[3];
   struct {
     uint64_t v0;
     uint64_t v1;

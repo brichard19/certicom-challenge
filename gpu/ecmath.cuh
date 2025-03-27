@@ -594,12 +594,12 @@ template<int CURVE> __device__ uint131_t inv(uint131_t x)
 // Check for point-at-infinity using the x coordinate
 __device__ bool is_infinity(uint131_t x)
 {
-  return x.v[2] == (uint64_t)-1;
+  return x.w.v2== (uint32_t)-1;
 }
 
 __device__ void set_point_at_infinity(uint131_t& x)
 {
-  x.v[2] = (uint64_t)-1;
+  x.w.v2 = (uint32_t)-1;
 }
 
 template<int CURVE> __device__ bool point_exists(uint131_t& x, uint131_t& y)

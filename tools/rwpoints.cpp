@@ -73,7 +73,7 @@ void print_multiples(ecc::ecpoint_t g, std::string name)
   std::cout << fmt::format("__device__ uint131_t _{}x[{}] = {{", name.c_str(), bits) << std::endl;
   
   for(int i = 0; i < bits; i++) {
-    std::cout << fmt::format("{{0x{:016x},0x{:016x},0x{:02x}}},", points[i].x.v[0], points[i].x.v[1], points[i].x.v[2]) << std::endl;
+    std::cout << fmt::format("{{0x{:08x},0x{:016x},0x{:02x}}},", points[i].x.w.v0, points[i].x.w.v1, points[i].x.w.v2) << std::endl;
   }
 
   std::cout << "};" << std::endl << std::endl;
@@ -81,7 +81,7 @@ void print_multiples(ecc::ecpoint_t g, std::string name)
   // Print y
   std::cout << fmt::format("__device__ uint131_t _{}y[{}] = {{", name.c_str(), bits) << std::endl;
   for(int i = 0; i < bits; i++) {
-    std::cout << fmt::format("{{0x{:016x},0x{:016x},0x{:02x}}},", points[i].y.v[0], points[i].y.v[1], points[i].y.v[2]) << std::endl;
+    std::cout << fmt::format("{{0x{:08x},0x{:016x},0x{:02x}}},", points[i].y.w.v0, points[i].y.w.v1, points[i].y.w.v2) << std::endl;
   }
 
   std::cout << "};" << std::endl << std::endl;

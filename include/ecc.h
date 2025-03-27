@@ -17,7 +17,7 @@ struct ecpoint_t {
   ecpoint_t()
   {
     this->x = make_uint131((uint32_t)0);
-    this->x.v[2] = (uint64_t)-1;
+    this->x.w.v2 = (uint32_t)-1;
     this->y = make_uint131((uint32_t)0);
   }
 

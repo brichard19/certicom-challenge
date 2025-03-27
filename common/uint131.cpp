@@ -58,7 +58,7 @@ uint131_t make_uint131(uint32_t x)
   uint131_t val;
   memset(&val, 0, sizeof(val));
 
-  val.v[0] = x;
+  val.w.v0 = x;
 
   return val;
 }
@@ -73,22 +73,22 @@ uint131_t make_uint131(const std::string& hex)
 
   std::vector<uint64_t> words = parse_hex_uint64(hex);
 
-  for(int i = 0; i < words.size(); i++) {
-    val.v[i] = words[words.size() - 1 - i];
+  if(words.size() >= 1) {
+    val.w.v0 = words[words.size() - 1];
+  }  
+  if(words.size() >= 2) {
+    val.w.v1 = words[words.size() - 2];
   }
-  
+  if(words.size() >= 3) {
+    val.w.v2 = (uint32_t)words[words.size() - 3];
+  }
+
   return val;
 }
 
 bool operator==(const uint131_t& a, const uint131_t& b)
 {
-  for(int i = 0; i < 3; i++) {
-    if(a.v[i] != b.v[i]) {
-      return false;
-    }
-  }
-
-  return true;
+  return a.w.v0 == b.w.v0 && a.w.v1 == b.w.v1 && a.w.v2 == b.w.v2;
 }
 
 bool operator!=(const uint131_t& a, const uint131_t& b)
@@ -98,14 +98,14 @@ bool operator!=(const uint131_t& a, const uint131_t& b)
 
 bool is_odd(const uint131_t& x)
 {
-  return x.v[0] & 0x01;
+  return x.w.v0 & 0x01;
 }
 
 std::string to_str(const uint131_t& x)
 {
   char buf[256] = "";
 
-  sprintf(buf, "%.1lX%.16lX%.16lX", x.v[2], x.v[1], x.v[0]);
+  sprintf(buf, "%.1X%.16lX%.16lX", x.w.v2, x.w.v1, x.w.v0);
 
   return std::string(buf);
 }

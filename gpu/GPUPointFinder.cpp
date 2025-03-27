@@ -186,8 +186,8 @@ void GPUPointFinder::report_points()
       // Do a quick verification
       assert(ecc::exists(p));
 
-      assert((p.x.v[0] & _dpmask) == 0);
-
+      assert((p.x.w.v0 & _dpmask) == 0);
+ 
       dps.push_back(DistinguishedPoint(a, p, length));
     }
 
@@ -215,7 +215,7 @@ void GPUPointFinder::refill_staging()
       p.a = ecc::genkey();
 
       point = ecc::mul(p.a, ecc::g());
-    } while((point.x.v[0] & _dpmask) == 0);
+    } while((point.x.w.v0 & _dpmask) == 0);
 
     assert(ecc::exists(point));
     

@@ -7,7 +7,13 @@
 
 namespace {
 
-class IntRNG {
+class RNG {
+
+public:
+  virtual uint64_t next() = 0;
+};
+
+class IntRNG : public RNG {
 
 private:
   std::random_device _rd;
@@ -20,7 +26,7 @@ public:
     _gen = std::mt19937(_rd());
   }
 
-  uint64_t next()
+  virtual uint64_t next()
   {
     return _d(_gen);
   }
@@ -30,7 +36,7 @@ public:
 IntRNG _rng;
 
 
-class DeterministicRNG{
+class DeterministicRNG : public RNG {
 
 private:
     uint64_t _state;
@@ -41,7 +47,7 @@ public:
         _state = seed;
     }
 
-    uint64_t next()
+    virtual uint64_t next()
     {
         _state = _state * 6364136223846793005 + 1442695040888963407;
 
@@ -60,8 +66,7 @@ ecpoint_t make_infinity()
 
   memset(&p, 0, sizeof(p));
 
-  p.x.v[2] = (uint64_t)-1;
-
+  p.x.w.v2 = (uint32_t)-1;
   return p;
 }
 
@@ -163,7 +168,7 @@ ecpoint_t add(const ecpoint_t& p, const ecpoint_t& q)
   return ecc::ecpoint_t(x, y);
 }
 
-uint131_t genkey()
+uint131_t genkey(RNG& rng)
 {
   uint131_t r;
 
@@ -172,26 +177,29 @@ uint131_t genkey()
   memset(&r, 0, sizeof(r));
 
   do {
-    for(int i = 0; i < _words; i++) {
-      r.v[i] = _rng.next();
+    r.w.v0 = rng.next();
+    r.w.v1 = rng.next();
+    r.w.v2 = (uint32_t)rng.next();
+
+    // mod p
+    if(_p.w.v2 == 0) {
+      r.w.v2 = 0;
+      r.w.v1 %= (_p.w.v1 + 1);
+
+      gte = r.w.v0 >= _p.w.v0;
+    } else {
+      r.w.v2 %= (_p.w.v2 + 1);
+      gte = r.w.v1 >= _p.w.v1;
     }
 
-    // Limit most-significant word
-    r.v[_words - 1] = r.v[_words - 1] % (_n.v[_words - 1] + 1);
-
-    // Check if less than P
-    for(int i = _words - 1; i >= 0; i--) {
-      if(r.v[i] < _n.v[i]) {
-        gte = false;
-        break;
-      } else if(r.v[i] > _n.v[i]) {
-        gte = true;
-        break;
-      }
-    }
   }while (gte);
 
   return r;
+}
+
+uint131_t genkey()
+{
+  return genkey(_rng);
 }
 
 // Use this when you need to generate keys in a deterministic way i.e. the same seed will
@@ -204,29 +212,7 @@ std::vector<uint131_t> genkeys(int count, int seed)
 
   for(int k = 0; k < count; k++) {
     uint131_t r;
-    memset(&r, 0, sizeof(r));
-
-    bool gte = true;
-
-    do {
-      for(int i = 0; i < _words; i++) {
-        r.v[i] = rng.next();
-      }
-
-      // Limit most-significant word
-      r.v[_words - 1] = r.v[_words - 1] % (_n.v[_words - 1] + 1);
-
-      // Check if less than P
-      for(int i = _words - 1; i >= 0; i--) {
-        if(r.v[i] < _n.v[i]) {
-          gte = false;
-          break;
-        } else if(r.v[i] > _n.v[i]) {
-          gte = true;
-          break;
-        }
-      }
-    }while (gte);
+    r = genkey(rng);
 
     keys.push_back(r);
   }
@@ -241,29 +227,38 @@ ecpoint_t mul(const uint131_t& k, const ecpoint_t& p)
 
   ecc::ecpoint_t adder = p;
 
+  // v0
   uint64_t mask = 0x01;
-  for(int i = 0; i < 2; i++) {
-
-    mask = 0x01;
-    for(int bit = 0; bit < 64; bit++) {
-      if(k.v[i] & mask) {
+  for(int i = 0; i < 64; i++) {
+      if(k.w.v0 & mask) {
         sum = ecc::add(sum, adder);
       }
 
       mask <<= 1;
       adder = ecc::dbl(adder);
-    }
   }
 
+  // v1
   mask = 0x01;
-  for(int bit = 0; bit < 3; bit++) {
-    if(k.v[2] & mask ) {
-      sum = ecc::add(sum, adder);
-    }
+  for(int i = 0; i < 64; i++) {
+      if(k.w.v1 & mask) {
+        sum = ecc::add(sum, adder);
+      }
 
-    mask <<= 1;
-    adder = ecc::dbl(adder);
-  }
+      mask <<= 1;
+      adder = ecc::dbl(adder);
+  } 
+
+  // v2
+  uint32_t mask32 = 0x01;
+  for(int i = 0; i < 32; i++) {
+      if(k.w.v2 & mask32) {
+        sum = ecc::add(sum, adder);
+      }
+
+      mask32 <<= 1;
+      adder = ecc::dbl(adder);
+  } 
 
   return sum;
 }

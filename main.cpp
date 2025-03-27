@@ -94,7 +94,7 @@ void dp_callback(const std::vector<DistinguishedPoint>& dps)
   // Validate they are correct
   for(auto dp : dps) {
     assert(ecc::exists(dp.p));
-    assert((dp.p.x.v[0] & dpmask) == 0);
+    assert((dp.p.x.w.v0 & dpmask) == 0);
   }
 
   if(_use_mpi == false) {
@@ -120,7 +120,7 @@ std::vector<uint8_t> encode_dp(const DistinguishedPoint& dp)
   // x-coordinate: 17 bytes
   // TODO: Compress further by removing the "distinguished bits", which
   // are all 0's. 
-  memcpy(ptr, dp.p.x.v, 17);
+  memcpy(ptr, &dp.p.x, 17);
   ptr += 17;
  
   // Append sign bit to x coordinate. The x coordinate is 131 bits,
@@ -130,7 +130,7 @@ std::vector<uint8_t> encode_dp(const DistinguishedPoint& dp)
   ptr++;
  
   // a-exponent, 17 bytes
-  memcpy(ptr, dp.a.v, 17);
+  memcpy(ptr, &dp.a, 17);
   ptr += 17;
 
   // Walk length, 8 bytes

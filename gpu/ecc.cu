@@ -7,13 +7,19 @@
 
 __device__ void print_big_int(uint131_t& x)
 {
-  printf("%.16lX%.16lX%.16lX", x.v[2], x.v[1], x.v[0]);
+  printf("%.8X%.16lX%.16lX", x.w.v2, x.w.v1, x.w.v0);
 }
 
 
 __device__ int get_bit(uint131_t x, int bit)
 {
-  return (int)(x.v[bit / 64] >> (bit % 64)) & 1;
+  if(bit >= 128) {
+    return (x.w.v2 >> (bit & 0x7f)) & 1;
+  } else if(bit >= 64) {
+    return (x.w.v1 >> (bit & 0x3f)) & 1;
+  } else {
+    return (x.w.v0 >> (bit & 0x1f)) & 1;
+  }
 }
 
 
@@ -48,7 +54,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
   for(; i < count; i+=dim) {
     uint131_t px = global_px[i];
 
-    if(result != NULL && (px.v[0] & dpmask) == 0) {
+    if(result != NULL && (px.w.v0 & dpmask) == 0) {
       // Record distinguished point
       int idx = atomicAdd(result_count, 1);
 
@@ -75,7 +81,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
     }
 
     // TODO: Proper mask
-    int idx = px.v[0] & rmask;
+    int idx = px.w.v0 & rmask;
 
     uint131_t rx = global_rx[idx];
 
@@ -98,7 +104,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
     uint131_t px = global_px[i];
     uint131_t py = global_py[i];
 
-    int idx = px.v[0] & rmask;
+    int idx = px.w.v0 & rmask;
 
     uint131_t rx = global_rx[idx];
     uint131_t ry = global_ry[idx]; 
