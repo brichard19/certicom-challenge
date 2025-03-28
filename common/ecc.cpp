@@ -73,8 +73,6 @@ ecpoint_t make_infinity()
 bool is_infinity(const ecpoint_t& p)
 {
   // If the high bits of x are all 1, then its a point-at-infinity
-  //return p.x.v[2] == (uint64_t)-1;
-  //return (p.x.v[2] & (uint64_t)0xffffffff) == (uint64_t)0xffffffff;
   return p.x.w.v2 == (uint32_t)-1;
 }
 
