@@ -23,13 +23,13 @@ cuda_lib:		GPUPointFinder.cpp ecc.cu
 	mkdir -p ${LIB_DIR}
 	ar rcs ${LIB_DIR}/${LIB_NAME} GPUPointFinder.o ecc_cu.o
 
-# ifeq ($(HIP_PLATFORM), nvidia)
-# 	HIP_PLATFORM=nvidia hipcc gpu_test.cu -o gpu_test-nvidia ${CFLAGS} ${ROCM_INCLUDE} ${INCLUDE} -L${LIB_DIR} ${GPU_LINKER} -L${ROCM_LIB} ${GPU_LIBS}
-# endif
+ifeq ($(HIP_PLATFORM), nvidia)
+	HIP_PLATFORM=nvidia hipcc gpu_test.cu -o gpu_test-nvidia ${CFLAGS} ${ROCM_INCLUDE} ${INCLUDE} -L${LIB_DIR} ${GPU_LINKER} -L${ROCM_LIB} ${GPU_LIBS}
+endif
 
-# ifeq ($(HIP_PLATFORM), amd)
-# 	HIP_PLATFORM=amd hipcc gpu_test.cu -o gpu_test-amd ${CFLAGS} ${ROCM_INCLUDE} ${INCLUDE} -L${LIB_DIR} ${GPU_LINKER} -L${ROCM_LIB} ${GPU_LIBS}
-# endif
+ifeq ($(HIP_PLATFORM), amd)
+	HIP_PLATFORM=amd hipcc gpu_test.cu -o gpu_test-amd ${CFLAGS} ${ROCM_INCLUDE} ${INCLUDE} -L${LIB_DIR} ${GPU_LINKER} -L${ROCM_LIB} ${GPU_LIBS}
+endif
 
 clean:
 	rm -rfv *.o gpu_test-amd gpu_test-nvidia
