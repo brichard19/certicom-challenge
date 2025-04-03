@@ -126,11 +126,14 @@ __device__ uint131_t sub_p79(uint131_t x, uint131_t y)
 
 template<int CURVE> __device__ uint131_t sub(uint131_t x, uint131_t y)
 {
+  uint131_t r;
   if(CURVE == 131) {
-    return sub_p131(x, y);
+    r = sub_p131(x, y);
   } else if(CURVE == 79) {
-    return sub_p79(x, y);
+    r = sub_p79(x, y);
   }
+
+  return r;
 }
 
 __device__ uint131_t add_p131(const uint131_t& x, const uint131_t& y)
@@ -157,11 +160,14 @@ __device__ uint131_t add_p79(const uint131_t& x, const uint131_t& y)
 
 template<int CURVE> __device__ uint131_t add(const uint131_t& x, const uint131_t& y)
 {
+  uint131_t r;
   if(CURVE == 131) {
-    return add_p131(x, y);
+    r = add_p131(x, y);
   } else if(CURVE == 79) {
-    return add_p79(x, y);
+    r = add_p79(x, y);
   }
+
+  return r;
 }
 
 
@@ -582,11 +588,14 @@ __device__ uint131_t inv_p79(uint131_t& x)
 
 template<int CURVE> __device__ uint131_t inv(uint131_t x)
 {
+  uint131_t r;
   if(CURVE == 131) {
-    return inv_p131(x);
+    r = inv_p131(x);
   } else if(CURVE == 79) {
-    return inv_p79(x);
+    r = inv_p79(x);
   }
+  
+  return r;
 }
 
 // ECC functons
