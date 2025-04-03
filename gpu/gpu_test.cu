@@ -21,12 +21,6 @@ __device__ void print_uint131(const uint131_t& x)
   printf("%d %.8x %.16lx %.16lx\n", gid, x.w.v2, x.w.v1, x.w.v0);
 }
 
-// 2^262 / p
-__constant__ uint131_t _p131_r = {{0xd189e497ae0c5c29, 0x0cd212c781aea937, 0xe}};
-
-// 2^158 / p
-__constant__ uint131_t _p79_r = {{0xebe9ca480764481f, 0xa5d1, 0x00}};
-
 
 template<int CURVE> __global__ void montgomery_perf_test(uint131_t* a, uint131_t* c, int n)
 {
