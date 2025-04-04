@@ -280,9 +280,10 @@ void main_loop()
   perf_timer.start();
   save_timer.start();
   size_t steps = 0;
+  double gpu_time = 0.0;
 
   while(_running) {
-    pf->step();
+    gpu_time += pf->step();
     steps++;
 
     double t = perf_timer.elapsed();
@@ -291,15 +292,15 @@ void main_loop()
     if(t >= _perf_interval) {
       size_t total = pf->work_per_step() * steps;
 
-      double perf = (double)total / t;
-      double iters = (double)steps * pf->iters_per_step() / t;
+      double perf = (double)total / gpu_time;
+      double iters = (double)steps * pf->iters_per_step() / gpu_time;
 
       perf_timer.start();
 
-      steps = 0;
-
-
       LOG("{:.2f} MKeys/sec ({:.2f} iters/sec)", perf / 1e6, iters);
+
+      steps = 0;
+      gpu_time = 0;
     }
 
     // Save data

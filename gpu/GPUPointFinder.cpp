@@ -403,12 +403,20 @@ void GPUPointFinder::allocate_buffers(int n)
 }
 
 
-void GPUPointFinder::step()
+double GPUPointFinder::step()
 {
 
   // We don't need result buf for benchmark
   DPResult* result_buf = _benchmark ? nullptr : _result_buf;
 
+  hipEvent_t start;
+  hipEvent_t stop;
+  float elapsed = 0.0f;
+
+  HIP_CALL(hipEventCreate(&start));
+  HIP_CALL(hipEventCreate(&stop));
+
+  HIP_CALL(hipEventRecord(start));
   for(int i = 0; i < _iters_per_step; i++) {
     HIP_CALL(hipLaunchKernel(_do_step_ptr, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _dev_rx, _dev_ry,
                   _mbuf, _num_points,
@@ -420,8 +428,11 @@ void GPUPointFinder::step()
                   _dpmask));
     _counter++;
   }
+  HIP_CALL(hipEventRecord(stop));
 
   HIP_CALL(hipDeviceSynchronize());
+
+  HIP_CALL(hipEventElapsedTime(&elapsed, start, stop));
 
   if(_first_run || _verify_points) {
     HIP_CALL(hipLaunchKernel((void*)_sanity_check_ptr, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _num_points, _sanity_flag));
@@ -465,6 +476,8 @@ void GPUPointFinder::step()
       report_points();
     }
   }
+
+  return (double)elapsed / 1000.0f;
 }
 
 void GPUPointFinder::set_callback(std::function<void(const std::vector<DistinguishedPoint>&)> callback)
@@ -474,7 +487,7 @@ void GPUPointFinder::set_callback(std::function<void(const std::vector<Distingui
 
 size_t GPUPointFinder::work_per_step()
 {
-  return _num_points * 4;
+  return _num_points * _iters_per_step;
 }
 
 int GPUPointFinder::iters_per_step()

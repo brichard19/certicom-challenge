@@ -83,7 +83,7 @@ public:
 
   virtual void init(const std::string& file);
 
-  virtual void step();
+  virtual double step();
 
   virtual void set_callback(std::function<void(const std::vector<DistinguishedPoint>&)> callback);
 

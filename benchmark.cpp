@@ -8,45 +8,47 @@
 #include "ec_rho.h"
 #include "util.h"
 
+double _benchmark_run_time = 15.0;
+
 void benchmark(int hip_device)
 {
   DistinguishedPointFinder* pf = new GPUPointFinder(hip_device, 0, 63, true);
 
   pf->init();
 
-  util::Timer perf_timer;
   util::Timer run_timer;
 
-  perf_timer.start();
   run_timer.start();
   size_t steps = 0;
 
   std::vector<double> ara;
 
+  double gpu_time = 0.0;
+
+  double total_time = 0.0;
+
   while(true) {
-    pf->step();
+    gpu_time += pf->step();
     steps++;
 
-    double t = perf_timer.elapsed();
-
     // Print performance info
+    double t = run_timer.elapsed(); 
     if(t >= 3.0) {
+      total_time += t;
+      run_timer.start();
+
       size_t total = pf->work_per_step() * steps;
-
-      double perf = (double)total / t;
-      double iters = (double)steps * pf->iters_per_step() / t;
-
-      perf_timer.start();
+      double perf = (double)total / gpu_time;
+      double iters = (double)steps * pf->iters_per_step() / gpu_time;
 
       steps = 0;
-
+      gpu_time = 0;
       std::cout << (perf / 1e6) << " MKeys/sec (" << iters << " iters/sec)" << std::endl;
 
       ara.push_back(perf);
     }
 
-    // Exit after 30 seconds
-    if(run_timer.elapsed() >= 15) {
+    if(total_time >= _benchmark_run_time) {
       break;
     }
   }

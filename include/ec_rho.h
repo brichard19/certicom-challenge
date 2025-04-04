@@ -34,7 +34,7 @@ public:
   virtual void set_callback(std::function<void(const std::vector<DistinguishedPoint>& p)> callback) = 0;
   virtual void init() = 0;
   virtual void init(const std::string& file) = 0;
-  virtual void step() = 0;
+  virtual double step() = 0;
   virtual void save_progress(const std::string& file) = 0;
 
 };
