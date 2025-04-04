@@ -10,7 +10,6 @@ union uint131_t {
     uint64_t v0;
     uint64_t v1;
     uint32_t v2;
-    uint32_t padding;
   }w;
 };
 
@@ -19,7 +18,6 @@ union uint160_t {
     uint64_t v0;
     uint64_t v1;
     uint32_t v2;
-    uint32_t padding;
   }w;
 };
 

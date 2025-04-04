@@ -87,9 +87,6 @@ uint131_t sub_raw(const uint131_t& x, const uint131_t& y)
 
   z.w.v2 = x.w.v2 - y.w.v2 - borrow;
 
-  // Sign extend
-  z.w.padding = z.w.v2 & 0x80000000 ? -1 : 0;
-
   return z;
 }
 
@@ -116,9 +113,6 @@ uint131_t add_raw(const uint131_t& x, const uint131_t& y, int carry_in = 0)
   carry = (uint64_t)(sum >> 64);
  
   z.w.v2 = x.w.v2 + y.w.v2 + carry;
-
-  // Padding
-  z.w.padding = 0;
 
   return z;
 }
@@ -353,7 +347,6 @@ uint131_t mont_reduce(const uint262_t& t)
   t_lo.w.v0 = t.v[0];
   t_lo.w.v1 = t.v[1];
   t_lo.w.v2 = (uint32_t)t.v[2];
-  t_lo.w.padding = 0;
 
   // Remaining high bits (102 bits)
   uint131_t t_hi;
@@ -361,7 +354,6 @@ uint131_t mont_reduce(const uint262_t& t)
   t_hi.w.v0 = (t.v[2] >> 32) | ((t.v[3] & 0xffffffff) << 32);
   t_hi.w.v1 = (t.v[3] >> 32) | ((t.v[4] & 0xffffffff) << 32);
   t_hi.w.v2 = 0;
-  t_hi.w.padding = 0;
 
   uint160_t m1;
   uint131_t m2;
