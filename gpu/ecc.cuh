@@ -29,6 +29,9 @@ extern "C" __global__ void do_step_p79(uint131_t* global_px, uint131_t* global_p
 extern "C" __global__ void do_step_p131(uint131_t* global_px, uint131_t* global_py, uint131_t* global_rx, uint131_t* global_ry, uint131_t* mbuf, int count, DPResult* result, int* result_count,
   StagingPoint* staging, int* staging_count, uint131_t* priv_key_a, uint64_t counter, uint64_t* start_pos, uint64_t dpmask);
 
+extern "C" __global__ void check_for_dp(uint131_t* global_px, uint131_t* global_py, int count, DPResult* result, int* result_count,
+  StagingPoint* staging, int* staging_count, uint131_t* priv_key_a, uint64_t counter, uint64_t* start_pos, uint64_t dpmask);
+
 extern "C" __global__ void batch_multiply_p79(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* mbuf, uint131_t* gx, uint131_t* gy, int priv_key_bit, int count);
 extern "C" __global__ void batch_multiply_p131(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* mbuf, uint131_t* gx, uint131_t* gy, int priv_key_bit, int count);
 

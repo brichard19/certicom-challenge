@@ -69,6 +69,7 @@ GPUPointFinder::GPUPointFinder(int device, uint32_t num_points, int dpbits, bool
 
   std::string curve_name = ecc::curve_name();
 
+  _dp_check_ptr = (void*)check_for_dp;
   if(curve_name == "ecp131") {
     _do_step_ptr = (void*)do_step_p131;
     _batch_multiply_ptr = (void*)batch_multiply_p131;
@@ -418,6 +419,14 @@ double GPUPointFinder::step()
 
   HIP_CALL(hipEventRecord(start));
   for(int i = 0; i < _iters_per_step; i++) {
+    HIP_CALL(hipLaunchKernel(_dp_check_ptr, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y,
+                  _num_points,
+                  result_buf, _result_count,
+                  _staging_buf, _staging_count,
+                  _priv_key_a,
+                  _counter,
+                  _walk_start,
+                  _dpmask));
     HIP_CALL(hipLaunchKernel(_do_step_ptr, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _dev_rx, _dev_ry,
                   _mbuf, _num_points,
                   result_buf, _result_count,

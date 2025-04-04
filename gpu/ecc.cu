@@ -54,32 +54,6 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
   for(; i < count; i+=dim) {
     uint131_t px = global_px[i];
 
-    if(result != NULL && (px.w.v0 & dpmask) == 0) {
-      // Record distinguished point
-      int idx = atomicAdd(result_count, 1);
-
-      DPResult r;
-
-      r.a = priv_key_a[i];
-      r.x = px;
-      r.y = global_py[i];
-      r.length = counter - start_pos[i];
-
-      result[idx] = r;
-
-      // Grab a new point from the staging buffer
-      idx = atomicSub(staging_count, 1) - 1;
-    
-      uint131_t new_x = staging[idx].x;
-      uint131_t new_y = staging[idx].y;
-      priv_key_a[i] = staging[idx].a;
-
-      start_pos[i] = counter;
-      px = new_x;
-      global_px[i] = new_x;
-      global_py[i] = new_y;
-    }
-
     // TODO: Proper mask
     int idx = px.w.v0 & rmask;
 
@@ -343,6 +317,50 @@ extern "C" __global__ void batch_multiply_p131(uint131_t* global_px, uint131_t* 
     batch_multiply_step<131>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
 }
 
+
+extern "C" __global__ void check_for_dp(uint131_t* global_px, uint131_t* global_py,
+                                   int count,
+                                   DPResult* result, int* result_count,
+                                   StagingPoint* staging, int* staging_count,
+                                   uint131_t* priv_key_a,
+                                   uint64_t counter,
+                                   uint64_t* start_pos,
+                                   uint64_t dpmask)
+{
+  const int gid = get_global_id();
+  const int dim = get_global_size();
+
+  int i = gid;
+
+  for(; i < count; i+=dim) {
+    uint131_t px = global_px[i];
+    if(result != NULL && (px.w.v0 & dpmask) == 0) {
+      // Record distinguished point
+      int idx = atomicAdd(result_count, 1);
+
+      DPResult r;
+
+      r.a = priv_key_a[i];
+      r.x = px;
+      r.y = global_py[i];
+      r.length = counter - start_pos[i];
+
+      result[idx] = r;
+
+      // Grab a new point from the staging buffer
+      idx = atomicSub(staging_count, 1) - 1;
+    
+      uint131_t new_x = staging[idx].x;
+      uint131_t new_y = staging[idx].y;
+      priv_key_a[i] = staging[idx].a;
+
+      start_pos[i] = counter;
+      px = new_x;
+      global_px[i] = new_x;
+      global_py[i] = new_y;
+    }
+  }
+}
 
 extern "C" __global__ void do_step_p131(uint131_t* global_px, uint131_t* global_py,
                                    uint131_t* global_rx, uint131_t* global_ry,
