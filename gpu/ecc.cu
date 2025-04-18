@@ -40,15 +40,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
 
   int i = gid;
 
-  uint131_t one;
-  if(CURVE == 131) {
-    one = _p131_one;
-  } else if(CURVE == 79) {
-    one = _p79_one;
-  }
-
-  uint131_t inverse = one;
-
+  uint131_t inverse;
 
   // Perform Qx - Px and then multiply them together
   for(; i < count; i+=dim) {
@@ -61,8 +53,11 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
 
     // Point addition, rx - px
     uint131_t t = sub<CURVE>(rx, px);
-
-    inverse = mul<CURVE>(inverse, t);
+    if(i > gid) {
+      inverse = mul<CURVE>(inverse, t);
+    } else {
+      inverse = t;
+    }
     mbuf[i] = inverse;
   }
 
