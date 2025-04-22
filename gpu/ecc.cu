@@ -22,11 +22,38 @@ __device__ int get_bit(uint131_t x, int bit)
   }
 }
 
+__device__ uint131_t load(const uint131_vec_ptr_t p, int n, int i)
+{
+  uint131_t value;
+
+  __int128* p128 = (__int128*)p;
+  uint32_t* p32 = (uint32_t*)p;
+  
+  __int128 lo = p128[i];
+  uint32_t hi = p32[n * 4 + i];
+
+  value.w.v0 = (uint64_t)lo;
+  value.w.v1 = (uint64_t)(lo >> 64);
+  value.w.v2 = hi;
+
+  return value;
+}
+
+__device__ void store(uint131_vec_ptr_t p, int n, int i, uint131_t x)
+{
+  __int128* p128 = (__int128*)p;
+  uint32_t* p32 = (uint32_t*)p;
+
+  __int128 lo = (__int128)x.w.v1 << 64 | x.w.v0;
+  p128[i] = lo;
+
+  p32[4 * n + i] = x.w.v2;
+}
 
 // If the private key bit for P is 1, then add Q to P
-template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t* global_py,
-                                   uint131_t* global_rx, uint131_t* global_ry,
-                                   uint131_t* mbuf, int count,
+template<int CURVE> __device__ void do_step_impl(uint131_vec_ptr_t global_px, uint131_vec_ptr_t global_py,
+                                   uint131_vec_ptr_t global_rx, uint131_vec_ptr_t global_ry,
+                                   uint131_vec_ptr_t mbuf, int count,
                                    DPResult* result, int* result_count,
                                    StagingPoint* staging, int* staging_count,
                                    uint131_t* priv_key_a,
@@ -44,12 +71,12 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
 
   // Perform Qx - Px and then multiply them together
   for(; i < count; i+=dim) {
-    uint131_t px = global_px[i];
+    uint131_t px = load(global_px, count, i);
 
     // TODO: Proper mask
     int idx = px.w.v0 & rmask;
 
-    uint131_t rx = global_rx[idx];
+    uint131_t rx = load(global_rx, 32, idx);
 
     // Point addition, rx - px
     uint131_t t = sub<CURVE>(rx, px);
@@ -58,7 +85,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
     } else {
       inverse = t;
     }
-    mbuf[i] = inverse;
+    store(mbuf, count, i, inverse);
   }
 
   // Perform inversion
@@ -70,13 +97,13 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
   // Complete addition
 
   for(; i >= gid; i-=dim) {
-    uint131_t px = global_px[i];
-    uint131_t py = global_py[i];
+    uint131_t px = load(global_px, count, i);
+    uint131_t py = load(global_py, count, i);
 
     int idx = px.w.v0 & rmask;
 
-    uint131_t rx = global_rx[idx];
-    uint131_t ry = global_ry[idx]; 
+    uint131_t rx = load(global_rx, 32, idx);
+    uint131_t ry = load(global_ry, 32, idx);
 
     uint131_t s;
 
@@ -84,7 +111,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
 
       // Get the 2nd-last element (product of all factors up to that number)
       // e.g. abcd
-      uint131_t m = mbuf[i - dim];
+      uint131_t m = load(mbuf, count, i - dim);
 
       // Multiply to cancel out all factors except the last one
       // e.g. abcd * (abcde)^-1 = e^-1
@@ -101,7 +128,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
     }
 
     // Perform point addition
-    uint131_t rise = sub<CURVE>(ry, py); 
+    uint131_t rise = sub<CURVE>(ry, py);
     s = mul<CURVE>(s, rise);
     uint131_t s2 = square<CURVE>(s);
 
@@ -112,8 +139,8 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
     uint131_t tmp3 = mul<CURVE>(s, tmp2);
     uint131_t y = sub<CURVE>(tmp3, py);
 
-    global_px[i] = x;
-    global_py[i] = y;
+    store(global_px, count, i, x);
+    store(global_py, count, i, y);
   }
 }
 
@@ -121,9 +148,8 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
 
 
 // If the private key bit for P is 1, then add Q to P
-template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* global_qx, uint131_t* global_qy, uint131_t* mbuf, int priv_key_bit, int count)
+template<int CURVE> __device__ void batch_multiply_step(uint131_vec_ptr_t global_px, uint131_vec_ptr_t global_py, uint131_t* private_keys, uint131_t* global_qx, uint131_t* global_qy, uint131_vec_ptr_t mbuf, int priv_key_bit, int count)
 {
-
   int gid = get_global_id();
   int dim = get_global_size();
 
@@ -144,7 +170,7 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
   // Perform Qx - Px and then multiply them together
   for(; i < count; i+=dim) {
 
-    uint131_t px = global_px[i];
+    uint131_t px = load(global_px, count, i);
     uint131_t t;
 
     int bit = get_bit(private_keys[i], priv_key_bit);
@@ -159,7 +185,7 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
     }
 
     inverse = mul<CURVE>(inverse, t);
-    mbuf[i] = inverse;
+    store(mbuf, count, i, inverse);
   }
 
   // Perform inversion
@@ -171,21 +197,21 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
   // Complete addition
 
   for(; i >= gid; i-=dim) {
-    uint131_t px = global_px[i];
-    uint131_t py = global_py[i];
+    uint131_t px = load(global_px, count, i);
+    uint131_t py = load(global_py, count, i);
 
     int bit = get_bit(private_keys[i], priv_key_bit);
 
     if(!bit) {
       continue;
     } else if(is_infinity(px)) {
-      global_px[i] = qx;
-      global_py[i] = qy;
+      store(global_px, count, i, qx);
+      store(global_py, count, i, qy);
 
       continue;
     } else if(equal(px, qx)) {
-      global_px[i] = global_qx[priv_key_bit + 1];
-      global_py[i] = global_qy[priv_key_bit + 1];
+      store(global_px, count, i, load(global_qx, count, priv_key_bit + 1));
+      store(global_py, count, i, load(global_qy, count, priv_key_bit + 1));
       continue;
     }
     
@@ -194,7 +220,7 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
 
       // Get the 2nd-last element (product of all factors up to that number)
       // e.g. abcd
-      uint131_t m = mbuf[i - dim];
+      uint131_t m = load(mbuf, count, i - dim);
 
       // Multiply to cancel out all factors except the last one
       // e.g. abcd * (abcde)^-1 = e^-1
@@ -222,19 +248,19 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
     uint131_t tmp3 = mul<CURVE>(s, tmp2);
     uint131_t y = sub<CURVE>(tmp3, py);
 
-    global_px[i] = x;
-    global_py[i] = y;
+    store(global_px, count, i, x);
+    store(global_py, count, i, y);
   }
 }
 
-template<int CURVE> __device__ void sanity_check_impl(uint131_t* global_px, uint131_t* global_py, int count, int* errors)
+template<int CURVE> __device__ void sanity_check_impl(uint131_vec_ptr_t global_px, uint131_vec_ptr_t global_py, int count, int* errors)
 {
   int gid = get_global_id();
   int dim = get_global_size();
 
   for(int i = gid; i < count; i += dim) {
-    uint131_t x = global_px[i];
-    uint131_t y = global_py[i];
+    uint131_t x = load(global_px, count, i);
+    uint131_t y = load(global_py, count, i);
 
     if(point_exists<CURVE>(x, y) == false) {
       atomicAdd(errors, 1);
@@ -242,13 +268,15 @@ template<int CURVE> __device__ void sanity_check_impl(uint131_t* global_px, uint
   }
 }
 
-__device__ void clear_public_keys_impl(uint131_t* x, uint131_t* y, int count)
+__device__ void clear_public_keys_impl(uint131_vec_ptr_t x, uint131_vec_ptr_t y, int count)
 {
   int idx = get_global_id();
   int dim = get_global_size();
-  
+ 
+  uint131_t point_zero;
+  set_point_at_infinity(point_zero);
   for(int i = idx; i < count; i += dim) {
-    set_point_at_infinity(x[i]);
+    store(x, count, i, point_zero);
   }
 }
 
@@ -263,7 +291,7 @@ __device__ void reset_counters_impl(uint64_t* start_pos, uint64_t value, int cou
 }
 
 // Set all public keys to point-at-infinity
-extern "C" __global__ void clear_public_keys(uint131_t* x, uint131_t* y, int count)
+extern "C" __global__ void clear_public_keys(uint131_vec_ptr_t x, uint131_vec_ptr_t y, int count)
 {
   clear_public_keys_impl(x, y, count);
 }
@@ -275,26 +303,26 @@ extern "C" __global__ void reset_counters(uint64_t* start_pos, uint64_t value, i
 
 
 
-extern "C" __global__ void sanity_check_p131(uint131_t* global_px, uint131_t* global_py, int count, int* errors)
+extern "C" __global__ void sanity_check_p131(uint131_vec_ptr_t global_px, uint131_vec_ptr_t global_py, int count, int* errors)
 {
   sanity_check_impl<131>(global_px, global_py, count, errors);
 }
 
-extern "C" __global__ void sanity_check_p79(uint131_t* global_px, uint131_t* global_py, int count, int* errors)
+extern "C" __global__ void sanity_check_p79(uint131_vec_ptr_t global_px, uint131_vec_ptr_t global_py, int count, int* errors)
 {
   sanity_check_impl<79>(global_px, global_py, count, errors);
 }
 
 
-extern "C" __global__ void batch_multiply_p79(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* mbuf, uint131_t* gx, uint131_t* gy, int priv_key_bit, int count)
+extern "C" __global__ void batch_multiply_p79(uint131_vec_ptr_t global_px, uint131_vec_ptr_t global_py, uint131_t* private_keys, uint131_vec_ptr_t mbuf, uint131_t* gx, uint131_t* gy, int priv_key_bit, int count)
 {
     batch_multiply_step<79>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
 }
 
 
-extern "C" __global__ void do_step_p79(uint131_t* global_px, uint131_t* global_py,
-                                   uint131_t* global_rx, uint131_t* global_ry,
-                                   uint131_t* mbuf, int count,
+extern "C" __global__ void do_step_p79(uint131_vec_ptr_t global_px, uint131_vec_ptr_t global_py,
+                                   uint131_vec_ptr_t global_rx, uint131_vec_ptr_t global_ry,
+                                   uint131_vec_ptr_t mbuf, int count,
                                    DPResult* result, int* result_count,
                                    StagingPoint* staging, int* staging_count,
                                    uint131_t* priv_key_a,
@@ -307,13 +335,13 @@ extern "C" __global__ void do_step_p79(uint131_t* global_px, uint131_t* global_p
 
 
 
-extern "C" __global__ void batch_multiply_p131(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* mbuf, uint131_t* gx, uint131_t* gy, int priv_key_bit, int count)
+extern "C" __global__ void batch_multiply_p131(uint131_vec_ptr_t global_px, uint131_vec_ptr_t global_py, uint131_t* private_keys, uint131_vec_ptr_t mbuf, uint131_t* gx, uint131_t* gy, int priv_key_bit, int count)
 {
     batch_multiply_step<131>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
 }
 
 
-extern "C" __global__ void check_for_dp(uint131_t* global_px, uint131_t* global_py,
+extern "C" __global__ void check_for_dp(uint131_vec_ptr_t global_px, uint131_vec_ptr_t global_py,
                                    int count,
                                    DPResult* result, int* result_count,
                                    StagingPoint* staging, int* staging_count,
@@ -328,7 +356,7 @@ extern "C" __global__ void check_for_dp(uint131_t* global_px, uint131_t* global_
   int i = gid;
 
   for(; i < count; i+=dim) {
-    uint131_t px = global_px[i];
+    uint131_t px = load(global_px, count, i);
     if(result != NULL && (px.w.v0 & dpmask) == 0) {
       // Record distinguished point
       int idx = atomicAdd(result_count, 1);
@@ -337,7 +365,7 @@ extern "C" __global__ void check_for_dp(uint131_t* global_px, uint131_t* global_
 
       r.a = priv_key_a[i];
       r.x = px;
-      r.y = global_py[i];
+      r.y = load(global_py, count, i);
       r.length = counter - start_pos[i];
 
       result[idx] = r;
@@ -351,15 +379,15 @@ extern "C" __global__ void check_for_dp(uint131_t* global_px, uint131_t* global_
 
       start_pos[i] = counter;
       px = new_x;
-      global_px[i] = new_x;
-      global_py[i] = new_y;
+      store(global_px, count, i, new_x);
+      store(global_py, count, i, new_y);
     }
   }
 }
 
-extern "C" __global__ void do_step_p131(uint131_t* global_px, uint131_t* global_py,
-                                   uint131_t* global_rx, uint131_t* global_ry,
-                                   uint131_t* mbuf, int count,
+extern "C" __global__ void do_step_p131(uint131_vec_ptr_t global_px, uint131_vec_ptr_t global_py,
+                                   uint131_vec_ptr_t global_rx, uint131_vec_ptr_t global_ry,
+                                   uint131_vec_ptr_t mbuf, int count,
                                    DPResult* result, int* result_count,
                                    StagingPoint* staging, int* staging_count,
                                    uint131_t* priv_key_a,
