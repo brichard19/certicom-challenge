@@ -50,6 +50,26 @@ __device__ void store(uint131_vec_ptr_t p, int n, int i, uint131_t x)
   p32[4 * n + i] = x.w.v2;
 }
 
+__device__ uint131_t r_load(uint32_t* p, int i)
+{
+  uint131_t r;
+
+  r.w.v0 = ((uint64_t)p[32 + i] << 32) + p[i];
+  r.w.v1 = ((uint64_t)p[96 + i] << 32) + p[64 + i];
+  r.w.v2 = p[128 + i];
+
+  return r;
+}
+
+__device__ void r_store(uint32_t* p, int i, uint131_t r)
+{
+  p[i] = (uint32_t)r.w.v0;
+  p[32 + i] = (uint32_t)(r.w.v0 >> 32);
+  p[64 + i] = (uint32_t)r.w.v1;
+  p[96 + i] = (uint32_t)(r.w.v1 >> 32);
+  p[128 + i] = r.w.v2;
+}
+
 // If the private key bit for P is 1, then add Q to P
 template<int CURVE> __device__ void do_step_impl(uint131_vec_ptr_t global_px, uint131_vec_ptr_t global_py,
                                    uint131_vec_ptr_t global_rx, uint131_vec_ptr_t global_ry,
@@ -61,6 +81,17 @@ template<int CURVE> __device__ void do_step_impl(uint131_vec_ptr_t global_px, ui
                                    uint64_t* start_pos,
                                    uint64_t dpmask)
 {
+  __shared__ uint32_t s_rx[32 * 5];
+  __shared__ uint32_t s_ry[32 * 5];
+ 
+  if(threadIdx.x < 32) {
+    uint131_t rx = load(global_rx, 32, threadIdx.x);
+    uint131_t ry = load(global_ry, 32, threadIdx.x);
+    r_store(s_rx, threadIdx.x, rx);
+    r_store(s_ry, threadIdx.x, ry);
+  }
+  __syncthreads();
+
   const int rmask = 0x1f;
   const int gid = get_global_id();
   const int dim = get_global_size();
@@ -76,7 +107,8 @@ template<int CURVE> __device__ void do_step_impl(uint131_vec_ptr_t global_px, ui
     // TODO: Proper mask
     int idx = px.w.v0 & rmask;
 
-    uint131_t rx = load(global_rx, 32, idx);
+    //uint131_t rx = load(global_rx, 32, idx);
+    uint131_t rx = r_load(s_rx, idx);
 
     // Point addition, rx - px
     uint131_t t = sub<CURVE>(rx, px);
@@ -102,8 +134,8 @@ template<int CURVE> __device__ void do_step_impl(uint131_vec_ptr_t global_px, ui
 
     int idx = px.w.v0 & rmask;
 
-    uint131_t rx = load(global_rx, 32, idx);
-    uint131_t ry = load(global_ry, 32, idx);
+    uint131_t rx = r_load(s_rx, idx);
+    uint131_t ry = r_load(s_ry, idx);
 
     uint131_t s;
 
