@@ -18,7 +18,7 @@ __device__ int get_bit(uint131_t x, int bit)
   } else if(bit >= 64) {
     return (x.w.v1 >> (bit & 0x3f)) & 1;
   } else {
-    return (x.w.v0 >> (bit & 0x1f)) & 1;
+    return (x.w.v0 >> bit) & 1;
   }
 }
 
