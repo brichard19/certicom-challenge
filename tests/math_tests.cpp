@@ -224,6 +224,26 @@ bool test11()
   return true;
 }
 
+bool test12()
+{
+  std::vector<uint131_t> k;
+  for(int i = 0; i < 100; i++) {
+    k.push_back(ecc::genkey());
+  }
+
+  std::vector<ecc::ecpoint_t> p = ecc::mul(k, ecc::g());
+
+  for(int i = 0; i < k.size(); i++) {
+    ecc::ecpoint_t r = ecc::mul(k[i], ecc::g());
+
+    if(!ecc::is_equal(r, p[i])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 int main(int argc, char**argv)
 {
   std::vector<std::string> curves = {"ecp131", "ecp79"};
@@ -246,6 +266,7 @@ int main(int argc, char**argv)
     test_functions.push_back(test9);
     test_functions.push_back(test10);
     test_functions.push_back(test11);
+    test_functions.push_back(test12);
 
     for(int i = 0; i < test_functions.size(); i++) {
       std::cout << "Test " << (i+1) << "/" << test_functions.size() << std::endl;
