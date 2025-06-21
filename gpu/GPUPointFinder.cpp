@@ -205,24 +205,21 @@ void GPUPointFinder::refill_staging()
 
   LOG("Refilling staging buffer");
 
+  std::vector<uint131_t> k(_staging_buf_size);
+
   for(int i = count; i < _staging_buf_size; i++) {
-    StagingPoint p;
+    k[i] = ecc::genkey();
+  }
 
-    ecc::ecpoint_t point;
+  std::vector<ecc::ecpoint_t> p = ecc::mul(k, ecc::g());
 
-    // Generate points, avoid distinguished points
-    do {
-      p.a = ecc::genkey();
+  for(int i = 0; i < _staging_buf_size; i++) {
+    StagingPoint sp;
+    sp.a = k[i];
+    sp.x = p[i].x;
+    sp.y = p[i].y;
 
-      point = ecc::mul(p.a, ecc::g());
-    } while((point.x.w.v0 & _dpmask) == 0);
-
-    assert(ecc::exists(point));
-    
-    p.x = point.x;
-    p.y = point.y;
-
-    _staging_buf[i] = p;
+    _staging_buf[i] = sp;
   }
 
   *_staging_count= _staging_buf_size;
