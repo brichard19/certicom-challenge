@@ -44,7 +44,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
 
   // Perform Qx - Px and then multiply them together
   for(; i < count; i+=dim) {
-    uint131_t px = global_px[i];
+    uint131_t px = load(global_px, i, count);//global_px[i];
 
     if(result != NULL && (px.w.v0 & dpmask) == 0) {
       // Record distinguished point
@@ -54,7 +54,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
 
       r.a = priv_key_a[i];
       r.x = px;
-      r.y = global_py[i];
+      r.y = load(global_py, i, count);//global_py[i];
       r.length = counter - start_pos[i];
 
       result[idx] = r;
@@ -68,8 +68,8 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
 
       start_pos[i] = counter;
       px = new_x;
-      global_px[i] = new_x;
-      global_py[i] = new_y;
+      store(global_px, i, count, new_x);
+      store(global_py, i, count, new_y);
     }
 
     // TODO: Proper mask
@@ -96,8 +96,8 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
   // Complete addition
 
   for(; i >= gid; i-=dim) {
-    uint131_t px = global_px[i];
-    uint131_t py = global_py[i];
+    uint131_t px = load(global_px, i, count);//global_px[i];
+    uint131_t py = load(global_py, i, count);//global_py[i];
 
     int idx = px.w.v0 & rmask;
 
@@ -127,7 +127,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
     }
 
     // Perform point addition
-    uint131_t rise = sub<CURVE>(ry, py); 
+    uint131_t rise = sub<CURVE>(ry, py);
     s = mul<CURVE>(s, rise);
     uint131_t s2 = square<CURVE>(s);
 
@@ -138,8 +138,8 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
     uint131_t tmp3 = mul<CURVE>(s, tmp2);
     uint131_t y = sub<CURVE>(tmp3, py);
 
-    global_px[i] = x;
-    global_py[i] = y;
+    store(global_px, i, count, x);
+    store(global_py, i, count, y);
   }
 }
 
@@ -170,7 +170,7 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
   // Perform Qx - Px and then multiply them together
   for(; i < count; i+=dim) {
 
-    uint131_t px = global_px[i];
+    uint131_t px = load(global_px, i, count);
     uint131_t t;
 
     int bit = get_bit(private_keys[i], priv_key_bit);
@@ -197,21 +197,21 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
   // Complete addition
 
   for(; i >= gid; i-=dim) {
-    uint131_t px = global_px[i];
-    uint131_t py = global_py[i];
+    uint131_t px = load(global_px, i, count);
+    uint131_t py = load(global_py, i, count);
 
     int bit = get_bit(private_keys[i], priv_key_bit);
 
     if(!bit) {
       continue;
     } else if(is_infinity(px)) {
-      global_px[i] = qx;
-      global_py[i] = qy;
+      store(global_px, i, count, qx);
+      store(global_py, i, count, qy);
 
       continue;
     } else if(equal(px, qx)) {
-      global_px[i] = global_qx[priv_key_bit + 1];
-      global_py[i] = global_qy[priv_key_bit + 1];
+      store(global_px, i, count, global_qx[priv_key_bit + 1]);
+      store(global_py, i, count, global_qy[priv_key_bit + 1]);
       continue;
     }
     
@@ -248,8 +248,8 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
     uint131_t tmp3 = mul<CURVE>(s, tmp2);
     uint131_t y = sub<CURVE>(tmp3, py);
 
-    global_px[i] = x;
-    global_py[i] = y;
+    store(global_px, i, count, x);
+    store(global_py, i, count, y);
   }
 }
 
@@ -259,8 +259,8 @@ template<int CURVE> __device__ void sanity_check_impl(uint131_t* global_px, uint
   int dim = get_global_size();
 
   for(int i = gid; i < count; i += dim) {
-    uint131_t x = global_px[i];
-    uint131_t y = global_py[i];
+    uint131_t x = load(global_px, i, count);
+    uint131_t y = load(global_py, i, count);
 
     if(point_exists<CURVE>(x, y) == false) {
       atomicAdd(errors, 1);
@@ -268,13 +268,16 @@ template<int CURVE> __device__ void sanity_check_impl(uint131_t* global_px, uint
   }
 }
 
-__device__ void clear_public_keys_impl(uint131_t* x, uint131_t* y, int count)
+__device__ void clear_public_keys_impl(uint131_t* x_ptr, uint131_t* y_ptr, int count)
 {
   int idx = get_global_id();
   int dim = get_global_size();
-  
+ 
+  uint131_t x;
+  set_point_at_infinity(x);
+
   for(int i = idx; i < count; i += dim) {
-    set_point_at_infinity(x[i]);
+    store(x_ptr, i, count, x);
   }
 }
 

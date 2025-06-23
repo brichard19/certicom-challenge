@@ -61,6 +61,26 @@ int get_warp_size(int device_id)
 
 }
 
+typedef unsigned __int128 uint128_t;
+typedef struct {
+  uint8_t data[17];
+}vec_uint131_t;
+
+uint131_t load_uint131(const void* p, int idx, int n)
+{
+  const uint128_t* p128 = (const uint128_t*)p;
+  const uint8_t* p8 = (const uint8_t*)p;
+
+  uint128_t u128 = p128[idx];
+  
+  uint131_t x;
+  x.w.v0 = (uint64_t)u128;
+  x.w.v1 = (uint64_t)(u128 >> 64);
+  x.w.v2 = (uint32_t)p8[n * sizeof(uint128_t) + idx];
+
+  return x;
+}
+
 GPUPointFinder::GPUPointFinder(int device, uint32_t num_points, int dpbits, bool benchmark)
 {
   assert(dpbits >= 16 && dpbits <= 63);
@@ -155,13 +175,13 @@ void GPUPointFinder::load(const std::string& file_name)
 
   IFSTREAM_CALL(file.read((char*)_priv_key_a, sizeof(uint131_t) * count));
 
-  std::vector<char> tmp(sizeof(uint131_t) * count);
+  std::vector<char> tmp(sizeof(vec_uint131_t) * count);
 
-  IFSTREAM_CALL(file.read(tmp.data(), sizeof(uint131_t) * count));
-  HIP_CALL(hipMemcpy(_dev_x, tmp.data(), sizeof(uint131_t) * count, hipMemcpyHostToDevice));
+  IFSTREAM_CALL(file.read(tmp.data(), sizeof(vec_uint131_t) * count));
+  HIP_CALL(hipMemcpy(_dev_x, tmp.data(), sizeof(vec_uint131_t) * count, hipMemcpyHostToDevice));
   
-  IFSTREAM_CALL(file.read(tmp.data(), sizeof(uint131_t) * count));
-  HIP_CALL(hipMemcpy(_dev_y, tmp.data(), sizeof(uint131_t) * count, hipMemcpyHostToDevice));
+  IFSTREAM_CALL(file.read(tmp.data(), sizeof(vec_uint131_t) * count));
+  HIP_CALL(hipMemcpy(_dev_y, tmp.data(), sizeof(vec_uint131_t) * count, hipMemcpyHostToDevice));
   
   IFSTREAM_CALL(file.read(tmp.data(), sizeof(uint64_t) * count));
   memcpy(_walk_start, tmp.data(), sizeof(uint64_t) * count);
@@ -314,8 +334,8 @@ void GPUPointFinder::init(const std::string& filename)
 
     // Verify
     if(_verify_points) {
-      std::vector<uint131_t> x(_num_points);
-      std::vector<uint131_t> y(_num_points);
+      std::vector<uint8_t> x(_num_points * sizeof(vec_uint131_t));
+      std::vector<uint8_t> y(_num_points * sizeof(vec_uint131_t));
 
       HIP_CALL(hipMemcpy(x.data(), _dev_x, x.size() * sizeof(x[0]), hipMemcpyDeviceToHost));
       HIP_CALL(hipMemcpy(y.data(), _dev_y, y.size() * sizeof(y[0]), hipMemcpyDeviceToHost));
@@ -325,14 +345,17 @@ void GPUPointFinder::init(const std::string& filename)
 
         ecc::ecpoint_t sum = ecc::mul(k1, ecc::g());
 
-        if(!ecc::exists(ecc::ecpoint_t(x[i], y[i]))) {
+        uint131_t xval = load_uint131(x.data(), i, _num_points);
+        uint131_t yval = load_uint131(y.data(), i, _num_points);
+
+        if(!ecc::exists(ecc::ecpoint_t(xval, yval))) {
           LOG("{}", to_str(sum.x));
-          LOG("{}", to_str(x[i]));
+          LOG("{}", to_str(xval));
           LOG("Validation failed: Point does not exist");
           exit(1);
         }
 
-        if(!ecc::is_equal(sum, ecc::ecpoint_t(x[i], y[i]))) {
+        if(!ecc::is_equal(sum, ecc::ecpoint_t(xval, yval))) {
           LOG("Expected:");
           LOG("{}", to_str(sum.x));
           LOG("{}", to_str(sum.y));
@@ -340,10 +363,10 @@ void GPUPointFinder::init(const std::string& filename)
           LOG("{}", to_str(mont::from(sum.y)));
           
           LOG("Got:");
-          LOG("{}", to_str(x[i]));
-          LOG("{}", to_str(y[i]));
-          LOG("{}", to_str(mont::from(x[i])));
-          LOG("{}", to_str(mont::from(y[i])));
+          LOG("{}", to_str(xval));
+          LOG("{}", to_str(yval));
+          LOG("{}", to_str(mont::from(xval)));
+          LOG("{}", to_str(mont::from(yval)));
 
           LOG("Validation failed: Point exists but is incorrect for key");
           exit(1);
@@ -376,8 +399,8 @@ void GPUPointFinder::allocate_buffers(int n)
   free_buffers();
 
   HIP_CALL(hipMalloc(&_mbuf, n * sizeof(uint131_t)));
-  HIP_CALL(hipMalloc(&_dev_x, n * sizeof(uint131_t)));
-  HIP_CALL(hipMalloc(&_dev_y, n * sizeof(uint131_t)));
+  HIP_CALL(hipMalloc(&_dev_x, n * sizeof(vec_uint131_t)));
+  HIP_CALL(hipMalloc(&_dev_y, n * sizeof(vec_uint131_t)));
   HIP_CALL(hipMalloc(&_dev_rx, _NUM_R_POINTS * sizeof(uint131_t)));
   HIP_CALL(hipMalloc(&_dev_ry, _NUM_R_POINTS * sizeof(uint131_t)));
 
@@ -438,15 +461,17 @@ double GPUPointFinder::step()
     if(*_sanity_flag != 0) {
       LOG("Detected {} errors\n", *_sanity_flag);
 
-      std::vector<uint131_t> x(_num_points);
-      std::vector<uint131_t> y(_num_points);
+      std::vector<uint8_t> x(_num_points * sizeof(vec_uint131_t));
+      std::vector<uint8_t> y(_num_points * sizeof(vec_uint131_t));
 
       HIP_CALL(hipMemcpy(x.data(), _dev_x, x.size() * sizeof(x[0]), hipMemcpyDeviceToHost));
       HIP_CALL(hipMemcpy(y.data(), _dev_y, y.size() * sizeof(y[0]), hipMemcpyDeviceToHost));
 
       int count = 0;
       for(int i = 0; i < _num_points; i++) {
-        ecc::ecpoint_t p(x[i], y[i]);
+        uint131_t xval = load_uint131(x.data(), i, _num_points);
+        uint131_t yval = load_uint131(y.data(), i, _num_points);
+        ecc::ecpoint_t p(xval, yval);
 
         if(!ecc::exists(p)) {
           count++;
@@ -534,12 +559,12 @@ void GPUPointFinder::save_progress(const std::string& file_name)
   char* tmp = new char[sizeof(uint131_t) * count];
 
   // Points X
-  HIP_CALL(hipMemcpy(tmp, _dev_x, sizeof(uint131_t) * count, hipMemcpyDeviceToHost));
-  file.write(tmp, sizeof(uint131_t) * count);
+  HIP_CALL(hipMemcpy(tmp, _dev_x, sizeof(vec_uint131_t) * count, hipMemcpyDeviceToHost));
+  file.write(tmp, sizeof(vec_uint131_t) * count);
 
   // Points Y
-  HIP_CALL(hipMemcpy(tmp, _dev_y, sizeof(uint131_t) * count, hipMemcpyDeviceToHost));
-  file.write(tmp, sizeof(uint131_t) * count);
+  HIP_CALL(hipMemcpy(tmp, _dev_y, sizeof(vec_uint131_t) * count, hipMemcpyDeviceToHost));
+  file.write(tmp, sizeof(vec_uint131_t) * count);
 
   // Write starting counters
   memcpy(tmp, _walk_start, sizeof(uint64_t) * count);

@@ -6,6 +6,33 @@ typedef unsigned __int128 uint128_t;
 #include "p131.cuh"
 #include "p79.cuh"
 
+
+__device__ uint131_t load(const void* p, int idx, int n)
+{
+  const uint128_t* p128 = (const uint128_t*)p;
+  const uint8_t* p8 = (const uint8_t*)p;
+
+  uint128_t u128 = p128[idx];
+  
+  uint131_t x;
+  x.w.v0 = (uint64_t)u128;
+  x.w.v1 = (uint64_t)(u128 >> 64);
+  x.w.v2 = (uint32_t)p8[n * sizeof(uint128_t) + idx];
+
+  return x;
+}
+
+__device__ void store(void* p, int idx, int n, uint131_t x)
+{
+  uint128_t* p128 = (uint128_t*)p;
+  uint8_t* p8 = (uint8_t*)p;
+
+  uint128_t u128 = ((uint128_t)x.w.v1 << 64) | x.w.v0;
+  p128[idx] = u128;
+
+  p8[n * sizeof(uint128_t) + idx] = (uint8_t)x.w.v2;
+}
+
 __device__ uint131_t sub_raw(const uint131_t& x, const uint131_t& y)
 {
   uint131_t z;
@@ -592,7 +619,7 @@ template<int CURVE> __device__ uint131_t inv(uint131_t x)
 // Check for point-at-infinity using the x coordinate
 __device__ bool is_infinity(uint131_t x)
 {
-  return x.w.v2== (uint32_t)-1;
+  return (x.w.v2 & 0xff) == 0xff;
 }
 
 __device__ void set_point_at_infinity(uint131_t& x)
