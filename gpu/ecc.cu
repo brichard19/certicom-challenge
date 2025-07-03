@@ -75,7 +75,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
     // TODO: Proper mask
     int idx = px.w.v0 & rmask;
 
-    uint131_t rx = global_rx[idx];
+    uint131_t rx = load(global_rx, idx, 32);
 
     // Point addition, rx - px
     uint131_t t = sub<CURVE>(rx, px);
@@ -101,8 +101,8 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
 
     int idx = px.w.v0 & rmask;
 
-    uint131_t rx = global_rx[idx];
-    uint131_t ry = global_ry[idx]; 
+    uint131_t rx = load(global_rx, idx, 32);
+    uint131_t ry = load(global_ry, idx, 32);
 
     uint131_t s;
 

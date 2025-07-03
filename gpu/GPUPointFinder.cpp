@@ -59,6 +59,34 @@ int get_warp_size(int device_id)
   return props.warpSize;
 }
 
+typedef unsigned __int128 uint128_t;
+
+uint131_t load_p131(const void* p, int idx, int n)
+{
+  const uint128_t* p128 = (const uint128_t*)p;
+  const uint8_t* p8 = (const uint8_t*)p;
+
+  uint128_t u128 = p128[idx];
+  
+  uint131_t x;
+  x.w.v0 = (uint64_t)u128;
+  x.w.v1 = (uint64_t)(u128 >> 64);
+  x.w.v2 = (uint32_t)p8[n * sizeof(uint128_t) + idx];
+
+  return x;
+}
+
+void store_p131(void* p, int idx, int n, uint131_t x)
+{
+  uint128_t* p128 = (uint128_t*)p;
+  uint8_t* p8 = (uint8_t*)p;
+
+  uint128_t u128 = ((uint128_t)x.w.v1 << 64) | x.w.v0;
+  p128[idx] = u128;
+
+  p8[n * sizeof(uint128_t) + idx] = (uint8_t)x.w.v2;
+}
+
 }
 
 typedef unsigned __int128 uint128_t;
@@ -262,11 +290,12 @@ void GPUPointFinder::init(const std::string& filename)
   // Initialize random walk points
   std::vector<RWPoint> rw = get_rw_points();
 
-  std::vector<uint131_t> rx;
-  std::vector<uint131_t> ry;
-  for(auto p : rw) {
-    rx.push_back(p.p.x);
-    ry.push_back(p.p.y);
+  std::vector<uint8_t> rx(sizeof(uint131_t) * rw.size());
+  std::vector<uint8_t> ry(sizeof(uint131_t) * rw.size());
+
+  for(int i = 0; i < rw.size(); i++) {
+    store_p131(rx.data(), i, rw.size(), rw[i].p.x);
+    store_p131(ry.data(), i, rw.size(), rw[i].p.y);
   }
 
   HIP_CALL(hipMemcpy(_dev_rx, rx.data(), rx.size() * sizeof(rx[0]), hipMemcpyHostToDevice));
