@@ -44,7 +44,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
 
   // Perform Qx - Px and then multiply them together
   for(; i < count; i+=dim) {
-    uint131_t px = load(global_px, i, count);//global_px[i];
+    uint131_t px = load(global_px, i, count);
 
     if(result != NULL && (px.w.v0 & dpmask) == 0) {
       // Record distinguished point
@@ -54,7 +54,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
 
       r.a = priv_key_a[i];
       r.x = px;
-      r.y = load(global_py, i, count);//global_py[i];
+      r.y = load(global_py, i, count);
       r.length = counter - start_pos[i];
 
       result[idx] = r;
@@ -84,7 +84,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
     } else {
       inverse = t;
     }
-    mbuf[i] = inverse;
+    store(mbuf, i, count, inverse);
   }
 
   // Perform inversion
@@ -96,8 +96,8 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
   // Complete addition
 
   for(; i >= gid; i-=dim) {
-    uint131_t px = load(global_px, i, count);//global_px[i];
-    uint131_t py = load(global_py, i, count);//global_py[i];
+    uint131_t px = load(global_px, i, count);
+    uint131_t py = load(global_py, i, count);
 
     int idx = px.w.v0 & rmask;
 
@@ -110,8 +110,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
 
       // Get the 2nd-last element (product of all factors up to that number)
       // e.g. abcd
-      uint131_t m = mbuf[i - dim];
-
+      uint131_t m = load(mbuf, i - dim, count);
       // Multiply to cancel out all factors except the last one
       // e.g. abcd * (abcde)^-1 = e^-1
       s = mul<CURVE>(inverse, m);
@@ -185,7 +184,7 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
     }
 
     inverse = mul<CURVE>(inverse, t);
-    mbuf[i] = inverse;
+    store(mbuf, i, count, inverse);
   }
 
   // Perform inversion
@@ -220,8 +219,7 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
 
       // Get the 2nd-last element (product of all factors up to that number)
       // e.g. abcd
-      uint131_t m = mbuf[i - dim];
-
+      uint131_t m = load(mbuf, i - dim, count);
       // Multiply to cancel out all factors except the last one
       // e.g. abcd * (abcde)^-1 = e^-1
       s = mul<CURVE>(inverse, m);
