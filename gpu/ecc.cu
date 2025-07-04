@@ -44,7 +44,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
 
   // Perform Qx - Px and then multiply them together
   for(; i < count; i+=dim) {
-    uint131_t px = load(global_px, i, count);
+    uint131_t px = load_uint131(global_px, i, count);
 
     if(result != NULL && (px.w.v0 & dpmask) == 0) {
       // Record distinguished point
@@ -54,7 +54,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
 
       r.a = priv_key_a[i];
       r.x = px;
-      r.y = load(global_py, i, count);
+      r.y = load_uint131(global_py, i, count);
       r.length = counter - start_pos[i];
 
       result[idx] = r;
@@ -68,14 +68,14 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
 
       start_pos[i] = counter;
       px = new_x;
-      store(global_px, i, count, new_x);
-      store(global_py, i, count, new_y);
+      store_uint131(global_px, i, count, new_x);
+      store_uint131(global_py, i, count, new_y);
     }
 
     // TODO: Proper mask
     int idx = px.w.v0 & rmask;
 
-    uint131_t rx = load(global_rx, idx, 32);
+    uint131_t rx = load_uint131(global_rx, idx, 32);
 
     // Point addition, rx - px
     uint131_t t = sub<CURVE>(rx, px);
@@ -84,7 +84,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
     } else {
       inverse = t;
     }
-    store(mbuf, i, count, inverse);
+    store_uint131(mbuf, i, count, inverse);
   }
 
   // Perform inversion
@@ -96,13 +96,13 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
   // Complete addition
 
   for(; i >= gid; i-=dim) {
-    uint131_t px = load(global_px, i, count);
-    uint131_t py = load(global_py, i, count);
+    uint131_t px = load_uint131(global_px, i, count);
+    uint131_t py = load_uint131(global_py, i, count);
 
     int idx = px.w.v0 & rmask;
 
-    uint131_t rx = load(global_rx, idx, 32);
-    uint131_t ry = load(global_ry, idx, 32);
+    uint131_t rx = load_uint131(global_rx, idx, 32);
+    uint131_t ry = load_uint131(global_ry, idx, 32);
 
     uint131_t s;
 
@@ -110,7 +110,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
 
       // Get the 2nd-last element (product of all factors up to that number)
       // e.g. abcd
-      uint131_t m = load(mbuf, i - dim, count);
+      uint131_t m = load_uint131(mbuf, i - dim, count);
       // Multiply to cancel out all factors except the last one
       // e.g. abcd * (abcde)^-1 = e^-1
       s = mul<CURVE>(inverse, m);
@@ -137,8 +137,8 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
     uint131_t tmp3 = mul<CURVE>(s, tmp2);
     uint131_t y = sub<CURVE>(tmp3, py);
 
-    store(global_px, i, count, x);
-    store(global_py, i, count, y);
+    store_uint131(global_px, i, count, x);
+    store_uint131(global_py, i, count, y);
   }
 }
 
@@ -169,7 +169,7 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
   // Perform Qx - Px and then multiply them together
   for(; i < count; i+=dim) {
 
-    uint131_t px = load(global_px, i, count);
+    uint131_t px = load_uint131(global_px, i, count);
     uint131_t t;
 
     int bit = get_bit(private_keys[i], priv_key_bit);
@@ -184,7 +184,7 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
     }
 
     inverse = mul<CURVE>(inverse, t);
-    store(mbuf, i, count, inverse);
+    store_uint131(mbuf, i, count, inverse);
   }
 
   // Perform inversion
@@ -196,21 +196,21 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
   // Complete addition
 
   for(; i >= gid; i-=dim) {
-    uint131_t px = load(global_px, i, count);
-    uint131_t py = load(global_py, i, count);
+    uint131_t px = load_uint131(global_px, i, count);
+    uint131_t py = load_uint131(global_py, i, count);
 
     int bit = get_bit(private_keys[i], priv_key_bit);
 
     if(!bit) {
       continue;
     } else if(is_infinity(px)) {
-      store(global_px, i, count, qx);
-      store(global_py, i, count, qy);
+      store_uint131(global_px, i, count, qx);
+      store_uint131(global_py, i, count, qy);
 
       continue;
     } else if(equal(px, qx)) {
-      store(global_px, i, count, global_qx[priv_key_bit + 1]);
-      store(global_py, i, count, global_qy[priv_key_bit + 1]);
+      store_uint131(global_px, i, count, global_qx[priv_key_bit + 1]);
+      store_uint131(global_py, i, count, global_qy[priv_key_bit + 1]);
       continue;
     }
     
@@ -219,7 +219,7 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
 
       // Get the 2nd-last element (product of all factors up to that number)
       // e.g. abcd
-      uint131_t m = load(mbuf, i - dim, count);
+      uint131_t m = load_uint131(mbuf, i - dim, count);
       // Multiply to cancel out all factors except the last one
       // e.g. abcd * (abcde)^-1 = e^-1
       s = mul<CURVE>(inverse, m);
@@ -246,8 +246,8 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
     uint131_t tmp3 = mul<CURVE>(s, tmp2);
     uint131_t y = sub<CURVE>(tmp3, py);
 
-    store(global_px, i, count, x);
-    store(global_py, i, count, y);
+    store_uint131(global_px, i, count, x);
+    store_uint131(global_py, i, count, y);
   }
 }
 
@@ -257,8 +257,8 @@ template<int CURVE> __device__ void sanity_check_impl(uint131_t* global_px, uint
   int dim = get_global_size();
 
   for(int i = gid; i < count; i += dim) {
-    uint131_t x = load(global_px, i, count);
-    uint131_t y = load(global_py, i, count);
+    uint131_t x = load_uint131(global_px, i, count);
+    uint131_t y = load_uint131(global_py, i, count);
 
     if(point_exists<CURVE>(x, y) == false) {
       atomicAdd(errors, 1);
@@ -275,7 +275,7 @@ __device__ void clear_public_keys_impl(uint131_t* x_ptr, uint131_t* y_ptr, int c
   set_point_at_infinity(x);
 
   for(int i = idx; i < count; i += dim) {
-    store(x_ptr, i, count, x);
+    store_uint131(x_ptr, i, count, x);
   }
 }
 

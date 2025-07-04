@@ -6,8 +6,24 @@ typedef unsigned __int128 uint128_t;
 #include "p131.cuh"
 #include "p79.cuh"
 
+// Memory layout for array of 131-bit integers
+//
+// Each 131-bit integer is 17 bytes. Stored in memory as 1 x 16-byte element and 1 x 1-byte
+//
+// For coalesed memory access, the 2 parts are stored in separate contiguous regions of memmory
+//
+// Accessing array element at index 'idx' in an array size 'n':
+//
+// Byte offset for 16-byte portion:
+//
+// idx * 16
+//
+// Byte offset for 1-byte portion:
+//
+// n * 16 + idx
+//
 
-__device__ uint131_t load(const void* p, int idx, int n)
+__device__ uint131_t load_uint131(const void* p, int idx, int n)
 {
   const uint128_t* p128 = (const uint128_t*)p;
   const uint8_t* p8 = (const uint8_t*)p;
@@ -22,7 +38,7 @@ __device__ uint131_t load(const void* p, int idx, int n)
   return x;
 }
 
-__device__ void store(void* p, int idx, int n, uint131_t x)
+__device__ void store_uint131(void* p, int idx, int n, uint131_t x)
 {
   uint128_t* p128 = (uint128_t*)p;
   uint8_t* p8 = (uint8_t*)p;

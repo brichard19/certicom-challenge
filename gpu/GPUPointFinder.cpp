@@ -61,39 +61,6 @@ int get_warp_size(int device_id)
 
 typedef unsigned __int128 uint128_t;
 
-uint131_t load_p131(const void* p, int idx, int n)
-{
-  const uint128_t* p128 = (const uint128_t*)p;
-  const uint8_t* p8 = (const uint8_t*)p;
-
-  uint128_t u128 = p128[idx];
-  
-  uint131_t x;
-  x.w.v0 = (uint64_t)u128;
-  x.w.v1 = (uint64_t)(u128 >> 64);
-  x.w.v2 = (uint32_t)p8[n * sizeof(uint128_t) + idx];
-
-  return x;
-}
-
-void store_p131(void* p, int idx, int n, uint131_t x)
-{
-  uint128_t* p128 = (uint128_t*)p;
-  uint8_t* p8 = (uint8_t*)p;
-
-  uint128_t u128 = ((uint128_t)x.w.v1 << 64) | x.w.v0;
-  p128[idx] = u128;
-
-  p8[n * sizeof(uint128_t) + idx] = (uint8_t)x.w.v2;
-}
-
-}
-
-typedef unsigned __int128 uint128_t;
-typedef struct {
-  uint8_t data[17];
-}vec_uint131_t;
-
 uint131_t load_uint131(const void* p, int idx, int n)
 {
   const uint128_t* p128 = (const uint128_t*)p;
@@ -108,6 +75,27 @@ uint131_t load_uint131(const void* p, int idx, int n)
 
   return x;
 }
+
+void store_uint131(void* p, int idx, int n, uint131_t x)
+{
+  uint128_t* p128 = (uint128_t*)p;
+  uint8_t* p8 = (uint8_t*)p;
+
+  uint128_t u128 = ((uint128_t)x.w.v1 << 64) | x.w.v0;
+  p128[idx] = u128;
+
+  p8[n * sizeof(uint128_t) + idx] = (uint8_t)x.w.v2;
+}
+
+}
+
+typedef unsigned __int128 uint128_t;
+
+// uint131_t is 20 bytes while we only need 17 bytes to store it, so
+// to allocate vectorized uint131_t arrays, use sizeof(vec_uint131_t);
+typedef struct {
+  uint8_t data[17];
+}vec_uint131_t;
 
 GPUPointFinder::GPUPointFinder(int device, uint32_t num_points, int dpbits, bool benchmark)
 {
@@ -294,8 +282,8 @@ void GPUPointFinder::init(const std::string& filename)
   std::vector<uint8_t> ry(sizeof(uint131_t) * rw.size());
 
   for(int i = 0; i < rw.size(); i++) {
-    store_p131(rx.data(), i, rw.size(), rw[i].p.x);
-    store_p131(ry.data(), i, rw.size(), rw[i].p.y);
+    store_uint131(rx.data(), i, rw.size(), rw[i].p.x);
+    store_uint131(ry.data(), i, rw.size(), rw[i].p.y);
   }
 
   HIP_CALL(hipMemcpy(_dev_rx, rx.data(), rx.size() * sizeof(rx[0]), hipMemcpyHostToDevice));
