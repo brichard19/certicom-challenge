@@ -540,21 +540,18 @@ void GPUPointFinder::save_progress(const std::string& file_name)
     return; 
   }
 
-  char* tmp = new char[sizeof(uint131_t) * count];
-
+  std::vector<char> tmp(sizeof(uint131_t) * count);
   // Points X
-  HIP_CALL(hipMemcpy(tmp, _dev_x, sizeof(vec_uint131_t) * count, hipMemcpyDeviceToHost));
-  file.write(tmp, sizeof(vec_uint131_t) * count);
+  HIP_CALL(hipMemcpy(tmp.data(), _dev_x, sizeof(vec_uint131_t) * count, hipMemcpyDeviceToHost));
+  file.write(tmp.data(), sizeof(vec_uint131_t) * count);
 
   // Points Y
-  HIP_CALL(hipMemcpy(tmp, _dev_y, sizeof(vec_uint131_t) * count, hipMemcpyDeviceToHost));
-  file.write(tmp, sizeof(vec_uint131_t) * count);
+  HIP_CALL(hipMemcpy(tmp.data(), _dev_y, sizeof(vec_uint131_t) * count, hipMemcpyDeviceToHost));
+  file.write(tmp.data(), sizeof(vec_uint131_t) * count);
 
   // Write starting counters
-  memcpy(tmp, _walk_start, sizeof(uint64_t) * count);
-  file.write(tmp, sizeof(uint64_t) * count);
+  memcpy(tmp.data(), _walk_start, sizeof(uint64_t) * count);
+  file.write(tmp.data(), sizeof(uint64_t) * count);
 
   file.close();
-
-  delete[] tmp;
 }

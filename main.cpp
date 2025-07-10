@@ -143,29 +143,28 @@ void mpi_recv_thread_function()
 {
 #ifdef BUILD_MPI
   int buf_size = 128 * 1024;
-  char* buf = new char[buf_size];
-
+  std::vector<char> buf(buf_size);
+  
   LOG("MPI thread started");
 
   while(_running == true) {
     MPI_Status status;
     int num_bytes;
-    MPI_CALL(MPI_Recv(buf, buf_size, MPI_BYTE, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status));
+    MPI_CALL(MPI_Recv(buf.data(), buf_size, MPI_BYTE, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status));
     MPI_CALL(MPI_Get_count(&status, MPI_BYTE, &num_bytes));
 
-    printf("Received %d bytes\n", num_bytes);
+    printf("MPI: Received %d bytes\n", num_bytes);
 
     assert(num_bytes % sizeof(DistinguishedPoint) == 0);
 
     int num_points = num_bytes / sizeof(DistinguishedPoint);
     std::vector<DistinguishedPoint> dps(num_points);
 
-    memcpy(dps.data(), buf, num_bytes);
+    memcpy(dps.data(), buf.data(), num_bytes);
 
     save_to_disk(dps);
   }
 
-  delete buf;
 #endif
 }
 
@@ -491,11 +490,13 @@ int main(int argc, char**argv)
     results_thread = std::thread(results_thread_function);
   }
 
+#ifdef BUILD_MPI
   // Thread for receiving MPI messages
   std::thread mpi_thread;
   if(_use_mpi == true) {
     mpi_thread = std::thread(mpi_recv_thread_function);
   }
+#endif
 
   // Run main loop
   main_loop();
@@ -505,11 +506,11 @@ int main(int argc, char**argv)
     results_thread.join();
   }
 
+#ifdef BUILD_MPI
   if(_use_mpi == true) {
     mpi_thread.join();
   }
-
-#ifdef BUILD_MPI
+#
   // Cleanup MPI
   if(_use_mpi) {
     MPI_Finalize();
