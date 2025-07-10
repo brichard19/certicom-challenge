@@ -25,39 +25,6 @@ namespace {
   }\
 }\
 
-template<class... T> hipError_t hipLaunchKernel(void* kernel, dim3 gridDim, dim3 blockDim, size_t sharedMem, T... args)
-{
-  std::vector<void*> ptr = {&args...};
-
-  return hipLaunchKernel(kernel, gridDim, blockDim, ptr.data(), sharedMem, 0);
-}
-
-std::string get_gpu_name(int device_id)
-{
-  hipDeviceProp_t props;
- 
-  HIP_CALL(hipGetDeviceProperties(&props, device_id));
-
-  return std::string(props.name);
-}
-
-int get_cu_count(int device_id)
-{
-  hipDeviceProp_t props;
- 
-  HIP_CALL(hipGetDeviceProperties(&props, device_id));
-
-  return props.multiProcessorCount;
-}
-
-int get_warp_size(int device_id)
-{
-  hipDeviceProp_t props;
- 
-  HIP_CALL(hipGetDeviceProperties(&props, device_id));
-
-  return props.warpSize;
-}
 
 typedef unsigned __int128 uint128_t;
 

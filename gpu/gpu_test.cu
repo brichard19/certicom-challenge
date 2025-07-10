@@ -295,16 +295,6 @@ template<int C> bool sub_test()
   return true;
 }
 
-std::string get_gpu_name(int device_id)
-{
-  hipDeviceProp_t props;
- 
-  HIP_CALL(hipGetDeviceProperties(&props, device_id));
-
-  return std::string(props.name);
-}
-
-
 
 template<int C> bool mul_perf_test()
 {
