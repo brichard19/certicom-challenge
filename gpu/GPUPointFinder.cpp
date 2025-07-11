@@ -245,8 +245,8 @@ void GPUPointFinder::init(const std::string& filename)
   // Initialize random walk points
   std::vector<RWPoint> rw = get_rw_points();
 
-  std::vector<uint8_t> rx(sizeof(uint131_t) * rw.size());
-  std::vector<uint8_t> ry(sizeof(uint131_t) * rw.size());
+  std::vector<uint8_t> rx(sizeof(vec_uint131_t) * rw.size());
+  std::vector<uint8_t> ry(sizeof(vec_uint131_t) * rw.size());
 
   for(int i = 0; i < rw.size(); i++) {
     store_uint131(rx.data(), i, rw.size(), rw[i].p.x);
@@ -382,11 +382,11 @@ void GPUPointFinder::allocate_buffers(int n)
 {
   free_buffers();
 
-  HIP_CALL(hipMalloc(&_mbuf, n * sizeof(uint131_t)));
+  HIP_CALL(hipMalloc(&_mbuf, n * sizeof(vec_uint131_t)));
   HIP_CALL(hipMalloc(&_dev_x, n * sizeof(vec_uint131_t)));
   HIP_CALL(hipMalloc(&_dev_y, n * sizeof(vec_uint131_t)));
-  HIP_CALL(hipMalloc(&_dev_rx, _NUM_R_POINTS * sizeof(uint131_t)));
-  HIP_CALL(hipMalloc(&_dev_ry, _NUM_R_POINTS * sizeof(uint131_t)));
+  HIP_CALL(hipMalloc(&_dev_rx, _NUM_R_POINTS * sizeof(vec_uint131_t)));
+  HIP_CALL(hipMalloc(&_dev_ry, _NUM_R_POINTS * sizeof(vec_uint131_t)));
 
   HIP_CALL(hipMallocManaged(&_priv_key_a, _num_points * sizeof(uint131_t)));
  
