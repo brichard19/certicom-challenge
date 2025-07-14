@@ -62,6 +62,7 @@ namespace {
   bool _use_mpi = false;
   int _world_size = -1;
   int _world_rank = -1;
+  volatile bool _mpi_thread_running = true;
 
   int _dpbits = 32;
   std::string _curve_name;
@@ -97,7 +98,7 @@ void dp_callback(const std::vector<DistinguishedPoint>& dps)
     assert((dp.p.x.w.v0 & dpmask) == 0);
   }
 
-  if(_use_mpi == false) {
+  if(_use_mpi == false || (_use_mpi == true && _world_rank == 0)) {
     save_to_disk(dps);
   } else {
 #ifdef BUILD_MPI
@@ -147,22 +148,31 @@ void mpi_recv_thread_function()
   
   LOG("MPI thread started");
 
-  while(_running == true) {
+  MPI_Request request;
+  MPI_CALL(MPI_Irecv(buf.data(), buf_size, MPI_BYTE, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &request));
+  
+  while(_mpi_thread_running == true) {
+    int flag = 0;
     MPI_Status status;
-    int num_bytes;
-    MPI_CALL(MPI_Recv(buf.data(), buf_size, MPI_BYTE, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status));
-    MPI_CALL(MPI_Get_count(&status, MPI_BYTE, &num_bytes));
+    MPI_CALL(MPI_Test(&request, &flag, &status));
+    if(flag) {
+      int num_bytes;
+      MPI_CALL(MPI_Get_count(&status, MPI_BYTE, &num_bytes));
 
-    printf("MPI: Received %d bytes\n", num_bytes);
+      printf("MPI: Received %d bytes\n", num_bytes);
 
-    assert(num_bytes % sizeof(DistinguishedPoint) == 0);
+      assert(num_bytes % sizeof(DistinguishedPoint) == 0);
 
-    int num_points = num_bytes / sizeof(DistinguishedPoint);
-    std::vector<DistinguishedPoint> dps(num_points);
+      int num_points = num_bytes / sizeof(DistinguishedPoint);
+      std::vector<DistinguishedPoint> dps(num_points);
 
-    memcpy(dps.data(), buf.data(), num_bytes);
+      memcpy(dps.data(), buf.data(), num_bytes);
 
-    save_to_disk(dps);
+      save_to_disk(dps);
+  
+      MPI_CALL(MPI_Irecv(buf.data(), buf_size, MPI_BYTE, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &request));
+    }
+    sleep(3);
   }
 
 #endif
@@ -312,7 +322,7 @@ void main_loop()
 
   // Save data
   pf->save_progress(data_file_path);
-
+ 
   delete pf;
 }
 
@@ -493,7 +503,7 @@ int main(int argc, char**argv)
 #ifdef BUILD_MPI
   // Thread for receiving MPI messages
   std::thread mpi_thread;
-  if(_use_mpi == true) {
+  if(_use_mpi == true && _world_rank == 0) {
     mpi_thread = std::thread(mpi_recv_thread_function);
   }
 #endif
@@ -501,16 +511,25 @@ int main(int argc, char**argv)
   // Run main loop
   main_loop();
 
-  // Wait for point thread to finish
+#ifdef BUILD_MPI
+  if(_use_mpi == true) {
+    // Wait for all MPI processes to finish
+    // TODO: This will wait for ALL MPI processes. If any died, this will block forever
+    MPI_Barrier(MPI_COMM_WORLD);
+    // Stop msg receive thread
+    _mpi_thread_running = false;
+  }
+#endif
+  //Wait for point thread to finish
   if(_use_mpi == false || (_use_mpi == true && _world_rank == 0)) {
     results_thread.join();
   }
 
 #ifdef BUILD_MPI
-  if(_use_mpi == true) {
+  if(_use_mpi == true && _world_rank == 0) {
     mpi_thread.join();
   }
-#
+
   // Cleanup MPI
   if(_use_mpi) {
     MPI_Finalize();

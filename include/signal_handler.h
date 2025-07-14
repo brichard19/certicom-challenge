@@ -47,6 +47,11 @@ bool set_signal_handler(std::function<void(int)> handler)
     sig_handler.sa_flags = 0;
     sigaction(SIGINT, &sig_handler, NULL);
     sigaction(SIGTERM, &sig_handler, NULL);
+
+    // When mpirun receives SIGINT or SIGTERM, it forwards them to the MPI processes but then
+    // exits before the MPI processes can exit cleanly. So instead use SIGUSR1. mpirun will forward
+    // this to the MPI processes but will not exit early.
+    sigaction(SIGUSR1, &sig_handler, NULL);
 #endif
 
     return true;
