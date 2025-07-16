@@ -422,6 +422,23 @@ uint131_t sub(uint131_t x, uint131_t y)
   return z;
 }
 
+uint131_t rshift(uint131_t x, int n)
+{
+  uint131_t y = {0};
+  int off = n / 32;
+  int right_shift = n % 32;
+  int left_shift = right_shift == 0 ? 0 : 32 - right_shift;
+
+  for(int i = 0; i + off < 5; i++) {
+    y.v[i] = (x.v[i + off] >> right_shift);
+    if(i + off + 1 < 5) {
+      y.v[i] |=(x.v[i + off + 1] << (left_shift));
+    }
+  }
+
+  return y;
+}
+
 uint131_t mul(uint131_t x, uint131_t y)
 {
   uint262_t product = mul_131(x, y);

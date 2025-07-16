@@ -11,6 +11,7 @@ union uint131_t {
     uint64_t v1;
     uint32_t v2;
   }w;
+  uint32_t v[5];
 };
 
 union uint160_t {
