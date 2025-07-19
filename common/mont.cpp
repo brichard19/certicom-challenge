@@ -424,6 +424,10 @@ uint131_t sub(uint131_t x, uint131_t y)
 
 uint131_t rshift(uint131_t x, int n)
 {
+  if(n == 0) {
+    return x;
+  } 
+
   uint131_t y = {0};
   int off = n / 32;
   int right_shift = n % 32;
@@ -431,13 +435,36 @@ uint131_t rshift(uint131_t x, int n)
 
   for(int i = 0; i + off < 5; i++) {
     y.v[i] = (x.v[i + off] >> right_shift);
-    if(i + off + 1 < 5) {
+    if(right_shift != 0 && i + off + 1 < 5) {
       y.v[i] |=(x.v[i + off + 1] << (left_shift));
     }
   }
 
   return y;
 }
+
+uint131_t lshift(uint131_t x, int n)
+{
+  if(n == 0) {
+    return x;
+  }
+
+  uint131_t y = {0};
+
+  int off = n / 32;
+  int left_shift = n % 32;
+  int right_shift = left_shift == 0 ? 0 : 32 - left_shift;
+
+  for(int i = 4; i - off >= 0; i--) {
+    y.v[i] = (x.v[i - off] << left_shift);
+    if(left_shift != 0 && i - off - 1 >= 0) {
+      y.v[i] |= (x.v[i - off - 1] >> (right_shift));
+    }
+  }
+
+  return y;
+}
+
 
 uint131_t mul(uint131_t x, uint131_t y)
 {
