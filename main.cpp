@@ -61,15 +61,14 @@ namespace {
 void save_to_disk(const std::vector<DistinguishedPoint>& dps)
 {
   // Use a temp file when writing since another thread periodically picks up all the
-  // .txt files
+  // .dat files
   std::string tmp_name = fmt::format("{}/{}.tmp", _results_dir, (int)time(NULL));
-  std::string file_name = fmt::format("{}/{}.txt", _results_dir, (int)time(NULL));
+  std::string file_name = fmt::format("{}/{}.dat", _results_dir, (int)time(NULL));
 
-  std::ofstream of(tmp_name);
+  auto encoded = encode_dps(dps, _dpbits);
+  std::ofstream of(tmp_name, std::ios::binary);
 
-  for(auto p : dps) {
-    of << fmt::format("{} {} {} {}", to_str(p.a), to_str(p.p.x), to_str(p.p.y), p.length) << std::endl;
-  }
+  of.write((const char*)encoded.data(), encoded.size());
   of.close();
 
   std::filesystem::rename(tmp_name, file_name);
@@ -162,7 +161,7 @@ void results_thread_function()
     // Get list of results files
     for(const auto& entry : std::filesystem::directory_iterator(_results_dir)) {
       std::string f = entry.path().filename();
-      if(f.rfind(".txt") != std::string::npos) {
+      if(f.rfind(".dat") != std::string::npos) {
         files.push_back(entry.path().filename());
       }
     }
@@ -175,21 +174,18 @@ void results_thread_function()
     std::vector<DistinguishedPoint> points;
 
     for(auto& file : files) {
-      std::ifstream f(_results_dir + "/" + file, std::ios::in);
+      std::ifstream f(_results_dir + "/" + file, std::ios::binary);
 
-      std::string a_hex;
-      std::string x_hex;
-      std::string y_hex;
-      uint64_t length;
+      f.seekg(0, std::ios::end);
+      std::streamsize file_size = f.tellg();
+      f.seekg(0, std::ios::beg);
 
-      while(f >> a_hex >> x_hex >> y_hex >> length) {
-        uint131_t a = make_uint131(a_hex);
-        uint131_t x = make_uint131(x_hex);
-        uint131_t y = make_uint131(y_hex);
+      std::vector<uint8_t> buf(file_size);
+      f.read((char*)buf.data(), buf.size());
 
-        DistinguishedPoint dp(a, ecc::ecpoint_t(x, y), length);
-        points.push_back(dp);
-      }
+      auto dps = decode_dps(buf.data(), buf.size());
+
+      points.insert(points.end(), dps.begin(), dps.end());      
     }
 
     // Encode results 
