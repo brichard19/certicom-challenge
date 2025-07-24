@@ -26,7 +26,6 @@
 
 
 #define DEFAULT_FILE_FORMAT_STRING "{}-gpu{}.dat"
-#define DEFAULT_DATA_DIRECTORY "data"
 
 namespace {
 
@@ -41,8 +40,8 @@ namespace {
   int _hip_device = 0;
 
   std::string _data_file = "";
-  std::string _data_dir = DEFAULT_DATA_DIRECTORY;
-  std::string _results_dir;
+  std::string _data_dir = "";
+  std::string _results_dir = "";
 
   // System will choose number of points 
   uint32_t _num_points = 0;
@@ -318,6 +317,7 @@ int main(int argc, char**argv)
       {"file", required_argument, 0, 'f'},
       {"mpi", no_argument, 0, 'm'},
       {"size", required_argument, 0, 's'},
+      {"curve", required_argument, 0, 'c'},
       {NULL, 0, NULL, 0}
     };
 
@@ -330,6 +330,10 @@ int main(int argc, char**argv)
     }
 
     switch(c) {
+      case 'c':
+        _curve_name = std::string(optarg);
+        break;
+
       case 'd':
         _data_dir = std::string(optarg);
         break;
@@ -360,12 +364,16 @@ int main(int argc, char**argv)
     }
   }
 
-  if(optind == argc) {
-    std::cout << "Curve not specified" << std::endl;
+  if(_curve_name.empty()) {
+    std::cout << "--curve required" << std::endl;
     return 1;
   }
 
-  _curve_name = std::string(argv[optind]);
+  if(_data_dir.empty()) {
+    std::cout << "--data required" << std::endl;
+    return 1;
+  }
+
   if(_curve_name != "ecp131" && _curve_name != "ecp79") {
     std::cout << "Invalid curve " << _curve_name << std::endl;
     return 1;
