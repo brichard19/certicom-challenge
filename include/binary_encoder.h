@@ -99,7 +99,7 @@ public:
             throw std::exception();
         }
 
-        std::memcpy(buf, _buf, size);
+        std::memcpy(buf, _buf + _idx, size);
         _idx += size;
     }
 };
