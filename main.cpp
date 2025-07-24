@@ -17,7 +17,7 @@
 #include "log.h"
 #include "signal_handler.h"
 #include "util.h"
-
+#include "mont.h"
 
 #ifdef BUILD_MPI
 
@@ -111,35 +111,6 @@ void dp_callback(const std::vector<DistinguishedPoint>& dps)
 
 
 
-// Encodes a DistinguishedPoint into a string of bytes
-std::vector<uint8_t> encode_dp(const DistinguishedPoint& dp)
-{
-  // 17 + 17 + 1 + 8 bytes
-  std::vector<uint8_t> buf(43);
-  uint8_t* ptr = buf.data();
-
-  // x-coordinate: 17 bytes
-  // TODO: Compress further by removing the "distinguished bits", which
-  // are all 0's. 
-  memcpy(ptr, &dp.p.x, 17);
-  ptr += 17;
- 
-  // Append sign bit to x coordinate. The x coordinate is 131 bits,
-  // so set the 132nd bit.
-  uint8_t sign = is_odd(dp.p.y) ? 1 : 0;
-  *ptr = sign;
-  ptr++;
- 
-  // a-exponent, 17 bytes
-  memcpy(ptr, &dp.a, 17);
-  ptr += 17;
-
-  // Walk length, 8 bytes
-  memcpy(ptr, &dp.length, sizeof(uint64_t));
-
-  return buf;
-}
-
 void mpi_recv_thread_function()
 {
 #ifdef BUILD_MPI
@@ -149,6 +120,8 @@ void mpi_recv_thread_function()
   LOG("MPI thread started");
 
   MPI_Request request;
+
+  // Async request
   MPI_CALL(MPI_Irecv(buf.data(), buf_size, MPI_BYTE, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &request));
   
   while(_mpi_thread_running == true) {
@@ -170,6 +143,7 @@ void mpi_recv_thread_function()
 
       save_to_disk(dps);
   
+      // New async request
       MPI_CALL(MPI_Irecv(buf.data(), buf_size, MPI_BYTE, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &request));
     }
     sleep(3);
@@ -232,23 +206,13 @@ void results_thread_function()
     // Encode results 
     bool success = true;
 
-    BinaryEncoder encoder;
+    auto encoded = encode_dps(points, _dpbits);
 
-    uint32_t num_points = points.size();
-
-    encoder.encode(num_points);
-
-    // TODO: Encode points
-    for(auto p : points) {
-      std::vector<uint8_t> buf = encode_dp(p);
-      encoder.encode(buf.data(), buf.size());
-    }
-    
     LOG("Uploading {} points to server", points.size());
 
     // TODO: Use base64 instead (smaller data)
     // Upload to server 
-    std::string hex = util::to_hex(encoder.get_ptr(), encoder.get_size());
+    std::string hex = util::to_hex(encoded.data(), encoded.size());
 
     try {
       HTTPClient http(_url, _port);

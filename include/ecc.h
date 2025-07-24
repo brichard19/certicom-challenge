@@ -36,6 +36,8 @@ bool exists(const ecpoint_t& p);
 ecpoint_t dbl(const ecpoint_t& p);
 ecpoint_t add(const ecpoint_t& p, const ecpoint_t& q);
 ecpoint_t mul(const uint131_t& k, const ecpoint_t& p);
+uint131_t calc_y(const uint131_t& x, int sign);
+
 std::vector<ecpoint_t> mul(const std::vector<uint131_t>& k, const ecpoint_t& p);
 
 ecpoint_t g();

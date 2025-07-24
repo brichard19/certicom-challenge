@@ -16,6 +16,7 @@ uint131_t square(uint131_t a);
 uint131_t inv(uint131_t a);
 uint131_t sqrt(uint131_t x);
 uint131_t rshift(uint131_t x, int n);
+uint131_t lshift(uint131_t x, int n);
 
 };
 

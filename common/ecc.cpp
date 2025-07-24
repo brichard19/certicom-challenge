@@ -373,6 +373,25 @@ std::vector<ecpoint_t> mul(const std::vector<uint131_t>& k, const ecpoint_t& q)
   return p;
 }
 
+// Calculate y from x and sign
+uint131_t calc_y(const uint131_t& x, int sign)
+{
+  // y^2 = x^3 + ax + b
+  // y = sqrt(x^3 + ax + b)
+
+  uint131_t x3 = mont::mul(mont::square(x), x);
+  uint131_t ax = mont::mul(ecc::a(), x);
+
+  uint131_t y2 = mont::add(mont::add(x3, ax), ecc::b());
+
+  uint131_t y = mont::sqrt(y2);
+
+  if(get_bit(y, 0) == sign) {
+    return y;
+  }
+  
+  return mont::sub(ecc::p(), y);
+}
 
 ecpoint_t g()
 {
