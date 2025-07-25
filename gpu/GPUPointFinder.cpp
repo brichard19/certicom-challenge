@@ -96,6 +96,8 @@ GPUPointFinder::GPUPointFinder(int device, uint32_t num_points, int dpbits, bool
   _threads = simd_width;
   
   HIP_CALL(hipSetDevice(device));
+  HIP_CALL(hipSetDeviceFlags(hipDeviceScheduleYield));
+
   LOG("Initializing GPU {}: {}", _device, get_gpu_name(_device));
   LOG("Compute units: {}", compute_units);
   LOG("SIMD width:    {}", simd_width);
