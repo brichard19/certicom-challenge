@@ -32,7 +32,6 @@ namespace {
   const double _save_interval = 600.0;
   const double _perf_interval = 5.0;
 
-  std::string _url = "127.0.0.1";
   int _port = 8080;
 
   volatile bool _running = true;
@@ -54,6 +53,7 @@ namespace {
 
   int _dpbits = 32;
   std::string _curve_name;
+  std::string _upload_server = "";
 }
 
 // Saves distingusihed points to disk
@@ -139,7 +139,7 @@ void mpi_recv_thread_function()
 #endif
 }
 
-void results_thread_function()
+void upload_thread_function()
 {
   bool defer_upload = false;
 
@@ -149,7 +149,7 @@ void results_thread_function()
 
     sleep(5);
 
-    if(defer_upload && defer_timer.elapsed() < 600.0) {
+    if(_running && defer_upload && defer_timer.elapsed() < 600.0) {
       continue;
     } else {
       defer_upload = false;
@@ -199,7 +199,7 @@ void results_thread_function()
     std::string hex = util::to_hex(encoded.data(), encoded.size());
 
     try {
-      HTTPClient http(_url, _port);
+      HTTPClient http(_upload_server, _port);
       http.submit_points(_curve_name, hex);
       defer_upload = false;
     }catch(std::exception& ex) {
@@ -309,7 +309,7 @@ bool init_directories()
 int main(int argc, char**argv)
 {
   bool gpu_flag = false;
-
+ 
   while(true) {
     static struct option long_options[] = {
       {"gpu", required_argument, 0, 'g'},
@@ -318,6 +318,7 @@ int main(int argc, char**argv)
       {"mpi", no_argument, 0, 'm'},
       {"size", required_argument, 0, 's'},
       {"curve", required_argument, 0, 'c'},
+      {"upload-server", required_argument, 0, 'u'},
       {NULL, 0, NULL, 0}
     };
 
@@ -353,6 +354,10 @@ int main(int argc, char**argv)
 
       case 's':
         _num_points = atoi(optarg);
+        break;
+      
+      case 'u':
+        _upload_server = std::string(optarg);
         break;
 
       case '?':
@@ -454,7 +459,9 @@ int main(int argc, char**argv)
 
   // If using MPI, only rank 0 reports results
   if(_use_mpi == false || (_use_mpi == true && _world_rank == 0)) {
-    results_thread = std::thread(results_thread_function);
+    if(_upload_server.empty() == false) {
+      results_thread = std::thread(upload_thread_function);
+    }
   }
 
 #ifdef BUILD_MPI
@@ -479,7 +486,9 @@ int main(int argc, char**argv)
 #endif
   //Wait for point thread to finish
   if(_use_mpi == false || (_use_mpi == true && _world_rank == 0)) {
-    results_thread.join();
+    if(_upload_server.empty() == false) {
+      results_thread.join();
+    }
   }
 
 #ifdef BUILD_MPI
