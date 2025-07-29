@@ -13,8 +13,9 @@ The target is the 131-bit prime curve. The 79-bit curve is included for testing 
 - Parallel Pollards rho algorithm with R-adding walks.
 - Distinguished points are uploaded to central server. Currently the server code is not implemented, so the upload gets skipped.
 - All math is done in  [Montgomery form](https://en.wikipedia.org/wiki/Montgomery_modular_multiplication "Montgomery form") with R = 2^160
-- Built using HIP, so can target AMD and Nvidia GPus
+- Built using HIP, so can target AMD and Nvidia GPUs
 - Currently builds on Linux
+- Supports MPI for multi-GPU / multi-node parallelism
 
 # Dependencies
 
