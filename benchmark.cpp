@@ -8,7 +8,7 @@
 #include "ec_rho.h"
 #include "util.h"
 
-double _benchmark_run_time = 15.0;
+double _benchmark_run_time = 30.0;
 
 void benchmark(int hip_device)
 {
