@@ -75,8 +75,11 @@ std::vector<uint8_t> encode_dp(const DistinguishedPoint& dp, int dbits)
   return buf;
 }
 
-std::vector<uint8_t> encode_dps(const std::vector<DistinguishedPoint>& dps, int dbits)
+std::vector<uint8_t> encode_dps(const std::vector<DistinguishedPoint>& dps, int dbits, int curve)
 {
+
+  assert(curve == 79 || curve == 131);
+
   BinaryEncoder encoder;
 
   // Encode header
@@ -84,6 +87,7 @@ std::vector<uint8_t> encode_dps(const std::vector<DistinguishedPoint>& dps, int 
   header.version = 1;
   header.count = dps.size();
   header.dbits = dbits;
+  header.curve = curve;
 
   encoder.encode(header);
 
@@ -140,6 +144,8 @@ std::vector<DistinguishedPoint> decode_dps(const uint8_t* bytes, size_t size)
   BinaryDecoder decoder(bytes, size);
   DPHeader header = decoder.decode<DPHeader>();
   
+  assert(header.curve == 79 || header.curve == 131);
+
   std::vector<DistinguishedPoint> dps;
 
   int payload_size = size - sizeof(DPHeader);

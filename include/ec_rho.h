@@ -23,6 +23,7 @@ struct DistinguishedPoint {
 struct DPHeader {
   uint8_t version;
   uint32_t count;
+  uint8_t curve;
   uint8_t dbits;
 };
 
@@ -49,6 +50,6 @@ public:
 std::vector<RWPoint> get_rw_points();
 
 std::vector<DistinguishedPoint> decode_dps(const uint8_t* bytes, size_t size);
-std::vector<uint8_t> encode_dps(const std::vector<DistinguishedPoint>& dps, int dbits);
+std::vector<uint8_t> encode_dps(const std::vector<DistinguishedPoint>& dps, int dbits, int curve);
 
 #endif
