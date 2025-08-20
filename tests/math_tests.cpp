@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "ecc.h"
-#include "mont.h"
+#include "montgomery.h"
 #include "uint131.h"
 
 namespace {

@@ -2,7 +2,7 @@
 
 #include "ecc.h"
 #include "eccp131.h"
-#include "mont.h"
+#include "montgomery.h"
 #include "util.h"
 
 namespace {

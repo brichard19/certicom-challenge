@@ -5,7 +5,7 @@
 
 #include "rw_p79.h"
 #include "rw_p131.h"
-#include "mont.h"
+#include "montgomery.h"
 
 #include "binary_encoder.h"
 

@@ -11,7 +11,7 @@
 #include "ecc.cuh"
 #include "hip_helper.h"
 #include "log.h"
-#include "mont.h"
+#include "montgomery.h"
 #include "util.h"
 
 namespace {

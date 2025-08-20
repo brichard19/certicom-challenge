@@ -1,7 +1,7 @@
 #include <stdexcept>
 
 #include "eccp131.h"
-#include "mont.h"
+#include "montgomery.h"
 
 typedef unsigned __int128 uint128_t;
 

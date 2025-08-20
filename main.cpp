@@ -18,7 +18,7 @@
 #include "log.h"
 #include "signal_handler.h"
 #include "util.h"
-#include "mont.h"
+#include "montgomery.h"
 
 #ifdef BUILD_MPI
 #include <mpi.h>
