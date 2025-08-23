@@ -95,9 +95,9 @@ bool exists(const ecpoint_t& p)
 {
   uint131_t y2 = mont::square(p.y);
   uint131_t x3 = mont::mul(p.x, mont::square(p.x));
-  uint131_t ax = mont::mul(_a, p.x);
+  uint131_t ax = mont::mul(_params.a, p.x);
 
-  uint131_t rs = mont::add(mont::add(x3, ax), _b);
+  uint131_t rs = mont::add(mont::add(x3, ax), _params.b);
 
   return y2 == rs;
 }
@@ -111,7 +111,7 @@ ecpoint_t dbl(const ecpoint_t& p)
   // 3x^2 + a / 2y
 
   uint131_t x2 = mont::square(p.x);
-  uint131_t rise = mont::add(mont::add(mont::add(x2, x2), x2), _a);
+  uint131_t rise = mont::add(mont::add(mont::add(x2, x2), x2), _params.a);
 
   uint131_t run = mont::add(p.y, p.y);
   uint131_t s = mont::mul(rise, mont::inv(run));
@@ -180,14 +180,14 @@ uint131_t genkey(RNG& rng)
     r.w.v2 = (uint32_t)rng.next();
 
     // mod p
-    if(_p.w.v2 == 0) {
+    if(_params.p.w.v2 == 0) {
       r.w.v2 = 0;
-      r.w.v1 %= (_p.w.v1 + 1);
+      r.w.v1 %= (_params.p.w.v1 + 1);
 
-      gte = r.w.v0 >= _p.w.v0;
+      gte = r.w.v0 >= _params.p.w.v0;
     } else {
-      r.w.v2 %= (_p.w.v2 + 1);
-      gte = r.w.v1 >= _p.w.v1;
+      r.w.v2 %= (_params.p.w.v2 + 1);
+      gte = r.w.v1 >= _params.p.w.v1;
     }
 
   }while (gte);
@@ -274,7 +274,7 @@ int get_bit(uint131_t x, int bit)
 std::vector<ecpoint_t> mul(const std::vector<uint131_t>& k, const ecpoint_t& q)
 {
   // Create lookup table for Q, 2Q, 4Q... 2^131Q
-  std::vector<ecpoint_t> qmul(_bits + 1);
+  std::vector<ecpoint_t> qmul(_params.bits + 1);
 
   // P = kQ
   std::vector<ecpoint_t> p(k.size());
@@ -286,13 +286,13 @@ std::vector<ecpoint_t> mul(const std::vector<uint131_t>& k, const ecpoint_t& q)
   }
 
   // For each bit in the private keys
-  for(int b = 0; b < _bits; b++) {
+  for(int b = 0; b < _params.bits; b++) {
 
     // Buffer to hold the multiplication chain
     std::vector<uint131_t> mbuf(k.size());
 
     uint131_t t;
-    uint131_t inverse = _one;
+    uint131_t inverse = _params.one;
 
     for(int i = 0; i < k.size(); i++) {
 
@@ -300,7 +300,7 @@ std::vector<ecpoint_t> mul(const std::vector<uint131_t>& k, const ecpoint_t& q)
 
       if(bit == 0 || is_infinity(p[i]) || is_equal(p[i], qmul[b])) {
         // Nothing to do. Multiply by 1
-        t = _one;
+        t = _params.one;
       } else {
         // x2 - x1
         t = mont::sub(qmul[b].x, p[i].x);
@@ -395,42 +395,42 @@ uint131_t calc_y(const uint131_t& x, int sign)
 
 ecpoint_t g()
 {
-  return ecpoint_t(_gx, _gy);
+  return ecpoint_t(_params.gx, _params.gy);
 }
 
 ecpoint_t q()
 {
-  return ecpoint_t(_qx, _qy);
+  return ecpoint_t(_params.qx, _params.qy);
 }
 
 uint131_t p()
 {
-  return _p;
+  return _params.p;
 }
 
 uint131_t a()
 {
-  return _a;
+  return _params.a;
 }
 
 uint131_t b()
 {
-  return _b;
+  return _params.b;
 }
 
 uint131_t n()
 {
-  return _n;
+  return _params.n;
 }
 
 std::string curve_name()
 {
-  return _curve_name;
+  return _params.name;
 }
 
 int curve_strength()
 {
-  return _bits;
+  return _params.bits;
 }
 
 }

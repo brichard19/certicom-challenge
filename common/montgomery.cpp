@@ -5,64 +5,15 @@
 
 typedef unsigned __int128 uint128_t;
 
-uint131_t _p;
-uint131_t _a;
-uint131_t _b;
-uint131_t _n;
-uint131_t _gx;
-uint131_t _gy;
-uint131_t _qx;
-uint131_t _qy;
-uint131_t _k;
-uint131_t _one;
-uint131_t _p_minus_2;
-uint131_t _r;
-uint131_t _r2;
-uint131_t _modulo_sqrt;
-
-int _bits;
-int _words;
-std::string _curve_name;
+CurveParameters _params;
 
 namespace ecc {
 void set_curve(const std::string& curve_name)
 {
   if(curve_name == "ecp131") {
-    _p = _eccp131_p;
-    _a = _eccp131_a;
-    _b = _eccp131_b;
-    _n = _eccp131_n;
-    _gx = _eccp131_gx;
-    _gy = _eccp131_gy;
-    _qx = _eccp131_qx;
-    _qy = _eccp131_qy;
-    _k = _eccp131_k;
-    _modulo_sqrt = _eccp131_sqrt;
-    _one = _eccp131_one;
-    _p_minus_2 = _eccp131_p_minus_2;
-    _r = _eccp131_r;
-    _r2 = _eccp131_r2;
-    _bits = _eccp131_bits;
-    _words = (_bits + 63) / 64;
-    _curve_name = _eccp131_curve_name;
+    _params = _eccp131;
   } else if(curve_name == "ecp79") {
-    _p = _eccp79_p;
-    _a = _eccp79_a;
-    _b = _eccp79_b;
-    _n = _eccp79_n;
-    _gx = _eccp79_gx;
-    _gy = _eccp79_gy;
-    _qx = _eccp79_qx;
-    _qy = _eccp79_qy;
-    _k = _eccp79_k;
-    _modulo_sqrt = _eccp79_sqrt;
-    _one = _eccp79_one;
-    _p_minus_2 = _eccp79_p_minus_2;
-    _r = _eccp79_r;
-    _r2 = _eccp79_r2;
-    _bits = _eccp79_bits;
-    _words = (_bits + 63) / 64;
-    _curve_name = _eccp79_curve_name;
+    _params = _eccp79;
   } else {
     throw std::runtime_error("Invalid curve name");
   }
@@ -359,15 +310,15 @@ uint131_t mont_reduce(const uint262_t& t)
   uint131_t m2;
   uint131_t m3;
 
-  m1 = mul_mod_160(t_lo, _k);
+  m1 = mul_mod_160(t_lo, _params.k);
 
-  m2 = mul_shift_160(m1, _p);
+  m2 = mul_shift_160(m1, _params.p);
  
   // Not sure if this is correct, but carry always seems to be 1.
   m3 = add_raw(t_hi, m2, 1);
 
-  if(is_less_than(_p, m3)) {
-    m3 = sub_raw(m3, _p);
+  if(is_less_than(_params.p, m3)) {
+    m3 = sub_raw(m3, _params.p);
   }
   return m3;
 
@@ -381,7 +332,7 @@ namespace mont {
 
 uint131_t to(uint131_t x)
 { 
-  return mul(x, _r2);
+  return mul(x, _params.r2);
 }
 
 uint131_t from(uint131_t x)
@@ -395,8 +346,8 @@ uint131_t add(uint131_t x, uint131_t y)
   uint131_t z = add_raw(x, y);
 
   // Reduce mod P
-  if(is_less_than(_p, z)) {
-    z = sub_raw(z, _p);
+  if(is_less_than(_params.p, z)) {
+    z = sub_raw(z, _params.p);
   }
   return z;
 }
@@ -404,7 +355,7 @@ uint131_t add(uint131_t x, uint131_t y)
 uint131_t neg(uint131_t x)
 {
   // To get -x mod P, subtract x from P
-  return sub_raw(_p, x);
+  return sub_raw(_params.p, x);
 }
 
 
@@ -416,7 +367,7 @@ uint131_t sub(uint131_t x, uint131_t y)
 
   // Went below zero. Need to add P.
   if(borrow) {
-    z = add_raw(z, _p);
+    z = add_raw(z, _params.p);
   }
 
   return z;
@@ -481,7 +432,7 @@ uint131_t square(uint131_t x)
 uint131_t pow(uint131_t x, uint131_t exponent)
 {
     // Initialize to 1 in montgomery form
-    uint131_t product = _one;
+    uint131_t product = _params.one;
     uint131_t q = x;
 
     for(int i = 0; i < 64; i++) {
@@ -516,27 +467,27 @@ uint131_t pow(uint131_t x, uint131_t exponent)
 // Modular inverse using Fermat's method
 uint131_t inv(uint131_t x)
 {
-  return pow(x, _p_minus_2);
+  return pow(x, _params.p_minus_2);
 }
 
 uint131_t sqrt(uint131_t x)
 {
-  if(_curve_name == "ecp131") {
+  if(_params.name == "ecp131") {
 
     // sqrt(x) = +- x^(p+1)/4 for p congruent to 3 mod 4
-    return pow(x, _modulo_sqrt);
-  } else if(_curve_name == "ecp79") {
+    return pow(x, _params.sqrt);
+  } else if(_params.name == "ecp79") {
 
     // 2 in montgomery form 
     uint131_t two = {{0xa88f54e07ed578be, 0x26b0, 0x00}};
     
-    uint131_t v = pow(mul(two, x), _modulo_sqrt);
+    uint131_t v = pow(mul(two, x), _params.sqrt);
 
     uint131_t i = mul(mul(square(v), x), two);
 
     uint131_t xv = mul(x, v);
 
-    return mul(xv, sub(i, _one));
+    return mul(xv, sub(i, _params.one));
   } else {
     throw std::runtime_error("Invalid curve name");
   }
