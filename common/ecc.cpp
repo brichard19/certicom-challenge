@@ -1,7 +1,7 @@
 #include <random>
 
 #include "ecc.h"
-#include "eccp131.h"
+#include "ecc_internal.h"
 #include "montgomery.h"
 #include "util.h"
 #include <stdexcept>

@@ -1,5 +1,5 @@
-#ifndef _ECCP131_H
-#define _ECCP131_H
+#ifndef _ECC_INTERNAL_H
+#define _ECC_INTERNAL_H
 
 #include <string>
 
