@@ -49,6 +49,7 @@ BUILD_DIR=$(CUR_DIR)
 LIB_DIR=$(CUR_DIR)/lib
 BIN_DIR=$(CUR_DIR)/bin
 ROCM_LIB=$(ROCM_HOME)/lib
+OBJDIR=$(CUR_DIR)/obj
 
 INCLUDE+=-I$(CUR_DIR) -I$(CUR_DIR)/include -I$(CUR_DIR)/gpu -I$(CUR_DIR)/third_party/json11 -I$(CUR_DIR)/third_party/fmt/include
 
@@ -64,55 +65,42 @@ export BIN_DIR
 export INCLUDE
 export CFLAGS
 
-all:	rho benchmark tests tools
+CPP_RHO := main.cpp GPUPointFinder.cpp  ec_rho.cpp  ecc.cpp  http_client.cpp  montgomery.cpp  uint131.cpp  util.cpp
+CPP_RHO := $(addprefix src/, $(CPP_RHO))
+CPP_BENCH := benchmark.cpp GPUPointFinder.cpp  ec_rho.cpp  ecc.cpp montgomery.cpp  uint131.cpp  util.cpp
+CPP_BENCH := $(addprefix src/, $(CPP_BENCH))
 
-tools:	common_lib third_party
-	make -C tools
 
-rho:	main.cpp gpu_lib third_party common_lib
-	mkdir -p ${BIN_DIR}
-ifneq ($(filter nvidia, $(TARGET_PLATFORMS)),)
-	HIP_PLATFORM=nvidia ${CXX} ${CFLAGS} ${CXX_CFLAGS_NVIDIA} main.cpp http_client.cpp ${INCLUDE} ${ROCM_INCLUDE} ${NVIDIA_INCLUDE} -o ${BIN_DIR}/${BIN_PREFIX}rho-nvidia -L${LIB_DIR}  ${MPI_LINKER} ${LINKER_NVIDIA} -L${ROCM_LIB} ${MPI_LIBS} -lgpupf-nvidia ${LIBS_NVIDIA} -ljson11 -lfmt -lcurl -lcommon
-endif
-
-ifneq ($(filter amd, $(TARGET_PLATFORMS)),)
-	HIP_PLATFORM=amd ${CXX} ${CFLAGS} ${CXX_CFLAGS_AMD} main.cpp http_client.cpp ${INCLUDE} ${ROCM_INCLUDE} -o ${BIN_DIR}/${BIN_PREFIX}rho-amd -L${LIB_DIR} ${LINKER_AMD} -L${ROCM_LIB} ${MPI_LINKER} -lgpupf-amd ${LIBS_AMD} ${MPI_LIBS} -ljson11 -lfmt -lcurl -lcommon
-endif
-
-benchmark:	benchmark.cpp gpu_lib third_party
-	mkdir -p ${BIN_DIR}
-ifneq ($(filter nvidia, $(TARGET_PLATFORMS)),)
-	HIP_PLATFORM=nvidia ${CXX} ${CFLAGS} ${CXX_CFLAGS_NVIDIA} benchmark.cpp ${INCLUDE} ${ROCM_INCLUDE} ${NVIDIA_INCLUDE} -o ${BIN_DIR}/${BIN_PREFIX}bench-nvidia -L${LIB_DIR} ${LINKER_NVIDIA} -L${ROCM_LIB} -lgpupf-nvidia ${LIBS_NVIDIA} -lfmt -lcommon
-endif
-
-ifneq ($(filter amd, $(TARGET_PLATFORMS)),)
-	HIP_PLATFORM=amd ${CXX} ${CFLAGS} ${CXX_CFLAGS_AMD} benchmark.cpp ${INCLUDE} ${ROCM_INCLUDE} -o ${BIN_DIR}/${BIN_PREFIX}bench-amd -L${LIB_DIR} ${LINKER_AMD} -L${ROCM_LIB} -lgpupf-amd ${LIBS_AMD} -lfmt -lcommon
-endif
-
-tests:	common_lib
-	make -C tests
-
-gpu_lib: common_lib third_party
-ifneq ($(filter nvidia, $(TARGET_PLATFORMS)),)
-	HIP_PLATFORM=nvidia make -C gpu
-endif
-
-ifneq ($(filter amd, $(TARGET_PLATFORMS)),)
-	HIP_PLATFORM=amd make -C gpu
-endif
-
-common_lib:	third_party
-	make -C common
+all:	benchmark_nvidia rho_nvidia benchmark_amd rho_amd
 
 .PHONY: third_party
 third_party:
 	make -C third_party/fmt
 	make -C third_party/json11
 
+gpu_nvidia:
+	mkdir -p $(OBJDIR)
+	HIP_PLATFORM=nvidia hipcc -c src/ecc.cu -o $(OBJDIR)/ecc_nvidia.o $(HIPCC_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -I/usr/local/cuda/include -Isrc/include
+
+gpu_amd:
+	mkdir -p $(OBJDIR)
+	HIP_PLATFORM=amd hipcc -c src/ecc.cu -o $(OBJDIR)/ecc_amd.o $(HIPCC_CFLAGS_AMD) -D__HIP_PLATFORM_AMD__ -Isrc -Isrc/include
+
+benchmark_nvidia:	third_party gpu_nvidia
+	mkdir -p $(OBJDIR)
+	HIP_PLATFORM=nvidia g++ $(CPP_BENCH) $(OBJDIR)/ecc_nvidia.o -o benchmark-nvidia $(CXX_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(NVIDIA_INCLUDE) $(INCLUDE) $(LINKER_NVIDIA) $(LIBS_NVIDIA) -lfmt
+
+rho_nvidia:	third_party gpu_nvidia
+	mkdir -p $(OBJDIR)
+	HIP_PLATFORM=nvidia g++ $(CPP_RHO) $(OBJDIR)/ecc_nvidia.o -o rho-nvidia $(CXX_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(NVIDIA_INCLUDE) $(INCLUDE) $(LINKER_NVIDIA) $(LIBS_NVIDIA) -lfmt -ljson11 -lcurl
+
+benchmark_amd:	third_party	gpu_amd
+	mkdir -p $(OBJDIR)
+	HIP_PLATFORM=amd g++ $(CPP_BENCH) $(OBJDIR)/ecc_amd.o -o benchmark-amd -D__HIP_PLATFORM_AMD__ -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LIBS_AMD) $(LINKER_AMD) -lfmt
+
+rho_amd:	third_party gpu_amd
+	mkdir -p $(OBJDIR)
+	HIP_PLATFORM=amd g++ $(CPP_RHO) $(OBJDIR)/ecc_amd.o -o rho-amd -D__HIP_PLATFORM_AMD__ -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LINKER_AMD) $(LIBS_AMD) -lfmt -ljson11 -lcurl
+
 clean:
-	make -C gpu clean
-	make -C common clean
-	make -C tests clean
-	make -C third_party/fmt clean
-	make -C third_party/json11 clean
-	rm -rfv ${LIB_DIR} ${BIN_DIR} *.o
+	rm -rf obj
