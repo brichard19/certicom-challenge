@@ -1,4 +1,15 @@
-TARGET_PLATFORMS=nvidia amd
+
+TARGET_PLATFORMS ?= nvidia amd
+VALID_PLATFORMS = amd nvidia
+INVALID_PLATFORMS := $(filter-out $(VALID_PLATFORMS),$(TARGET_PLATFORMS))
+
+# Fail early if invalids exist
+ifeq ($(strip $(INVALID_TARGETS)),)
+# all good
+else
+$(error Invalid TARGETS: $(INVALID_PLATFORMS). Valid options are: $(VALID_PLATFORMS))
+endif
+
 CXX=g++
 
 DEFINES=
@@ -70,8 +81,16 @@ CPP_RHO := $(addprefix src/, $(CPP_RHO))
 CPP_BENCH := benchmark.cpp GPUPointFinder.cpp  ec_rho.cpp  ecc.cpp montgomery.cpp  uint131.cpp  util.cpp
 CPP_BENCH := $(addprefix src/, $(CPP_BENCH))
 
+# NVIDIA targets
+ifeq ($(filter nvidia,$(TARGET_PLATFORMS)),nvidia)
+TARGETS += benchmark_nvidia rho_nvidia
+endif
 
-all:	benchmark_nvidia rho_nvidia benchmark_amd rho_amd
+ifeq ($(filter amd,$(TARGET_PLATFORMS)),amd)
+TARGETS += benchmark_amd rho_amd
+endif
+
+all:	$(TARGETS)
 
 .PHONY: third_party
 third_party:
@@ -103,4 +122,8 @@ rho_amd:	third_party gpu_amd
 	HIP_PLATFORM=amd g++ $(CPP_RHO) $(OBJDIR)/ecc_amd.o -o rho-amd -D__HIP_PLATFORM_AMD__ -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LINKER_AMD) $(LIBS_AMD) -lfmt -ljson11 -lcurl
 
 clean:
-	rm -rf obj
+	rm -v -rf obj
+	rm -v -f rho-amd
+	rm -v -f benchmark-amd
+	rm -v -f rho-nvidia
+	rm -v -f benchmark-nvidia
