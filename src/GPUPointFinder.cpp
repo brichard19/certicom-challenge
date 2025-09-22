@@ -1,10 +1,12 @@
 #include <assert.h>
 #include <chrono>
 #include <fstream>
+#include <format>
 #include <hip/hip_runtime.h>
 #include <sstream>
 #include <stdexcept>
 #include <stdint.h>
+#include <math.h>
 
 #include "GPUPointFinder.h"
 #include "ec_rho.h"
@@ -118,7 +120,7 @@ GPUPointFinder::GPUPointFinder(int device, uint32_t num_points, int dpbits, bool
 
   // Using the number of DP bits and the number of parallel walks, we can
   // approximate how many results we will get per iteration
-  double prob = 1.0 / pow(2, _dpbits);
+  double prob = 1.0 / pow(2.0, (double)_dpbits);
 
   // Can run ~65k iteration before buffer is full
   _result_buf_size = 65536 * (int)((double)_num_points * prob + 1.0);

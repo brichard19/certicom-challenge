@@ -1,5 +1,6 @@
 #include <cassert>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <getopt.h>
 #include <hip/hip_runtime.h>
@@ -12,7 +13,6 @@
 #include "GPUPointFinder.h"
 #include "binary_encoder.h"
 #include "ec_rho.h"
-#include "fmt/format.h"
 #include "hip_helper.h"
 #include "http_client.h"
 #include "log.h"
@@ -67,8 +67,9 @@ void save_to_disk(const std::vector<DistinguishedPoint>& dps)
 {
   // Use a temp file when writing since another thread periodically picks up all the
   // .dat files
-  std::string tmp_name = fmt::format("{}/{}.tmp", _results_dir, (int)time(NULL));
-  std::string file_name = fmt::format("{}/{}.dat", _results_dir, (int)time(NULL));
+  //std::string tmp_name = std::format("{}/{}.tmp", _results_dir, (int)time(NULL));
+  std::string tmp_name = std::format("{}/{}.tmp", _results_dir, (int)time(NULL));
+  std::string file_name = std::format("{}/{}.dat", _results_dir, (int)time(NULL));
 
   auto encoded = encode_dps(dps, _dpbits, _curve_bits[_curve_name]);
   std::ofstream of(tmp_name, std::ios::binary);
@@ -297,7 +298,7 @@ bool init_directories()
     if(std::filesystem::exists(_data_dir)) {
       return true;
     }
-    std::cout << fmt::format("Error creating directory '{}': {}", _data_dir, err.message()) << std::endl;
+    std::cout << std::format("Error creating directory '{}': {}", _data_dir, err.message()) << std::endl;
     return false;
   }
 
@@ -305,7 +306,7 @@ bool init_directories()
     if(std::filesystem::exists(_data_dir)) {
       return true;
     }
-    std::cout << fmt::format("Error creating directory '{}': {}", _data_dir, err.message()) << std::endl;
+    std::cout << std::format("Error creating directory '{}': {}", _data_dir, err.message()) << std::endl;
     return false;
   }
 
@@ -459,7 +460,7 @@ int main(int argc, char**argv)
 
   // Use default file unless one was provided
   if(_data_file.empty()) {
-    _data_file = fmt::format(DEFAULT_FILE_FORMAT_STRING, ecc::curve_name().c_str(), _hip_device);
+    _data_file = std::format(DEFAULT_FILE_FORMAT_STRING, ecc::curve_name().c_str(), _hip_device);
   }
 
   // Set interrupt handler

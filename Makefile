@@ -35,7 +35,7 @@ ROCM_HOME=/opt/rocm
 # Nvidia target
 NVIDIA_INCLUDE=-I${CUDA_HOME}/include
 HIPCC_CFLAGS_NVIDIA=-Wno-deprecated-declarations -Xptxas -v
-CXX_CFLAGS_NVIDIA=-D__HIP_PLATFORM_NVIDIA__ -Wno-deprecated-declarations -Wno-return-local-addr
+CXX_CFLAGS_NVIDIA=-D__HIP_PLATFORM_NVIDIA__ -Wno-deprecated-declarations -Wno-return-local-addr -std=c++20
 LIBS_NVIDIA=-lcuda -lcudart
 LINKER_NVIDIA=-L${CUDA_HOME}/lib64
 
@@ -50,11 +50,11 @@ endif
 # AMD target
 ROCM_INCLUDE=-I$(ROCM_HOME)/include
 HIPCC_CFLAGS_AMD=-Wno-deprecated-declarations -fPIE
-CXX_CFLAGS_AMD=-D__HIP_PLATFORM_AMD__
+CXX_CFLAGS_AMD=-D__HIP_PLATFORM_AMD__ -std=c++20
 LIBS_AMD=-lamdhip64
 LINKER_AMD=-L${ROCM_HOME}/lib
 
-CFLAGS+=${DEFINES} -std=c++20
+#CFLAGS+=${DEFINES} -std=c++20
 
 # Directories
 CUR_DIR=$(shell pwd)
@@ -96,7 +96,6 @@ all:	$(TARGETS)
 
 .PHONY: third_party
 third_party:
-	make -C third_party/fmt
 	make -C third_party/json11
 
 gpu_nvidia:
@@ -109,19 +108,19 @@ gpu_amd:
 
 benchmark_nvidia:	third_party gpu_nvidia
 	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=nvidia $(CXX) $(CPP_BENCH) $(OBJDIR)/ecc_nvidia.co -o benchmark-nvidia $(CXX_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(NVIDIA_INCLUDE) $(INCLUDE) $(LINKER_NVIDIA) $(LIBS_NVIDIA) -lfmt
+	HIP_PLATFORM=nvidia $(CXX) $(CPP_BENCH) $(OBJDIR)/ecc_nvidia.co -o benchmark-nvidia $(CXX_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(NVIDIA_INCLUDE) $(INCLUDE) $(LINKER_NVIDIA) $(LIBS_NVIDIA)
 
 rho_nvidia:	third_party gpu_nvidia
 	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=nvidia $(CXX) $(CPP_RHO) $(OBJDIR)/ecc_nvidia.co -o rho-nvidia $(CXX_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(NVIDIA_INCLUDE) $(INCLUDE) $(LINKER_NVIDIA) $(LIBS_NVIDIA) -lfmt -ljson11 -lcurl
+	HIP_PLATFORM=nvidia $(CXX) $(CPP_RHO) $(OBJDIR)/ecc_nvidia.co -o rho-nvidia $(CXX_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(NVIDIA_INCLUDE) $(INCLUDE) $(LINKER_NVIDIA) $(LIBS_NVIDIA) -ljson11 -lcurl
 
 benchmark_amd:	third_party	gpu_amd
 	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=amd $(CXX) $(CPP_BENCH) $(OBJDIR)/ecc_amd.co -o benchmark-amd -D__HIP_PLATFORM_AMD__ -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LIBS_AMD) $(LINKER_AMD) -lfmt
+	HIP_PLATFORM=amd $(CXX) $(CPP_BENCH) $(OBJDIR)/ecc_amd.co -o benchmark-amd $(CXX_CFLAGS_AMD) -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LIBS_AMD) $(LINKER_AMD)
 
 rho_amd:	third_party gpu_amd
 	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=amd $(CXX) $(CPP_RHO) $(OBJDIR)/ecc_amd.co -o rho-amd -D__HIP_PLATFORM_AMD__ -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LINKER_AMD) $(LIBS_AMD) -lfmt -ljson11 -lcurl
+	HIP_PLATFORM=amd $(CXX) $(CPP_RHO) $(OBJDIR)/ecc_amd.co -o rho-amd $(CXX_CFLAGS_AMD) -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LINKER_AMD) $(LIBS_AMD) -ljson11 -lcurl
 
 clean:
 	rm -v -rf src/*.o

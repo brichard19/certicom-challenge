@@ -1,7 +1,6 @@
 #include <exception>
-
+#include <format>
 #include "curl/curl.h"
-#include "fmt/format.h"
 #include "http_client.h"
 #include "util.h"
 
@@ -46,7 +45,7 @@ std::string HTTPClient::post_json(const std::string path, json11::Json& json)
   curl_easy_cleanup(curl);
 
   if(res != CURLE_OK) {
-    std::string err_msg = fmt::format("Connection to {} on port {} failed: {}", _hostname, _port, curl_easy_strerror(res));
+    std::string err_msg = std::format("Connection to {} on port {} failed: {}", _hostname, _port, curl_easy_strerror(res));
     throw NetworkException(err_msg);
   }
 
