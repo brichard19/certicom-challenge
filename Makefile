@@ -64,7 +64,7 @@ BIN_DIR=$(CUR_DIR)/bin
 ROCM_LIB=$(ROCM_HOME)/lib
 OBJDIR=$(CUR_DIR)/obj
 
-INCLUDE+=-I$(CUR_DIR) -I$(CUR_DIR)/include -I$(CUR_DIR)/gpu -I$(CUR_DIR)/third_party/json11 -I$(CUR_DIR)/third_party/fmt/include
+INCLUDE+=-I$(CUR_DIR) -I$(CUR_DIR)/src/include -I$(CUR_DIR)/gpu -I$(CUR_DIR)/third_party/json11 -I$(CUR_DIR)/third_party/fmt/include
 
 ifeq ($(BUILD_MPI),1)
 MPI_LIBS+=-lmpi -lmpi_cxx
@@ -78,10 +78,14 @@ export BIN_DIR
 export INCLUDE
 export CFLAGS
 
+CPP_MATH_TESTS := ecc.cpp montgomery.cpp uint131.cpp util.cpp
+CPP_MATH_TESTS := $(addprefix src/, $(CPP_MATH_TESTS))
 CPP_RHO := main.cpp GPUPointFinder.cpp  ec_rho.cpp  ecc.cpp  http_client.cpp  montgomery.cpp  uint131.cpp  util.cpp
 CPP_RHO := $(addprefix src/, $(CPP_RHO))
 CPP_BENCH := benchmark.cpp GPUPointFinder.cpp  ec_rho.cpp  ecc.cpp montgomery.cpp  uint131.cpp  util.cpp
 CPP_BENCH := $(addprefix src/, $(CPP_BENCH))
+
+TARGETS = tests
 
 # NVIDIA targets
 ifeq ($(filter nvidia,$(TARGET_PLATFORMS)),nvidia)
@@ -112,15 +116,19 @@ benchmark_nvidia:	third_party gpu_nvidia
 
 rho_nvidia:	third_party gpu_nvidia
 	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=nvidia $(CXX) $(CPP_RHO) $(OBJDIR)/ecc_nvidia.co -o rho-nvidia $(CXX_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(NVIDIA_INCLUDE) $(INCLUDE) $(LINKER_NVIDIA) $(LIBS_NVIDIA) -ljson11 -lcurl
+	HIP_PLATFORM=nvidia $(CXX) $(CPP_RHO) $(OBJDIR)/ecc_nvidia.co -o rho-nvidia $(CXX_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(NVIDIA_INCLUDE) $(INCLUDE) $(LINKER_NVIDIA) $(LIBS_NVIDIA) -ljson11 -lcurl
 
 benchmark_amd:	third_party	gpu_amd
 	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=amd $(CXX) $(CPP_BENCH) $(OBJDIR)/ecc_amd.co -o benchmark-amd $(CXX_CFLAGS_AMD) -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LIBS_AMD) $(LINKER_AMD)
+	HIP_PLATFORM=amd $(CXX) $(CPP_BENCH) $(OBJDIR)/ecc_amd.co -o benchmark-amd $(CXX_CFLAGS_AMD) -Isrc -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LIBS_AMD) $(LINKER_AMD)
 
 rho_amd:	third_party gpu_amd
 	mkdir -p $(OBJDIR)
 	HIP_PLATFORM=amd $(CXX) $(CPP_RHO) $(OBJDIR)/ecc_amd.co -o rho-amd $(CXX_CFLAGS_AMD) -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LINKER_AMD) $(LIBS_AMD) -ljson11 -lcurl
+
+.PHONY: tests
+tests:
+	$(CXX) tests/math_tests.cpp $(CPP_MATH_TESTS) -o tests/math_tests $(INCLUDE)
 
 clean:
 	rm -v -rf src/*.o
