@@ -1,4 +1,5 @@
 #include <cassert>
+#include <chrono>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -7,7 +8,6 @@
 #include <iostream>
 #include <mutex>
 #include <thread>
-#include <unistd.h>
 #include <map>
 
 #include "GPUPointFinder.h"
@@ -140,7 +140,7 @@ void mpi_recv_thread_function()
       // New async request
       MPI_CALL(MPI_Irecv(buf.data(), buf_size, MPI_BYTE, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &request));
     }
-    sleep(3);
+    std::this_thread::sleep_for(std::chrono::seconds(3));
   }
 
 #endif
@@ -154,7 +154,7 @@ void upload_thread_function()
 
   while(_running) {
 
-    sleep(5);
+    std::this_thread::sleep_for(std::chrono::seconds(5));
 
     if(_running && defer_upload && defer_timer.elapsed() < 600.0) {
       continue;
