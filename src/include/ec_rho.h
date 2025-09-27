@@ -43,7 +43,7 @@ public:
   virtual void init(const std::string& file) = 0;
   virtual double step() = 0;
   virtual void save_progress(const std::string& file) = 0;
-
+  virtual ~DistinguishedPointFinder(){}
 };
 
 
