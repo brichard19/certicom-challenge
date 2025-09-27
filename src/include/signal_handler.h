@@ -40,7 +40,7 @@ bool set_signal_handler(std::function<void(int)> handler)
     GetConsoleMode(input_handle, &console_flags);
     SetConsoleMode(input_handle, ENABLE_EXTENDED_FLAGS | (console_flags & ~ENABLE_QUICK_EDIT_MODE));
 
-    if(!SetConsoleCtrlHandler(console_handler, TRUE)) {
+    if(!SetConsoleCtrlHandler(console_handler_internal, TRUE)) {
         return false;
     }
 #else
