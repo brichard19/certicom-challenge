@@ -76,6 +76,7 @@ export BIN_PREFIX=certicom-
 export LIB_DIR
 export BIN_DIR
 export INCLUDE
+export CXX
 export CFLAGS
 
 CPP_MATH_TESTS := ecc.cpp montgomery.cpp uint131.cpp util.cpp
