@@ -15,17 +15,20 @@ std::function<void(int)> _console_handler_ptr = nullptr;
 
 #ifdef _WIN32
 static BOOL WINAPI console_handler_internal(DWORD signal)
-#else
-static void signal_handler_internal(int signal)
-#endif
 {
     if(_console_handler_ptr) {
         _console_handler_ptr(signal);
     }
-#ifdef _WIN32
     return TRUE;
-#endif
 }
+#else
+static void signal_handler_internal(int signal)
+{
+    if(_console_handler_ptr) {
+        _console_handler_ptr(signal);
+    }
+}
+#endif
 
 bool set_signal_handler(std::function<void(int)> handler)
 {
