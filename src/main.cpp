@@ -9,6 +9,7 @@
 #include <mutex>
 #include <thread>
 #include <map>
+#include <vector>
 
 #include "GPUPointFinder.h"
 #include "binary_encoder.h"
@@ -166,9 +167,9 @@ void upload_thread_function()
 
     // Get list of results files
     for(const auto& entry : std::filesystem::directory_iterator(_results_dir)) {
-      std::string f = entry.path().filename();
+      std::string f = entry.path().filename().string();
       if(f.rfind(".dat") != std::string::npos) {
-        files.push_back(entry.path().filename());
+        files.push_back(f);
       }
     }
 
