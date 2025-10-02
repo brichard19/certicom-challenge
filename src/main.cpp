@@ -61,6 +61,7 @@ namespace {
   int _dpbits = 32;
   std::string _curve_name;
   std::string _upload_server = "";
+  bool _use_upload = false;
 }
 
 // Saves distingusihed points to disk
@@ -290,7 +291,6 @@ void signal_handler(int signal)
 
 bool init_directories()
 {
-
   _results_dir = _data_dir + "/results";
 
   std::error_code err;
@@ -365,6 +365,7 @@ int main(int argc, char**argv)
         break;
       
       case 'u':
+        _use_upload = true;
         _upload_server = std::string(optarg);
         break;
 
@@ -468,13 +469,11 @@ int main(int argc, char**argv)
   set_signal_handler(signal_handler);
 
   // Start point reporter thread
-  std::thread results_thread;
+  std::thread upload_thread;
 
   // If using MPI, only rank 0 reports results
-  if(_use_mpi == false || (_use_mpi == true && _world_rank == 0)) {
-    if(_upload_server.empty() == false) {
-      results_thread = std::thread(upload_thread_function);
-    }
+  if(_use_upload && (_use_mpi == false || (_use_mpi == true && _world_rank == 0))) {
+    upload_thread = std::thread(upload_thread_function);
   }
 
 #ifdef BUILD_MPI
@@ -498,10 +497,8 @@ int main(int argc, char**argv)
   }
 #endif
   //Wait for point thread to finish
-  if(_use_mpi == false || (_use_mpi == true && _world_rank == 0)) {
-    if(_upload_server.empty() == false) {
-      results_thread.join();
-    }
+  if(_use_upload && (_use_mpi == false || (_use_mpi == true && _world_rank == 0))) {
+      upload_thread.join();
   }
 
 #ifdef BUILD_MPI
