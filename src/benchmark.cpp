@@ -73,23 +73,29 @@ void benchmark(int hip_device)
 
 int main(int argc, char**argv)
 {
+  std::string curve_name;
   int device = 0;
 
   while(true) {
     static struct option long_options[] = {
+      {"curve", required_argument, 0, 'c'},
       {"gpu", required_argument, 0, 'g'},
     };
 
     int opt_idx = 0;
 
-    int c = getopt_long(argc, argv, "g:", long_options, &opt_idx);
+    int c = getopt_long(argc, argv, "c:g:", long_options, &opt_idx);
 
     if(c == -1) {
       break;
     }
 
     switch(c) {
-      case 'g':
+      case 'c':
+        curve_name = std::string(optarg);
+        break;
+      
+        case 'g':
         device = atoi(optarg);
         break;
 
@@ -102,12 +108,10 @@ int main(int argc, char**argv)
     }
   }
 
-  if(optind == argc) {
-    std::cout << "Curve name required" << std::endl;
+  if(curve_name.empty()) {
+    std::cout << "--curve required" << std::endl;
     return 1;
   }
-
-  std::string curve_name = std::string(argv[optind]);
 
   if(curve_name != "ecp131" && curve_name != "ecp79") {
     std::cout << "Invalid curve name" << std::endl;
