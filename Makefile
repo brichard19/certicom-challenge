@@ -29,8 +29,15 @@ CFLAGS+=-DBUILD_MPI
 INCLUDE+=-I/usr/lib/x86_64-linux-gnu/openmpi/include -I/usr/lib/x86_64-linux-gnu/openmpi/include/openmpi
 endif
 
+# Check for CUDA_HOME
+ifneq ($(origin CUDA_HOME), environment)
 CUDA_HOME=/usr/local/cuda
+endif
+
+# Check for ROCM_HOME
+ifneq ($(origin ROCM_HOME), environment)
 ROCM_HOME=/opt/rocm
+endif
 
 # Nvidia target
 NVIDIA_INCLUDE=-I${CUDA_HOME}/include
