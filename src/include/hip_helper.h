@@ -41,7 +41,18 @@ inline int get_cu_count(int device_id)
  
   HIP_CALL(hipGetDeviceProperties(&props, device_id));
 
+#ifdef __HIP_PLATFORM_AMD__
+// TODO: Find a way to check for WGP mode. Seems that gfx11xx and later default to WGP mode.
+  std::string arch = std::string(props.gcnArchName);
+  if(arch.find("gfx11") != std::string::npos || arch.find("gfx12") != std::string::npos) {
+    return props.multiProcessorCount * 2;
+  } else {
+    return props.multiProcessorCount;
+  }
+#else
   return props.multiProcessorCount;
+#endif
+
 }
 
 inline int get_warp_size(int device_id)
@@ -51,6 +62,15 @@ inline int get_warp_size(int device_id)
   HIP_CALL(hipGetDeviceProperties(&props, device_id));
 
   return props.warpSize;
+}
+
+inline int get_compute_mode(int device_id)
+{
+  hipDeviceProp_t props;
+ 
+  HIP_CALL(hipGetDeviceProperties(&props, device_id));
+
+  return props.computeMode;
 }
 
 #endif
