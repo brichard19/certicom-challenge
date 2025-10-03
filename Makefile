@@ -60,6 +60,7 @@ HIPCC_CFLAGS_AMD=-Wno-deprecated-declarations -fPIE
 CXX_CFLAGS_AMD=-D__HIP_PLATFORM_AMD__ -std=c++20
 LIBS_AMD=-lamdhip64
 LINKER_AMD=-L${ROCM_HOME}/lib
+HIPCC=$(ROCM_HOME)/bin/hipcc
 
 CFLAGS+=-std=c++20
 
@@ -112,11 +113,11 @@ third_party:
 
 gpu_nvidia:
 	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=nvidia hipcc -c src/ecc.cu -o $(OBJDIR)/ecc_nvidia.co $(HIPCC_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -I/usr/local/cuda/include -Isrc/include
+	HIP_PLATFORM=nvidia $(HIPCC) -c src/ecc.cu -o $(OBJDIR)/ecc_nvidia.co $(HIPCC_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -I/usr/local/cuda/include -Isrc/include
 
 gpu_amd:
 	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=amd hipcc -c src/ecc.cu -o $(OBJDIR)/ecc_amd.co $(HIPCC_CFLAGS_AMD) -D__HIP_PLATFORM_AMD__ -Isrc -Isrc/include
+	HIP_PLATFORM=amd $(HIPCC) -c src/ecc.cu -o $(OBJDIR)/ecc_amd.co $(HIPCC_CFLAGS_AMD) -D__HIP_PLATFORM_AMD__ -Isrc -Isrc/include
 
 benchmark_nvidia:	third_party gpu_nvidia
 	mkdir -p $(OBJDIR)
