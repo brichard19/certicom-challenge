@@ -42,9 +42,9 @@ inline int get_cu_count(int device_id)
   HIP_CALL(hipGetDeviceProperties(&props, device_id));
 
 #ifdef __HIP_PLATFORM_AMD__
-// TODO: Find a way to check for WGP mode. Seems that gfx11xx and later default to WGP mode.
+// TODO: Find a way to check for WGP mode. Seems hipcc defaults to WGP mode for RDNA.
   std::string arch = std::string(props.gcnArchName);
-  if(arch.find("gfx11") != std::string::npos || arch.find("gfx12") != std::string::npos) {
+  if(arch.find("gfx10") != std::string::npos || arch.find("gfx11") != std::string::npos || arch.find("gfx12") != std::string::npos) {
     return props.multiProcessorCount * 2;
   } else {
     return props.multiProcessorCount;
