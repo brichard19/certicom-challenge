@@ -331,7 +331,7 @@ __device__ uint262_t square_131(const uint131_t& a)
 
 // One in put is 131 bits, the other is 160 bits
 // Output is 131 bits
-__device__ uint131_t mul_shift_160(const uint160_t& a, const uint131_t& b)
+__device__ uint131_t mul_shift_160(const uint131_t& a, const uint131_t& b)
 {
   uint64_t tmp[5];
   uint64_t high = 0;
@@ -365,9 +365,9 @@ __device__ uint131_t mul_shift_160(const uint160_t& a, const uint131_t& b)
   // a1 * b2
   t = (uint128_t)a.w.v1 * b.w.v2 + tmp[3] + high;
   tmp[3] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
+  uint32_t high32 = (uint32_t)(t >> 64);
   
-  tmp[4] = high;
+  tmp[4] = high32;
   
   // a2 * b0
   t = (uint128_t)a.w.v2 * b.w.v0 + tmp[2];
@@ -377,27 +377,27 @@ __device__ uint131_t mul_shift_160(const uint160_t& a, const uint131_t& b)
   // a2 * b1 
   t = (uint128_t)a.w.v2 * b.w.v1 + tmp[3] + high;
   tmp[3] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
+  high32 = (uint32_t)(t >> 64);
   
   // a2 * b2
   // The final word is only at most 35 bits, so no 128-bit mul needed
-  uint64_t t64 = (uint64_t)a.w.v2 * b.w.v2 + tmp[4] + high;
-  tmp[4] = t64;
+  uint32_t t32 = (uint32_t)a.w.v2 * b.w.v2 + tmp[4] + high32;
+  tmp[4] = t32;
 
   uint131_t product;
-  // Divide by 2^160
-  product.w.v0 = (tmp[2] >> 32) | ((tmp[3] & 0xffffffff) << 32);
-  product.w.v1 = (tmp[3] >> 32) | ((tmp[4] & 0xffffffff) << 32);
-  product.w.v2 = (tmp[4] >> 32);
+  // Divide by 2^131
+  product.w.v0 = (tmp[2] >> 3) | (tmp[3] << 61);
+  product.w.v1 = (tmp[3] >> 3) | (tmp[4] << 61);
+  product.w.v2 = tmp[4] >> 3;
 
   return product;
 }
 
 
 
-__device__ uint160_t mul_mod_160(const uint160_t& a, const uint131_t& b)
+__device__ uint131_t mul_mod_160(const uint131_t& a, const uint131_t& b)
 {
-  uint160_t tmp;
+  uint131_t tmp;
   uint64_t high64 = 0;
   uint32_t high32 = 0;
 
@@ -426,7 +426,7 @@ __device__ uint160_t mul_mod_160(const uint160_t& a, const uint131_t& b)
 
   // a2 * b0
   t32 = (uint32_t)a.w.v2 * b.w.v0 + tmp.w.v2;
-  tmp.w.v2 = t32;
+  tmp.w.v2 = t32 & 0x07;
 
   return tmp;
 }
@@ -438,7 +438,7 @@ template<int CURVE> __device__ uint131_t mont_reduce(const uint262_t& t)
   // m2 = m1 * p / r
   // m3 = m2 + t_hi + 1
 
-  uint160_t t_lo; 
+  uint131_t t_lo; 
   t_lo.w.v0 = t.v[0];
   t_lo.w.v1 = t.v[1];
   t_lo.w.v2 = (uint32_t)t.v[2];
@@ -446,11 +446,11 @@ template<int CURVE> __device__ uint131_t mont_reduce(const uint262_t& t)
   // Remaining high bits (102 bits)
   uint131_t t_hi;
 
-  t_hi.w.v0 = (t.v[2] >> 32) | ((t.v[3] & 0xffffffff) << 32);
-  t_hi.w.v1 = (t.v[3] >> 32) | ((t.v[4] & 0xffffffff) << 32);
-  t_hi.w.v2 = 0;
+  t_hi.w.v0 = (t.v[2] >> 3) | (t.v[3] << 61);
+  t_hi.w.v1 = (t.v[3] >> 3) | (t.v[4] << 61);
+  t_hi.w.v2 = t.v[4] >> 3;
 
-  uint160_t m1;
+  uint131_t m1;
   uint131_t m2;
   uint131_t m3;
 
