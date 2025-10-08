@@ -1,8 +1,8 @@
 #include <iostream>
 #include <cassert>
+#include <format>
 
 #include "ec_rho.h"
-#include "fmt/format.h"
 #include "util.h"
 
 void print_rw_points()

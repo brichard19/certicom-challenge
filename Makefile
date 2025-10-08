@@ -89,12 +89,15 @@ export CFLAGS
 
 CPP_MATH_TESTS := ecc.cpp montgomery.cpp uint131.cpp util.cpp
 CPP_MATH_TESTS := $(addprefix src/, $(CPP_MATH_TESTS))
+CPP_TOOLS := ecc.cpp montgomery.cpp uint131.cpp util.cpp
+CPP_TOOLS := $(addprefix src/, $(CPP_TOOLS))
+
 CPP_RHO := main.cpp GPUPointFinder.cpp  ec_rho.cpp  ecc.cpp  http_client.cpp  montgomery.cpp  uint131.cpp  util.cpp
 CPP_RHO := $(addprefix src/, $(CPP_RHO))
 CPP_BENCH := benchmark.cpp GPUPointFinder.cpp  ec_rho.cpp  ecc.cpp montgomery.cpp  uint131.cpp  util.cpp
 CPP_BENCH := $(addprefix src/, $(CPP_BENCH))
 
-TARGETS = tests
+TARGETS = tests tools
 
 # NVIDIA targets
 ifeq ($(filter nvidia,$(TARGET_PLATFORMS)),nvidia)
@@ -138,6 +141,10 @@ rho_amd:	third_party gpu_amd
 .PHONY: tests
 tests:
 	$(CXX) tests/math_tests.cpp $(CPP_MATH_TESTS) -o tests/math_tests $(INCLUDE)
+
+.PHONY: tools
+tools:
+	$(CXX) $(CFLAGS) tools/rwpoints.cpp $(CPP_TOOLS) -o tools/rwpoints $(INCLUDE)
 
 clean:
 	rm -v -rf src/*.o
