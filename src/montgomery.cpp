@@ -168,74 +168,78 @@ uint262_t square_131(const uint131_t& a)
   return tmp;
 }
 
-// One in put is 131 bits, the other is 160 bits
-// Output is 131 bits
-uint131_t mul_shift_160(const uint160_t& a, const uint131_t& b)
+uint131_t mul_shift_131(const uint131_t& a, const uint131_t& b)
 {
-  uint64_t tmp[5];
+  uint262_t tmp;
   uint64_t high = 0;
 
   // a0 * b0
   uint128_t t = (uint128_t)a.w.v0 * b.w.v0;
+  tmp.v[0] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a0 * b1 
   t = (uint128_t)a.w.v0 * b.w.v1 + high;
-  tmp[1] = (uint64_t)t;
+  tmp.v[1] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
   // a0 * b2
   t = (uint128_t)a.w.v0 * b.w.v2 + high;
-  tmp[2] = (uint64_t)t;
+  tmp.v[2] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
 
-  tmp[3] = high;
+  tmp.v[3] = high;
 
   // a1 * b0
-  t = (uint128_t)a.w.v1 * b.w.v0 + tmp[1];
-  tmp[1] = (uint64_t)t;
+  t = (uint128_t)a.w.v1 * b.w.v0 + tmp.v[1];
+  tmp.v[1] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
-  
+
   // a1 * b1 
-  t = (uint128_t)a.w.v1 * b.w.v1 + tmp[2] + high;
-  tmp[2] = (uint64_t)t;
+  t = (uint128_t)a.w.v1 * b.w.v1 + tmp.v[2] + high;
+  tmp.v[2] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
-  
+
   // a1 * b2
-  t = (uint128_t)a.w.v1 * b.w.v2 + tmp[3] + high;
-  tmp[3] = (uint64_t)t;
+  t = (uint128_t)a.w.v1 * b.w.v2 + tmp.v[3] + high;
+  tmp.v[3] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
-  
-  tmp[4] = high;
-  
+
+  tmp.v[4] = high;
+
   // a2 * b0
-  t = (uint128_t)a.w.v2 * b.w.v0 + tmp[2];
-  tmp[2] = (uint64_t)t;
+  t = (uint128_t)a.w.v2* b.w.v0 + tmp.v[2];
+  tmp.v[2] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
-  
+
   // a2 * b1 
-  t = (uint128_t)a.w.v2 * b.w.v1 + tmp[3] + high;
-  tmp[3] = (uint64_t)t;
+  t = (uint128_t)a.w.v2 * b.w.v1 + tmp.v[3] + high;
+  tmp.v[3] = (uint64_t)t;
   high = (uint64_t)(t >> 64);
-  
+
   // a2 * b2
-  // The final word is only at most 35 bits, so no 128-bit mul needed
-  uint64_t t64 = (uint64_t)a.w.v2 * b.w.v2 + tmp[4] + high;
-  tmp[4] = t64;
+  // The final word is only at most 6 bits, so no 128-bit mul needed
+  uint64_t t64 = a.w.v2 * b.w.v2 + tmp.v[4] + high;
+  tmp.v[4] = t64;
 
-  uint131_t product;
-  // Divide by 2^160
-  product.w.v0 = (tmp[2] >> 32) | ((tmp[3] & 0xffffffff) << 32);
-  product.w.v1 = (tmp[3] >> 32) | ((tmp[4] & 0xffffffff) << 32);
-  product.w.v2 = (tmp[4] >> 32);
+  // 262 bits
+  // tmp[0]  0 : 63
+  // tmp[1]  64 : 127
+  // tmp[2]  128 : 191
+  // tmp[3]  192 : 255
+  // tmp[4]  256 : 261
+  uint131_t result;
+  result.w.v0 = (tmp.v[2] >> 3) | (tmp.v[3] << 61);
+  result.w.v1 = (tmp.v[3] >> 3) | (tmp.v[4] << 61);
+  result.w.v2 = (tmp.v[4] >> 3);
 
-  return product;
+  return result;
 }
 
-//void mul_mod_160(const uint64_t* a, const uint64_t* b, uint64_t* product)
-uint160_t mul_mod_160(const uint160_t& a, const uint131_t& b)
+
+uint131_t mul_mod_131(const uint131_t& a, const uint131_t& b)
 {
-  uint160_t tmp;
+  uint131_t tmp;
   uint64_t high = 0;
 
   // a0 * b0
@@ -265,38 +269,39 @@ uint160_t mul_mod_160(const uint160_t& a, const uint131_t& b)
   t = (uint128_t)a.w.v2 * b.w.v0 + tmp.w.v2;
   tmp.w.v2 = (uint64_t)t;
 
-  tmp.w.v2 &= 0xffffffff;
+  tmp.w.v2 &= 0x07;
 
   return tmp;
 
 }
 
-//void mont_reduce(const uint64_t* t, uint64_t* y)
-uint131_t mont_reduce(const uint262_t& t)
+
+
+uint131_t mont_reduce_131(const uint262_t& t)
 {
   // m1 = t_lo * k mod R
   // m2 = m1 * p / r
   // m3 = m2 + t_hi + 1
 
-  uint160_t t_lo; 
+  uint131_t t_lo; 
   t_lo.w.v0 = t.v[0];
   t_lo.w.v1 = t.v[1];
-  t_lo.w.v2 = (uint32_t)t.v[2];
+  t_lo.w.v2 = (uint32_t)t.v[2] & 0x07;
 
-  // Remaining high bits (102 bits)
+  // Remaining high bits (131 bits)
   uint131_t t_hi;
 
-  t_hi.w.v0 = (t.v[2] >> 32) | ((t.v[3] & 0xffffffff) << 32);
-  t_hi.w.v1 = (t.v[3] >> 32) | ((t.v[4] & 0xffffffff) << 32);
-  t_hi.w.v2 = 0;
+  t_hi.w.v0 = (t.v[2] >> 3) | (t.v[3] << 61);
+  t_hi.w.v1 = (t.v[3] >> 3) | (t.v[4] << 61);
+  t_hi.w.v2 = t.v[4] >> 3;
 
-  uint160_t m1;
+  uint131_t m1;
   uint131_t m2;
   uint131_t m3;
 
-  m1 = mul_mod_160(t_lo, _params.k);
+  m1 = mul_mod_131(t_lo, _params.k);
 
-  m2 = mul_shift_160(m1, _params.p);
+  m2 = mul_shift_131(m1, _params.p);
  
   // Not sure if this is correct, but carry always seems to be 1.
   m3 = add_raw(t_hi, m2, 1);
@@ -404,13 +409,14 @@ uint131_t lshift(uint131_t x, int n)
 uint131_t mul(uint131_t x, uint131_t y)
 {
   uint262_t product = mul_131(x, y);
-  return mont_reduce(product);
+  return mont_reduce_131(product);
 }
 
 uint131_t square(uint131_t x)
 {
   uint262_t product = square_131(x);
-  return mont_reduce(product);
+
+  return mont_reduce_131(product);
 }
 
 uint131_t pow(uint131_t x, uint131_t exponent)
@@ -463,7 +469,7 @@ uint131_t sqrt(uint131_t x)
   } else if(_params.name == "ecp79") {
 
     // 2 in montgomery form 
-    uint131_t two = {{0xa88f54e07ed578be, 0x26b0, 0x00}};
+    uint131_t two = {{0x150619962eb12300, 0x5b4b, 0x0}};
     
     uint131_t v = pow(mul(two, x), _params.sqrt);
 

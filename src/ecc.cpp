@@ -9,22 +9,22 @@
 
 CurveParameters _eccp131 = {
     .p = {{0x194c43186b3abc0b, 0x8e1d43f293469e33, 0x4}},
-    .a = {{0xe7f7f250cee8709a, 0xacd15fe1a8ec1522, 0x00}},
-    .b = {{0xc85087e5ab4eca9e, 0xde124657d7ba5851, 0x2}},
+    .a = {{0x9893f47bd114555d, 0x2b935e3727d799fa, 0x1}},
+    .b = {{0xe59d7a40bc8648b, 0x55abb9bc04daa824, 0x4}},
     .n = {{0x7f7ed728f6b8e6f1, 0x8e1d43f293469e31, 0x4}},
 
-    .gx = {{0xb137748018df6458, 0xb188ba8cd2a386d9, 0x00}},
-    .gy = {{0x4b5a2a8f9b90cbef, 0x7dabb39a1bb0a5fa, 0x2}},
+    .gx = {{0x11106cddc12294ab, 0x862b445b2d90f966, 0x1}},
+    .gy = {{0xbdd264b969654eb3, 0x2ccf5a5df57b1433, 0x3}},
 
-    .qx = {{0xc83af1fe332475e3, 0xe38a3357a4b0bb01, 0x2}},
+    .qx = {{0xa036d1676c1cec9c, 0x9bf4f50b596c4922, 0x1}},
 
-    .qy = {{0xfe97756ed241b570, 0xb167247624e73021, 0x3}},
+    .qy = {{0xc9a258ee3a5aa43f, 0xfd3113f721b1e7aa, 0x3}},
 
     // k such that k * k^-1 = -1 (mod R)
     // k = (r * r_inv -1) // p
-    .k = {{0xe0587d72985b105d, 0xf1fd54b0309e1ab9, 0x7cfd70cf}},
+    .k = {{0xe0587d72985b105d, 0xf1fd54b0309e1ab9, 0x7}},
 
-    .one = {{0x6e7743da32b6d0c7, 0x88c614d64c1a8f0b, 0x00}},
+    .one = {{0xe6b3bce794c543f5, 0x71e2bc0d6cb961cc, 0x3}},
 
     .p_minus_2 = {{0x194c43186b3abc09, 0x8e1d43f293469e33, 0x4}},
 
@@ -32,10 +32,10 @@ CurveParameters _eccp131 = {
     .sqrt = {{0xc65310c61aceaf03, 0x238750fca4d1a78c, 0x1}},
 
     // R mod p
-    .r = {{0x6e7743da32b6d0c7, 0x88c614d64c1a8f0b, 0x00}},
+    .r = {{0xe6b3bce794c543f5, 0x71e2bc0d6cb961cc, 0x3}},
 
     // R^2
-    .r2 = {{0xf95d709f92600513, 0xf3d6fa1fb65ef639, 0x3}},
+    .r2 = {{0xa0a3d1806d7fee3d, 0x93a974dd09a9f553, 0x1}},
 
     .bits = 131,
 
@@ -47,33 +47,33 @@ CurveParameters _eccp131 = {
 CurveParameters _eccp79 = {
   .p = {{0x5177412aca899cf5, 0x62ce, 0x00}},
 
-  .a = {{0x732c9b460e3c3d, 0x1bb7, 0x00}},
+  .a = {{0x1274945cc02f5789, 0x5320, 0x0}},
 
-  .b = {{0xc88edfd7d5b44610, 0x250c, 0x00}},
+  .b = {{0x967af723a2d4326f, 0x1e5d, 0x0}},
 
   .n = {{0x5177407b7258dc31, 0x62ce, 0x00}},
 
-  .gx = {{0x8fa818f2b62053c8, 0x3e37, 0x00}},
+  .gx = {{0x5e14178a38bb98f0, 0x3088, 0x0}},
 
-  .gy = {{0xddab9a8daa5aa60b, 0x21a9}},
+  .gy = {{0x9612fecbf0419185, 0x4f96, 0x0}},
 
-  .qx = {{0x96642c5fb8dbd341, 0x7a7}},
+  .qx = {{0x4ee59e29999d86f, 0x4e23, 0x0}},
 
-  .qy = {{0xbf3614d658e2931c, 0x426c}},
+  .qy = {{0xc994049f2ed05e7f, 0x2f1d, 0x0}},
 
-  .k = {{0x6e3655426732d0a3, 0xcafea9fd045a89b6, 0xe6bb05ec}},
+  .k = {{0x6e3655426732d0a3, 0xcafea9fd045a89b6, 0x4}},
 
-  .one = {{0x5447aa703f6abc5f, 0x1358, 0x00}},
+  .one = {{0x150619962eb12300, 0x5b4b, 0x0}},
 
   .p_minus_2 = {{0x5177412aca899cf3, 0x62ce, 0x00}},
 
   // (p - 5) / 8
   .sqrt = {{0xca2ee8255951339e, 0xc59, 0x00}},
   
-  .r = {{0x5447aa703f6abc5f, 0x1358, 0x00}},
+  .r = {{0x150619962eb12300, 0x5b4b, 0x0}},
 
   // R^2
-  .r2 = {{0x7b0baef57de52417, 0xe79, 0x00}},
+  .r2 = {{0x45cc4bd33e72e43c, 0x1b44, 0x0}},
 
   .bits = 79,
 
