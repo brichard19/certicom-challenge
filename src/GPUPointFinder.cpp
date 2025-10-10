@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <chrono>
 #include <fstream>
-#include <format>
+#include "fmt/format.h"
 #include <hip/hip_runtime.h>
 #include <sstream>
 #include <stdexcept>

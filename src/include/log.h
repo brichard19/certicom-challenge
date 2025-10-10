@@ -1,12 +1,12 @@
 #ifndef _LOG_H
 #define _LOG_H
 
-#include <format>
+#include "fmt/format.h"
 #include <iostream>
 
 template<typename ...T>
-void LOG(std::format_string<T...> fmt, T&&...args){
- std::cout << std::format(fmt, std::forward<T>(args)...) << std::endl;
+void LOG(fmt::format_string<T...> fmt, T&&...args){
+ std::cout << fmt::format(fmt, std::forward<T>(args)...) << std::endl;
 }
 
 

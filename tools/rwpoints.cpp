@@ -1,6 +1,6 @@
 #include <iostream>
 #include <cassert>
-#include <format>
+#include "fmt/format.h"
 
 #include "ec_rho.h"
 #include "util.h"
@@ -27,29 +27,29 @@ void print_rw_points()
   }
 
 
-  std::cout << std::format("std::string _{}_a_str[] = {{", name) << std::endl;
+  std::cout << fmt::format("std::string _{}_a_str[] = {{", name) << std::endl;
   for(int i = 0; i < rw_vec.size(); i++) {
-    std::cout << std::format("\"{}\",", to_str(rw_vec[i].a)) << std::endl;
+    std::cout << fmt::format("\"{}\",", to_str(rw_vec[i].a)) << std::endl;
   }
   std::cout << "};" << std::endl;
 
   std::cout << std::endl;
  
-  std::cout << std::format("std::string _{}_b_str[] = {{", name) << std::endl;
+  std::cout << fmt::format("std::string _{}_b_str[] = {{", name) << std::endl;
   for(int i = 0; i < rw_vec.size(); i++) {
-    std::cout << std::format("\"{}\",", to_str(rw_vec[i].b)) << std::endl;
+    std::cout << fmt::format("\"{}\",", to_str(rw_vec[i].b)) << std::endl;
   }
   std::cout << "};" << std::endl;
   std::cout << std::endl;
   
-  std::cout << std::format("std::string _{}_x_str[] = {{", name) << std::endl;
+  std::cout << fmt::format("std::string _{}_x_str[] = {{", name) << std::endl;
   for(int i = 0; i < rw_vec.size(); i++) {
     std::cout << "\"" << to_str(rw_vec[i].p.x) << "\"," << std::endl;
   }
   std::cout << "};" << std::endl;
   std::cout << std::endl;
   
-  std::cout << std::format("std::string _{}_y_str[] = {{", name.c_str()) << std::endl;
+  std::cout << fmt::format("std::string _{}_y_str[] = {{", name.c_str()) << std::endl;
   for(int i = 0; i < rw_vec.size(); i++) {
     std::cout << "\"" << to_str(rw_vec[i].p.y) << "\"," << std::endl;
   }
@@ -70,18 +70,18 @@ void print_multiples(ecc::ecpoint_t g, std::string name)
   int bits = ecc::curve_strength();
 
   // Print x
-  std::cout << std::format("__device__ uint131_t _{}x[{}] = {{", name.c_str(), bits) << std::endl;
+  std::cout << fmt::format("__device__ uint131_t _{}x[{}] = {{", name.c_str(), bits) << std::endl;
   
   for(int i = 0; i < bits; i++) {
-    std::cout << std::format("{{0x{:08x},0x{:016x},0x{:02x}}},", points[i].x.w.v0, points[i].x.w.v1, points[i].x.w.v2) << std::endl;
+    std::cout << fmt::format("{{0x{:08x},0x{:016x},0x{:02x}}},", points[i].x.w.v0, points[i].x.w.v1, points[i].x.w.v2) << std::endl;
   }
 
   std::cout << "};" << std::endl << std::endl;
 
   // Print y
-  std::cout << std::format("__device__ uint131_t _{}y[{}] = {{", name.c_str(), bits) << std::endl;
+  std::cout << fmt::format("__device__ uint131_t _{}y[{}] = {{", name.c_str(), bits) << std::endl;
   for(int i = 0; i < bits; i++) {
-    std::cout << std::format("{{0x{:08x},0x{:016x},0x{:02x}}},", points[i].y.w.v0, points[i].y.w.v1, points[i].y.w.v2) << std::endl;
+    std::cout << fmt::format("{{0x{:08x},0x{:016x},0x{:02x}}},", points[i].y.w.v0, points[i].y.w.v1, points[i].y.w.v2) << std::endl;
   }
 
   std::cout << "};" << std::endl << std::endl;
