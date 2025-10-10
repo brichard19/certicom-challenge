@@ -143,7 +143,7 @@ rho_amd:	third_party gpu_amd
 tests:
 	$(CXX) tests/math_tests.cpp $(CPP_MATH_TESTS) -o tests/math_tests $(INCLUDE)
 
-.PHONY: tools
+.PHONY: tools third_party
 tools:
 	$(CXX) $(CFLAGS) tools/rwpoints.cpp $(CPP_TOOLS) -L$(LIB_DIR) -o tools/rwpoints $(INCLUDE) -lfmt
 
@@ -154,3 +154,5 @@ clean:
 	rm -v -f benchmark-amd
 	rm -v -f rho-nvidia
 	rm -v -f benchmark-nvidia
+	rm -v -f tools/rwpoints
+	rm -v -f tests/math_tests
