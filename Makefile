@@ -113,6 +113,7 @@ all:	$(TARGETS)
 .PHONY: third_party
 third_party:
 	make -C third_party/json11
+	make -C third_party/fmt
 
 gpu_nvidia:
 	mkdir -p $(OBJDIR)
@@ -124,19 +125,19 @@ gpu_amd:
 
 benchmark_nvidia:	third_party gpu_nvidia
 	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=nvidia $(CXX) $(CFLAGS) $(CPP_BENCH) $(OBJDIR)/ecc_nvidia.co -o benchmark-nvidia $(CXX_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(NVIDIA_INCLUDE) $(INCLUDE) $(LINKER_NVIDIA) $(LIBS_NVIDIA)
+	HIP_PLATFORM=nvidia $(CXX) $(CFLAGS) $(CPP_BENCH) $(OBJDIR)/ecc_nvidia.co -o benchmark-nvidia $(CXX_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(NVIDIA_INCLUDE) $(INCLUDE) $(LINKER_NVIDIA) $(LIBS_NVIDIA) -lfmt
 
 rho_nvidia:	third_party gpu_nvidia
 	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=nvidia $(CXX) $(CFLAGS) $(CPP_RHO) $(OBJDIR)/ecc_nvidia.co -o rho-nvidia $(CXX_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(NVIDIA_INCLUDE) $(INCLUDE) $(LINKER_NVIDIA) $(LIBS_NVIDIA) -ljson11 -lcurl
+	HIP_PLATFORM=nvidia $(CXX) $(CFLAGS) $(CPP_RHO) $(OBJDIR)/ecc_nvidia.co -o rho-nvidia $(CXX_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(NVIDIA_INCLUDE) $(INCLUDE) $(LINKER_NVIDIA) $(LIBS_NVIDIA) -lfmt -ljson11 -lcurl
 
 benchmark_amd:	third_party	gpu_amd
 	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=amd $(CXX) $(CFLAGS) $(CPP_BENCH) $(OBJDIR)/ecc_amd.co -o benchmark-amd $(CXX_CFLAGS_AMD) -Isrc -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LIBS_AMD) $(LINKER_AMD)
+	HIP_PLATFORM=amd $(CXX) $(CFLAGS) $(CPP_BENCH) $(OBJDIR)/ecc_amd.co -o benchmark-amd $(CXX_CFLAGS_AMD) -Isrc -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LIBS_AMD) $(LINKER_AMD) -lfmt
 
 rho_amd:	third_party gpu_amd
 	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=amd $(CXX) $(CFLAGS) $(CPP_RHO) $(OBJDIR)/ecc_amd.co -o rho-amd $(CXX_CFLAGS_AMD) -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LINKER_AMD) $(LIBS_AMD) -ljson11 -lcurl
+	HIP_PLATFORM=amd $(CXX) $(CFLAGS) $(CPP_RHO) $(OBJDIR)/ecc_amd.co -o rho-amd $(CXX_CFLAGS_AMD) -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LINKER_AMD) $(LIBS_AMD) -lfmt -ljson11 -lcurl
 
 .PHONY: tests
 tests:
@@ -144,7 +145,7 @@ tests:
 
 .PHONY: tools
 tools:
-	$(CXX) $(CFLAGS) tools/rwpoints.cpp $(CPP_TOOLS) -o tools/rwpoints $(INCLUDE)
+	$(CXX) $(CFLAGS) tools/rwpoints.cpp $(CPP_TOOLS) -L$(LIB_DIR) -o tools/rwpoints $(INCLUDE) -lfmt
 
 clean:
 	rm -v -rf src/*.o
