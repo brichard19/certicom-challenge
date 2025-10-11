@@ -94,7 +94,7 @@ GPUPointFinder::GPUPointFinder(int device, uint32_t num_points, int dpbits, bool
   int simd_width = get_warp_size(device);
 
   // Use these for now
-  _blocks = compute_units * 8;
+  _blocks = compute_units * 32;
   _threads = simd_width;
   
   HIP_CALL(hipSetDevice(device));
@@ -106,7 +106,7 @@ GPUPointFinder::GPUPointFinder(int device, uint32_t num_points, int dpbits, bool
 
   // Give 256 points to each thread unless specified
   if(num_points == 0) {
-    num_points = _blocks * _threads * 256;
+    num_points = _blocks * _threads * 64;
   }
 
   uint32_t total_threads = _blocks * _threads;
