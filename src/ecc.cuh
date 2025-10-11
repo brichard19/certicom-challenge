@@ -3,6 +3,7 @@
 
 #include <hip/hip_runtime.h>
 
+#define POINTS_PER_THREAD 64
 
 struct DPResult {
   uint131_t a;

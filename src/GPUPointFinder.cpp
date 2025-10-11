@@ -106,8 +106,9 @@ GPUPointFinder::GPUPointFinder(int device, uint32_t num_points, int dpbits, bool
 
   // Give 256 points to each thread unless specified
   if(num_points == 0) {
-    num_points = _blocks * _threads * 64;
+    num_points = _blocks * _threads * POINTS_PER_THREAD;
   }
+
 
   uint32_t total_threads = _blocks * _threads;
 

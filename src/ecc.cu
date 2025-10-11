@@ -24,7 +24,7 @@ __device__ int get_bit(uint131_t x, int bit)
 
 
 // If the private key bit for P is 1, then add Q to P
-template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t* global_py,
+template<int CURVE, int N> __device__ void do_step_impl(uint131_t* global_px, uint131_t* global_py,
                                    uint131_t* global_rx, uint131_t* global_ry,
                                    uint131_t* mbuf, int count,
                                    DPResult* result, int* result_count,
@@ -43,7 +43,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
   uint131_t inverse;
 
   // Perform Qx - Px and then multiply them together
-  for(; i < count; i+=dim) {
+  for(int n = 0; n < N; n++) {
     uint131_t px = load_uint131(global_px, i, count);
 
     if(result != NULL && (px.w.v0 & dpmask) == 0) {
@@ -79,23 +79,22 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
 
     // Point addition, rx - px
     uint131_t t = sub<CURVE>(rx, px);
-    if(i > gid) {
+    if(n > 0) {
       inverse = mul<CURVE>(inverse, t);
     } else {
       inverse = t;
     }
     store_uint131(mbuf, i, count, inverse);
+
+    i += dim;
   }
 
   // Perform inversion
   inverse = inv<CURVE>(inverse);
 
-  // Start at last element (undo final loop counter add)
-  i -= dim;
-
   // Complete addition
-
-  for(; i >= gid; i-=dim) {
+  i = gid + 63 * dim;
+  for(int n = 0; n < N; n++) {
     uint131_t px = load_uint131(global_px, i, count);
     uint131_t py = load_uint131(global_py, i, count);
 
@@ -106,7 +105,7 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
 
     uint131_t s;
 
-    if(i > gid) {
+    if(n < 63) {
 
       // Get the 2nd-last element (product of all factors up to that number)
       // e.g. abcd
@@ -139,6 +138,8 @@ template<int CURVE> __device__ void do_step_impl(uint131_t* global_px, uint131_t
 
     store_uint131(global_px, i, count, x);
     store_uint131(global_py, i, count, y);
+
+    i -= dim;
   }
 }
 
@@ -329,7 +330,7 @@ extern "C" __global__ void do_step_p79(uint131_t* global_px, uint131_t* global_p
                                    uint64_t* start_pos,
                                    uint64_t dpmask)
 {
-  do_step_impl<79>(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, staging_count, priv_key_a, counter, start_pos, dpmask);
+  do_step_impl<79, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, staging_count, priv_key_a, counter, start_pos, dpmask);
 }
 
 
@@ -350,5 +351,5 @@ extern "C" __global__ void do_step_p131(uint131_t* global_px, uint131_t* global_
                                    uint64_t* start_pos,
                                    uint64_t dpmask)
 {
-  do_step_impl<131>(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, staging_count, priv_key_a, counter, start_pos, dpmask);
+  do_step_impl<131, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, staging_count, priv_key_a, counter, start_pos, dpmask);
 }
