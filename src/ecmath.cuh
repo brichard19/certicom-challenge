@@ -386,8 +386,8 @@ __device__ uint131_t mul_shift_160(const uint160_t& a, const uint131_t& b)
 
   uint131_t product;
   // Divide by 2^160
-  product.w.v0 = (tmp[2] >> 32) | ((tmp[3] & 0xffffffff) << 32);
-  product.w.v1 = (tmp[3] >> 32) | ((tmp[4] & 0xffffffff) << 32);
+  product.w.v0 = (tmp[2] >> 32) | (tmp[3] << 32);
+  product.w.v1 = (tmp[3] >> 32) | (tmp[4] << 32);
   product.w.v2 = (tmp[4] >> 32);
 
   return product;
@@ -446,8 +446,8 @@ template<int CURVE> __device__ uint131_t mont_reduce(const uint262_t& t)
   // Remaining high bits (102 bits)
   uint131_t t_hi;
 
-  t_hi.w.v0 = (t.v[2] >> 32) | ((t.v[3] & 0xffffffff) << 32);
-  t_hi.w.v1 = (t.v[3] >> 32) | ((t.v[4] & 0xffffffff) << 32);
+  t_hi.w.v0 = (t.v[2] >> 32) | (t.v[3] << 32);
+  t_hi.w.v1 = (t.v[3] >> 32) | (t.v[4] << 32);
   t_hi.w.v2 = 0;
 
   uint160_t m1;
