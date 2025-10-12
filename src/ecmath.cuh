@@ -245,9 +245,9 @@ __device__ uint262_t mul_131(const uint131_t& a, const uint131_t& b)
   // a1 * b2
   t = (uint128_t)a.w.v1 * b.w.v2 + tmp.v[3] + high;
   tmp.v[3] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
+  uint32_t high32 = (uint32_t)(t >> 64);
 
-  tmp.v[4] = high;
+  tmp.v[4] = high32;
 
   // a2 * b0
   t = (uint128_t)a.w.v2* b.w.v0 + tmp.v[2];
@@ -257,12 +257,12 @@ __device__ uint262_t mul_131(const uint131_t& a, const uint131_t& b)
   // a2 * b1 
   t = (uint128_t)a.w.v2 * b.w.v1 + tmp.v[3] + high;
   tmp.v[3] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
+  high32 = (uint32_t)(t >> 64);
 
   // a2 * b2
   // The final word is only at most 6 bits, so no 128-bit mul needed
-  uint64_t t64 = a.w.v2 * b.w.v2 + tmp.v[4] + high;
-  tmp.v[4] = t64;
+  uint64_t t32 = (uint32_t)a.w.v2 * b.w.v2 + tmp.v[4] + high32;
+  tmp.v[4] = t32;
 
   return tmp;
 }
@@ -305,9 +305,9 @@ __device__ uint262_t square_131(const uint131_t& a)
   // a1 * a2
   t = (uint128_t)a.w.v1 * a.w.v2 + tmp.v[3] + high;
   tmp.v[3] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
+  uint32_t high32 = (uint32_t)(t >> 64);
 
-  tmp.v[4] = high;
+  tmp.v[4] = high32;
 
   // a2 * a0
   t = (uint128_t)a.w.v2 * a.w.v0 + tmp.v[2];
@@ -317,12 +317,12 @@ __device__ uint262_t square_131(const uint131_t& a)
   // a2 * a1 
   t = (uint128_t)a.w.v2 * a.w.v1 + tmp.v[3] + high;
   tmp.v[3] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
+  high32 = (uint32_t)(t >> 64);
 
   // a2 * a2
   // The final word is only at most 6 bits, so no 128-bit mul needed
-  uint64_t t64 = a.w.v2 * a.w.v2 + tmp.v[4] + high;
-  tmp.v[4] = t64;
+  uint32_t t32 = (uint32_t)a.w.v2 * a.w.v2 + tmp.v[4] + high32;
+  tmp.v[4] = t32;
 
   return tmp;
 }
