@@ -261,7 +261,7 @@ __device__ uint262_t mul_131(const uint131_t& a, const uint131_t& b)
 
   // a2 * b2
   // The final word is only at most 6 bits, so no 128-bit mul needed
-  uint64_t t32 = (uint32_t)a.w.v2 * b.w.v2 + tmp.v[4] + high32;
+  uint32_t t32 = (uint32_t)a.w.v2 * b.w.v2 + tmp.v[4] + high32;
   tmp.v[4] = t32;
 
   return tmp;
