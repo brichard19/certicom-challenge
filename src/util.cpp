@@ -4,6 +4,7 @@
 #include <random>
 #include <stdexcept>
 #include <thread>
+#include <unistd.h>
 
 #include "util.h"
 
@@ -80,4 +81,14 @@ namespace util
     }
   }
 
+  std::string get_hostname()
+  {
+    char buf[1024];
+
+    if(gethostname(buf, sizeof(buf))) {
+      throw std::runtime_error("Error getting hostname: " + std::to_string(errno));
+    }
+
+    return std::string(buf);
+  }
 };

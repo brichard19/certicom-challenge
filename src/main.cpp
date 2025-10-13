@@ -48,6 +48,7 @@ namespace {
   std::string _data_file = "";
   std::string _data_dir = "";
   std::string _results_dir = "";
+  std::string _hostname = "";
 
   // System will choose number of points 
   uint32_t _num_points = 0;
@@ -232,7 +233,7 @@ void upload_thread_function()
 void main_loop()
 {
 
-  std::string data_file_path = _data_dir + "/" + _data_file;
+  std::string data_file_path = _data_dir + "/" + _hostname + "/" + _data_file;
 
   DistinguishedPointFinder* pf = new GPUPointFinder(_hip_device, _num_points, _dpbits);
 
@@ -295,19 +296,19 @@ bool init_directories()
 
   std::error_code err;
 
-  if(!std::filesystem::create_directories(_data_dir, err)) {
-    if(std::filesystem::exists(_data_dir)) {
-      return true;
-    }
+  if(!std::filesystem::create_directories(_data_dir, err) && !std::filesystem::exists(_data_dir)) {
     std::cout << fmt::format("Error creating directory '{}': {}", _data_dir, err.message()) << std::endl;
     return false;
   }
 
-  if(!std::filesystem::create_directories(_results_dir, err)) {
-    if(std::filesystem::exists(_data_dir)) {
-      return true;
-    }
-    std::cout << fmt::format("Error creating directory '{}': {}", _data_dir, err.message()) << std::endl;
+  if(!std::filesystem::create_directories(_results_dir, err) && !std::filesystem::exists(_results_dir)) {
+    std::cout << fmt::format("Error creating directory '{}': {}", _results_dir, err.message()) << std::endl;
+    return false;
+  }
+
+  std::string progress_dir = _data_dir + "/" + _hostname;
+  if(!std::filesystem::create_directories(progress_dir, err) && !std::filesystem::exists(progress_dir)) {
+    std::cout << fmt::format("Error creating directory '{}': {}", progress_dir, err.message()) << std::endl;
     return false;
   }
 
@@ -316,6 +317,9 @@ bool init_directories()
 
 int main(int argc, char**argv)
 {
+ 
+  _hostname = util::get_hostname();
+
   bool gpu_flag = false;
  
   while(true) {

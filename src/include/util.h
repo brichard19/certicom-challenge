@@ -9,7 +9,7 @@ namespace util {
 
 double get_time();
 std::string get_date_time();
-
+std::string get_hostname();
 std::string to_hex(const void* bytes, size_t count);
 
 bool file_exists(const std::string& path);
