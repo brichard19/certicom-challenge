@@ -27,8 +27,6 @@
 #endif
 
 
-#define DEFAULT_FILE_FORMAT_STRING "{}-gpu{}.dat"
-
 namespace {
 
   std::map<std::string, int> _curve_bits = {
@@ -351,10 +349,6 @@ int main(int argc, char**argv)
         _data_dir = std::string(optarg);
         break;
 
-      case 'f':
-        _data_file = std::string(optarg);
-        break;
-
       case 'g':
         _hip_device = atoi(optarg);
         gpu_flag = true;
@@ -464,10 +458,11 @@ int main(int argc, char**argv)
     return 1;
   }
 
-  // Use default file unless one was provided
-  if(_data_file.empty()) {
-    _data_file = fmt::format(DEFAULT_FILE_FORMAT_STRING, ecc::curve_name().c_str(), _hip_device);
-  }
+  // Use device curve + device name + device ID for data file
+  std::string device_name = get_gpu_name(_hip_device);
+  device_name.erase(std::remove(device_name.begin(), device_name.end(), ' '), device_name.end());
+
+  _data_file = fmt::format("{}-{}-{}.dat", ecc::curve_name().c_str(), device_name, _hip_device);
 
   // Set interrupt handler
   set_signal_handler(signal_handler);
