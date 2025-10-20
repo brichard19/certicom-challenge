@@ -106,9 +106,9 @@ void dp_callback(const std::vector<DistinguishedPoint>& dps)
 
 
 
+#ifdef BUILD_MPI
 void mpi_recv_thread_function()
 {
-#ifdef BUILD_MPI
   int buf_size = 128 * 1024;
   std::vector<char> buf(buf_size);
   
@@ -143,9 +143,8 @@ void mpi_recv_thread_function()
     }
     std::this_thread::sleep_for(std::chrono::seconds(3));
   }
-
-#endif
 }
+#endif
 
 void upload_thread_function()
 {
@@ -490,6 +489,7 @@ int main(int argc, char**argv)
   if(_use_mpi == true) {
     // Wait for all MPI processes to finish
     // TODO: This will wait for ALL MPI processes. If any died, this will block forever
+    std::cout << "Waiting for MPI processes to finish..." << std::endl;
     MPI_Barrier(MPI_COMM_WORLD);
     // Stop msg receive thread
     _mpi_thread_running = false;
