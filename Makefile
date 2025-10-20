@@ -79,6 +79,28 @@ MPI_LIBS+=-lmpi -lmpi_cxx
 MPI_LINKER+=-L/usr/lib/x86_64-linux-gnu/openmpi/lib
 endif
 
+
+
+LINKER_RHO=-lfmt -ljson11
+ifeq ($(BUILD_HTTP), 1)
+LINKER_RHO+=-lcurl
+CFLAGS+=-DBUILD_HTTP
+endif
+
+CPP_MATH_TESTS := ecc.cpp montgomery.cpp uint131.cpp util.cpp
+CPP_MATH_TESTS := $(addprefix src/, $(CPP_MATH_TESTS))
+CPP_TOOLS := ecc.cpp montgomery.cpp uint131.cpp util.cpp
+CPP_TOOLS := $(addprefix src/, $(CPP_TOOLS))
+
+CPP_RHO := main.cpp GPUPointFinder.cpp  ec_rho.cpp  ecc.cpp montgomery.cpp uint131.cpp  util.cpp
+ifeq ($(BUILD_HTTP), 1)
+CPP_RHO += http_client.cpp
+endif
+
+CPP_RHO := $(addprefix src/, $(CPP_RHO))
+CPP_BENCH := benchmark.cpp GPUPointFinder.cpp  ec_rho.cpp ecc.cpp montgomery.cpp uint131.cpp  util.cpp
+CPP_BENCH := $(addprefix src/, $(CPP_BENCH))
+
 export BUILD_DIR
 export BIN_PREFIX=certicom-
 export LIB_DIR
@@ -86,16 +108,6 @@ export BIN_DIR
 export INCLUDE
 export CXX
 export CFLAGS
-
-CPP_MATH_TESTS := ecc.cpp montgomery.cpp uint131.cpp util.cpp
-CPP_MATH_TESTS := $(addprefix src/, $(CPP_MATH_TESTS))
-CPP_TOOLS := ecc.cpp montgomery.cpp uint131.cpp util.cpp
-CPP_TOOLS := $(addprefix src/, $(CPP_TOOLS))
-
-CPP_RHO := main.cpp GPUPointFinder.cpp  ec_rho.cpp  ecc.cpp  http_client.cpp  montgomery.cpp  uint131.cpp  util.cpp
-CPP_RHO := $(addprefix src/, $(CPP_RHO))
-CPP_BENCH := benchmark.cpp GPUPointFinder.cpp  ec_rho.cpp  ecc.cpp montgomery.cpp  uint131.cpp  util.cpp
-CPP_BENCH := $(addprefix src/, $(CPP_BENCH))
 
 TARGETS = tests tools
 
@@ -129,7 +141,7 @@ benchmark_nvidia:	third_party gpu_nvidia
 
 rho_nvidia:	third_party gpu_nvidia
 	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=nvidia $(CXX) $(CFLAGS) $(CPP_RHO) $(OBJDIR)/ecc_nvidia.co -o rho-nvidia $(CXX_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(NVIDIA_INCLUDE) $(INCLUDE) $(LINKER_NVIDIA) $(LIBS_NVIDIA) -lfmt -ljson11 -lcurl
+	HIP_PLATFORM=nvidia $(CXX) $(CFLAGS) $(CPP_RHO) $(OBJDIR)/ecc_nvidia.co -o rho-nvidia $(CXX_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(NVIDIA_INCLUDE) $(INCLUDE) $(LINKER_NVIDIA) $(LIBS_NVIDIA) $(LINKER_RHO)
 
 benchmark_amd:	third_party	gpu_amd
 	mkdir -p $(OBJDIR)
@@ -137,7 +149,7 @@ benchmark_amd:	third_party	gpu_amd
 
 rho_amd:	third_party gpu_amd
 	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=amd $(CXX) $(CFLAGS) $(CPP_RHO) $(OBJDIR)/ecc_amd.co -o rho-amd $(CXX_CFLAGS_AMD) -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LINKER_AMD) $(LIBS_AMD) -lfmt -ljson11 -lcurl
+	HIP_PLATFORM=amd $(CXX) $(CFLAGS) $(CPP_RHO) $(OBJDIR)/ecc_amd.co -o rho-amd $(CXX_CFLAGS_AMD) -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LINKER_AMD) $(LIBS_AMD) $(LINKER_RHO)
 
 .PHONY: tests
 tests:

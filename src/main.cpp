@@ -15,7 +15,6 @@
 #include "binary_encoder.h"
 #include "ec_rho.h"
 #include "hip_helper.h"
-#include "http_client.h"
 #include "log.h"
 #include "signal_handler.h"
 #include "util.h"
@@ -26,6 +25,9 @@
 #include "mpi_helper.h"
 #endif
 
+#ifdef BUILD_HTTP
+#include "http_client.h"
+#endif
 
 namespace {
 
@@ -146,6 +148,7 @@ void mpi_recv_thread_function()
 }
 #endif
 
+#ifdef BUILD_HTTP
 void upload_thread_function()
 {
   bool defer_upload = false;
@@ -226,6 +229,8 @@ void upload_thread_function()
     }
   }
 }
+
+#endif
 
 void main_loop()
 {
@@ -466,6 +471,7 @@ int main(int argc, char**argv)
   // Set interrupt handler
   set_signal_handler(signal_handler);
 
+#ifdef BUILD_HTTP
   // Start point reporter thread
   std::thread upload_thread;
 
@@ -473,6 +479,7 @@ int main(int argc, char**argv)
   if(_use_upload && (_use_mpi == false || (_use_mpi == true && _world_rank == 0))) {
     upload_thread = std::thread(upload_thread_function);
   }
+#endif
 
 #ifdef BUILD_MPI
   // Thread for receiving MPI messages
@@ -495,10 +502,13 @@ int main(int argc, char**argv)
     _mpi_thread_running = false;
   }
 #endif
+
+#ifdef BUILD_HTTP
   //Wait for point thread to finish
   if(_use_upload && (_use_mpi == false || (_use_mpi == true && _world_rank == 0))) {
       upload_thread.join();
   }
+#endif
 
 #ifdef BUILD_MPI
   if(_use_mpi == true && _world_rank == 0) {
