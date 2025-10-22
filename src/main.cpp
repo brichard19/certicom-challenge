@@ -43,6 +43,7 @@ namespace {
 
   volatile bool _running = true;
 
+  HIPDeviceMap _device_map;
   int _hip_device = 0;
 
   std::string _data_file = "";
@@ -380,6 +381,8 @@ int main(int argc, char**argv)
     }
   }
 
+  _device_map = get_device_map();
+
   if(_curve_name.empty()) {
     std::cout << "--curve required" << std::endl;
     return 1;
@@ -462,11 +465,8 @@ int main(int argc, char**argv)
     return 1;
   }
 
-  // Use device curve + device name + device ID for data file
-  std::string device_name = get_gpu_name(_hip_device);
-  device_name.erase(std::remove(device_name.begin(), device_name.end(), ' '), device_name.end());
-
-  _data_file = fmt::format("{}-{}-{}.dat", ecc::curve_name().c_str(), device_name, _hip_device);
+  // Use device UUID for data file
+  _data_file = fmt::format("GPU-{}.dat", _device_map[_hip_device].uuid);
 
   // Set interrupt handler
   set_signal_handler(signal_handler);

@@ -6,6 +6,15 @@
 #include <vector>
 #include <string>
 
+struct HIPDeviceID {
+  int id;
+  std::string uuid;
+
+  HIPDeviceID(int id, std::string uuid) : id(id), uuid(uuid) {}
+};
+
+using HIPDeviceMap = std::vector<HIPDeviceID>;
+
 #define HIP_CALL(condition)\
 {\
   hipError_t err = condition;\
@@ -71,6 +80,27 @@ inline int get_compute_mode(int device_id)
   HIP_CALL(hipGetDeviceProperties(&props, device_id));
 
   return props.computeMode;
+}
+
+inline HIPDeviceMap get_device_map()
+{
+  int count;
+
+  HIP_CALL(hipGetDeviceCount(&count));
+
+  HIPDeviceMap device_map;
+
+  for(int d = 0; d < count; d++) {
+    hipDeviceProp_t props;
+
+    HIP_CALL(hipGetDeviceProperties(&props, d));
+
+    std::string uuid(props.uuid.bytes, 16);
+
+    device_map.push_back(HIPDeviceID(d, uuid));
+  }
+
+  return device_map;
 }
 
 #endif
