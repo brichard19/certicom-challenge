@@ -328,7 +328,7 @@ int main(int argc, char**argv)
   while(true) {
     static struct option long_options[] = {
       {"gpu", required_argument, 0, 'g'},
-      {"data", required_argument, 0, 'd'},
+      {"data-dir", required_argument, 0, 'd'},
       {"file", required_argument, 0, 'f'},
       {"mpi", no_argument, 0, 'm'},
       {"size", required_argument, 0, 's'},
@@ -339,7 +339,7 @@ int main(int argc, char**argv)
 
     int opt_idx = 0;
 
-    int c = getopt_long(argc, argv, "d:f:g:s:mu:", long_options, &opt_idx);
+    int c = getopt_long(argc, argv, "", long_options, &opt_idx);
 
     if(c == -1) {
       break;
@@ -373,6 +373,7 @@ int main(int argc, char**argv)
         break;
 
       case '?':
+        return 1;
         break;
 
       default:
