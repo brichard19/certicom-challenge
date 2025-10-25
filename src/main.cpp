@@ -51,9 +51,6 @@ namespace {
   std::string _results_dir = "";
   std::string _hostname = "";
 
-  // System will choose number of points 
-  uint32_t _num_points = 0;
-
   // MPI variables
   bool _use_mpi = false;
   int _world_size = -1;
@@ -238,7 +235,7 @@ void main_loop()
 
   std::string data_file_path = _data_dir + "/" + _hostname + "/" + _data_file;
 
-  DistinguishedPointFinder* pf = new GPUPointFinder(_hip_device, _num_points, _dpbits);
+  DistinguishedPointFinder* pf = new GPUPointFinder(_hip_device, _dpbits);
 
   pf->init(data_file_path);
 
@@ -331,7 +328,6 @@ int main(int argc, char**argv)
       {"data-dir", required_argument, 0, 'd'},
       {"file", required_argument, 0, 'f'},
       {"mpi", no_argument, 0, 'm'},
-      {"size", required_argument, 0, 's'},
       {"curve", required_argument, 0, 'c'},
       {"upload-server", required_argument, 0, 'u'},
       {NULL, 0, NULL, 0}
@@ -363,10 +359,6 @@ int main(int argc, char**argv)
         _use_mpi = true;
         break;
 
-      case 's':
-        _num_points = atoi(optarg);
-        break;
-      
       case 'u':
         _use_upload = true;
         _upload_server = std::string(optarg);

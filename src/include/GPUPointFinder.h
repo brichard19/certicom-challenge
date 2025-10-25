@@ -56,7 +56,7 @@ private:
   uint64_t* _walk_start = nullptr;
 
   int _blocks = 1;
-  int _threads = 32;
+  int _threads_per_block = 32;
 
   bool _benchmark = false;
 
@@ -75,7 +75,7 @@ private:
 
 public:
 
-  GPUPointFinder(int device, uint32_t num_points, int dpbits, bool benchmark = false);
+  GPUPointFinder(int device, int dpbits, bool benchmark = false);
 
   virtual ~GPUPointFinder();
 

@@ -13,7 +13,7 @@ double _benchmark_run_time = 30.0;
 
 void benchmark(int hip_device)
 {
-  DistinguishedPointFinder* pf = new GPUPointFinder(hip_device, 0, 63, true);
+  DistinguishedPointFinder* pf = new GPUPointFinder(hip_device, 63, true);
 
   pf->init();
 

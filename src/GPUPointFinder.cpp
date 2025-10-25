@@ -66,7 +66,7 @@ typedef struct {
   uint8_t data[17];
 }vec_uint131_t;
 
-GPUPointFinder::GPUPointFinder(int device, uint32_t num_points, int dpbits, bool benchmark)
+GPUPointFinder::GPUPointFinder(int device, int dpbits, bool benchmark)
 {
   assert(dpbits >= 16 && dpbits <= 63);
 
@@ -95,7 +95,7 @@ GPUPointFinder::GPUPointFinder(int device, uint32_t num_points, int dpbits, bool
 
   // Use these for now
   _blocks = compute_units * 32;
-  _threads = simd_width;
+  _threads_per_block = simd_width;
   
   HIP_CALL(hipSetDevice(device));
   HIP_CALL(hipSetDeviceFlags(hipDeviceScheduleYield));
@@ -104,13 +104,9 @@ GPUPointFinder::GPUPointFinder(int device, uint32_t num_points, int dpbits, bool
   LOG("Compute units: {}", compute_units);
   LOG("SIMD width:    {}", simd_width);
 
-  // Give 256 points to each thread unless specified
-  if(num_points == 0) {
-    num_points = _blocks * _threads * POINTS_PER_THREAD;
-  }
+  int num_points = _blocks * _threads_per_block * POINTS_PER_THREAD;
 
-
-  uint32_t total_threads = _blocks * _threads;
+  uint32_t total_threads = _blocks * _threads_per_block;
 
   // Round up to multiple of number of threads to ensure CUs get roughtly
   // the same amount of work
@@ -269,7 +265,7 @@ void GPUPointFinder::init(const std::string& filename)
     // Check sanity
     *_sanity_flag = 0;
 
-    HIP_CALL(hipLaunchKernel((void*)_sanity_check_ptr, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _num_points, _sanity_flag));
+    HIP_CALL(hipLaunchKernel((void*)_sanity_check_ptr, dim3(_blocks), dim3(_threads_per_block), 0, _dev_x, _dev_y, _num_points, _sanity_flag));
     HIP_CALL(hipDeviceSynchronize());
 
     if(*_sanity_flag != 0) {
@@ -289,10 +285,10 @@ void GPUPointFinder::init(const std::string& filename)
     }
 
     // Clear keys on device
-    HIP_CALL(hipLaunchKernel((void*)clear_public_keys, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _num_points));
+    HIP_CALL(hipLaunchKernel((void*)clear_public_keys, dim3(_blocks), dim3(_threads_per_block), 0, _dev_x, _dev_y, _num_points));
     HIP_CALL(hipDeviceSynchronize());
 
-    HIP_CALL(hipLaunchKernel((void*)reset_counters, dim3(_blocks), dim3(_threads), 0, _walk_start, _counter, _num_points));
+    HIP_CALL(hipLaunchKernel((void*)reset_counters, dim3(_blocks), dim3(_threads_per_block), 0, _walk_start, _counter, _num_points));
     HIP_CALL(hipDeviceSynchronize());
 
     uint131_t* dev_gx = nullptr;
@@ -314,7 +310,7 @@ void GPUPointFinder::init(const std::string& filename)
     // Initialize keys
     int bits = ecc::curve_strength();
     for(int i = 0; i < bits; i++) {
-      HIP_CALL(hipLaunchKernel(_batch_multiply_ptr, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _priv_key_a, _mbuf, dev_gx, dev_gy, i, _num_points));
+      HIP_CALL(hipLaunchKernel(_batch_multiply_ptr, dim3(_blocks), dim3(_threads_per_block), 0, _dev_x, _dev_y, _priv_key_a, _mbuf, dev_gx, dev_gy, i, _num_points));
       HIP_CALL(hipDeviceSynchronize());
     }
 
@@ -427,7 +423,7 @@ double GPUPointFinder::step()
 
   HIP_CALL(hipEventRecord(start));
   for(int i = 0; i < _iters_per_step; i++) {
-    HIP_CALL(hipLaunchKernel(_do_step_ptr, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _dev_rx, _dev_ry,
+    HIP_CALL(hipLaunchKernel(_do_step_ptr, dim3(_blocks), dim3(_threads_per_block), 0, _dev_x, _dev_y, _dev_rx, _dev_ry,
                   _mbuf, _num_points,
                   result_buf, _result_count,
                   _staging_buf, _staging_count,
@@ -444,7 +440,7 @@ double GPUPointFinder::step()
   HIP_CALL(hipEventElapsedTime(&elapsed, start, stop));
 
   if(_first_run || _verify_points) {
-    HIP_CALL(hipLaunchKernel((void*)_sanity_check_ptr, dim3(_blocks), dim3(_threads), 0, _dev_x, _dev_y, _num_points, _sanity_flag));
+    HIP_CALL(hipLaunchKernel((void*)_sanity_check_ptr, dim3(_blocks), dim3(_threads_per_block), 0, _dev_x, _dev_y, _num_points, _sanity_flag));
     HIP_CALL(hipDeviceSynchronize());
 
     if(*_sanity_flag != 0) {
