@@ -33,3 +33,4 @@
 
 tools/rwpoints
 bin/*
+__pycache__/

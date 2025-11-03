@@ -52,8 +52,6 @@ namespace util
   }
 
 
-
-
   // Simple timer class
   Timer::Timer()
   {

@@ -323,37 +323,28 @@ std::vector<RWPoint> get_rw_points()
 }
 
 
-
-// Encodes a DistinguishedPoint into a string of bytes
 std::vector<uint8_t> encode_dp(const DistinguishedPoint& dp, int dbits)
 {
-  std::vector<uint8_t> buf(128);
+  std::vector<uint8_t> buf(ENCODED_DP_SIZE);
   uint8_t* ptr = buf.data();
 
   // Remove distinguished bits by shifting right then
   // copy into array
   uint131_t x2 = mont::rshift(dp.p.x, dbits);
   
-  int len = ((131 - dbits) + 7) / 8;
-  memcpy(ptr, &x2, len);
-  ptr += len;
+  //int len = ((131 - dbits) + 7) / 8;
+  memcpy(ptr + X_OFFSET, &x2, X_TRUNC_LEN);
 
   // sign bit: 1 byte
   uint8_t sign = is_odd(dp.p.y) ? 1 : 0;
-  *ptr = sign;
-  ptr++;
+  ptr[SIGN_OFFSET] = sign;
 
   // exponent
-  len = (131 + 7) / 8;
-  memcpy(ptr, &dp.a, len);
-  ptr += len;
+  int len = (131 + 7) / 8;
+  memcpy(ptr + A_OFFSET, &dp.a, len);
 
   // Walk length: 40 bits (5 bytes)
-  memcpy(ptr, &dp.length, 5);
-  ptr += 5;
-
-  // Resize the array
-  buf.resize(ptr - buf.data());
+  memcpy(ptr + LEN_OFFSET, &dp.length, 5);
 
   return buf;
 }
@@ -398,24 +389,21 @@ DistinguishedPoint decode_dp(const uint8_t* bytes, int dbits)
   const int x_bytes = ((131 - dbits) + 7) / 8;
 
   // extract x
-  memcpy(&p.x, ptr, x_bytes);
+  memcpy(&p.x, ptr + X_OFFSET, x_bytes);
   p.x = mont::lshift(p.x, dbits);
-  ptr += x_bytes;
 
   // sign
-  uint8_t sign = *ptr;
-  ptr++;
+  uint8_t sign = ptr[SIGN_OFFSET];
  
   // Calculate y component
   p.y = ecc::calc_y(p.x, sign);
 
   uint131_t a;
   memset(&a, 0, sizeof(a));
-  memcpy(&a, ptr, a_bytes);
-  ptr += a_bytes;
+  memcpy(&a, ptr + A_OFFSET, a_bytes);
 
   uint64_t length = 0;
-  memcpy(&length, ptr, 5);
+  memcpy(&length, ptr + LEN_OFFSET, 5);
 
   assert(ecc::exists(p));
 

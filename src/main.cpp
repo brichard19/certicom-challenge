@@ -36,7 +36,7 @@ namespace {
     {"ecp79", 79}
   };
 
-  const double _save_interval = 600.0;
+  const double _save_interval = 60.0;
   const double _perf_interval = 5.0;
 
   int _port = 8080;
@@ -57,7 +57,7 @@ namespace {
   int _world_rank = -1;
   volatile bool _mpi_thread_running = true;
 
-  int _dpbits = 32;
+  int _dpbits = DP_BITS;
   std::string _curve_name;
   std::string _upload_server = "";
   bool _use_upload = false;
@@ -397,9 +397,9 @@ int main(int argc, char**argv)
   }
 
   if(_curve_name == "ecp131") {
-    _dpbits = 32;
+    _dpbits = DP_BITS;
   } else if(_curve_name == "ecp79") {
-    _dpbits = 24;
+    _dpbits = DP_BITS;
   }
 
   if(_use_mpi && gpu_flag) {
