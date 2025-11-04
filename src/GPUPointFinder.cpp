@@ -541,7 +541,7 @@ void GPUPointFinder::save_progress(const std::string& file_name)
     return; 
   }
 
-  std::vector<char> tmp(sizeof(uint131_t) * count);
+  std::vector<char> tmp(sizeof(vec_uint131_t) * count);
   // Points X
   HIP_CALL(hipMemcpy(tmp.data(), _dev_x, sizeof(vec_uint131_t) * count, hipMemcpyDeviceToHost));
   file.write(tmp.data(), sizeof(vec_uint131_t) * count);
