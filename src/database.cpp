@@ -11,6 +11,7 @@
 #include "giga/gigalist.h"
 #include "giga/gigaset.h"
 #include "util.h"
+#include "fmt/format.h"
 
 #define IFSTREAM_CALL(condition)\
 {\
@@ -204,12 +205,16 @@ void process_collision(const DistinguishedPoint p1, const DistinguishedPoint p2)
 
 double calc_probability(uint64_t n)
 {
-    //double birthday_bound = sqrt(M_PI/2.0) * pow(2.0, (double)ecc::curve_strength() / 2.0);
-
     double exponent = (double)n * n / (2 * pow(2, (double)ecc::curve_strength()));
 
-    //return (double)total_points / birthday_bound * 0.5;
-    return (1.0 - exp(-exponent)) * 100.0;
+    return 1.0 - exp(-exponent);
+}
+
+void display_status()
+{
+    double prob = calc_probability(_stats.total_points);
+    std::string status = fmt::format("DPs: {:>12}  |  Walks: {:>15}  |  Collision: {:>7.4f}% ({:.2e})", _stats.num_dps, _stats.total_points, prob * 100.0, prob);
+    std::cout << status << std::endl;
 }
 
 void main_loop()
@@ -221,9 +226,9 @@ void main_loop()
   memset(&_stats, 0, sizeof(_stats));
   load_stats();
 
-  std::cout << _stats.num_dps << " " << _stats.total_points << std::endl;
-  
   std::filesystem::create_directories(_data_dir);
+
+  display_status();
 
   while(_running) {
 
@@ -280,10 +285,12 @@ void main_loop()
       _stats.total_points += count;
       _stats.num_dps += dps.size();
 
-      std::cout << file_path << " " << dps.size() << " " << count << std::endl;
-
-      // Insert to DB
+      double t0 = util::get_time();
       auto collisions = coll_db.insert(dps);
+      double t1 = util::get_time();
+      
+      std::string status = fmt::format("{:<18} | DPs: {:>8} | Total: {:>12} | Time: {:>6.3f}ms", file_path, dps.size(), count, (t1 - t0));
+      std::cout << status << std::endl;
 
       // Process any collisions.
       if(collisions.size() > 0) {
@@ -297,7 +304,7 @@ void main_loop()
       std::filesystem::remove(_data_dir + "/" + file_path);
     }
     save_stats();
-    std::cout << _stats.num_dps << " " << _stats.total_points << " " << calc_probability(_stats.total_points) << "%" << std::endl;
+    display_status();
   }
 }
 
