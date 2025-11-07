@@ -92,6 +92,8 @@ public:
   virtual size_t work_per_step();
   
   virtual int iters_per_step();
+
+  virtual int parallel_walks();
 };
 
 #endif

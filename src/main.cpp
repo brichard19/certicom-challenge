@@ -264,7 +264,7 @@ void main_loop()
 
       perf_timer.start();
 
-      LOG("{:.2f} MKeys/sec ({:.2f} iters/sec)", perf / 1e6, iters);
+      LOG("Perf: {:.2f} MKeys/sec | Iters: {:.2f} iters/sec | Parallel walks: {}", perf / 1e6, iters, pf->parallel_walks());
 
       steps = 0;
       gpu_time = 0;

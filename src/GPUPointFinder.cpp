@@ -502,6 +502,10 @@ int GPUPointFinder::iters_per_step()
   return _iters_per_step;
 }
 
+int GPUPointFinder::parallel_walks()
+{
+  return _num_points;
+}
 
 void GPUPointFinder::save_progress(const std::string& file_name)
 {

@@ -188,13 +188,12 @@ uint64_t extract_length(EncodedDP& encoded)
 
 void process_collision(const DistinguishedPoint p1, const DistinguishedPoint p2)
 {
-    std::cout << to_str(p1.p.x) << " " << to_str(p1.p.y) << std::endl;
-    std::cout << to_str(p1.a) << std::endl;
-    std::cout << p1.length << std::endl;
-
-    std::cout << to_str(p2.p.x) << " " << to_str(p2.p.y) << std::endl;
-    std::cout << to_str(p2.a) << std::endl;
-    std::cout << p2.length << std::endl;
+    std::cout << "──────── Collision ────────" << std::endl;
+    std::cout << "x : " << to_str(p1.p.x) << std::endl;
+    std::cout << "y : " << to_str(p1.p.y) << std::endl;
+    std::cout << "a : " << to_str(p1.a) << std::endl;
+    std::cout << "b : " << to_str(p2.a) << std::endl;
+    std::cout << "───────────────────────────" << std::endl;
 
     // Write the collision to a file. To be solved with a solving tool.
     std::string file_path = _db_dir + "/" + "coll" + std::to_string(rand()) + ".txt";
@@ -213,7 +212,7 @@ double calc_probability(uint64_t n)
 void display_status()
 {
     double prob = calc_probability(_stats.total_points);
-    std::string status = fmt::format("DPs: {:>12}  |  Walks: {:>15}  |  Collision: {:>7.4f}% ({:.2e})", _stats.num_dps, _stats.total_points, prob * 100.0, prob);
+    std::string status = fmt::format("DPs: {:>9}  |  Ps: {:>15}  |  Collision: {:>7.4f}% ({:.2e})", _stats.num_dps, _stats.total_points, prob * 100.0, prob);
     std::cout << status << std::endl;
 }
 
@@ -245,6 +244,8 @@ void main_loop()
       continue;
     }
 
+    std::cout << "=========================================================================" << std::endl;
+    
     // Process each file
     for(const auto& file_path : files) {
 
@@ -289,20 +290,22 @@ void main_loop()
       auto collisions = coll_db.insert(dps);
       double t1 = util::get_time();
       
-      std::string status = fmt::format("{:<18} | DPs: {:>8} | Total: {:>12} | Time: {:>6.3f}ms", file_path, dps.size(), count, (t1 - t0));
+      std::string status = fmt::format("{:<15} | DPs: {:>8} | Ps: {:>12} | Time: {:>6.3f}ms", file_path, dps.size(), count, (t1 - t0));
       std::cout << status << std::endl;
 
       // Process any collisions.
       if(collisions.size() > 0) {
-        std::cout << "Found " << collisions.size() << " collisions" << std::endl;
+        std::cout << "=========================================================================" << std::endl;
         for(auto coll : collisions) {
             process_collision(coll.first, coll.second);
         }
+        std::cout << "=========================================================================" << std::endl;
       }
 
       // Remove file
       std::filesystem::remove(_data_dir + "/" + file_path);
     }
+    std::cout << "=========================================================================" << std::endl;
     save_stats();
     display_status();
   }
