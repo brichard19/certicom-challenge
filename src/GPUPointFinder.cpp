@@ -137,40 +137,6 @@ GPUPointFinder::~GPUPointFinder()
   free_buffers();
 }
 
-void GPUPointFinder::load(const std::string& file_name)
-{
-  std::ifstream file;
-
-  file.open(file_name, std::ios::in | std::ios::binary);
-
-  if(!file.is_open()) {
-    throw std::runtime_error("Unable to open file for reading");
-  }
-
-  // Load the count
-  size_t count = 0;
-
-  IFSTREAM_CALL(file.read((char*)&count, sizeof(count)));
-  
-  assert(count == _num_points);
-
-  // Load counter
-  IFSTREAM_CALL(file.read((char*)&_counter, sizeof(_counter)));
-
-  IFSTREAM_CALL(file.read((char*)_priv_key_a, sizeof(uint131_t) * count));
-
-  std::vector<char> tmp(sizeof(vec_uint131_t) * count);
-
-  IFSTREAM_CALL(file.read(tmp.data(), sizeof(vec_uint131_t) * count));
-  HIP_CALL(hipMemcpy(_dev_x, tmp.data(), sizeof(vec_uint131_t) * count, hipMemcpyHostToDevice));
-  
-  IFSTREAM_CALL(file.read(tmp.data(), sizeof(vec_uint131_t) * count));
-  HIP_CALL(hipMemcpy(_dev_y, tmp.data(), sizeof(vec_uint131_t) * count, hipMemcpyHostToDevice));
-  
-  IFSTREAM_CALL(file.read(tmp.data(), sizeof(uint64_t) * count));
-  memcpy(_walk_start, tmp.data(), sizeof(uint64_t) * count);
-
-}
 
 void GPUPointFinder::report_points()
 {
@@ -322,8 +288,8 @@ void GPUPointFinder::init(const std::string& filename)
       std::vector<uint8_t> x(_num_points * sizeof(vec_uint131_t));
       std::vector<uint8_t> y(_num_points * sizeof(vec_uint131_t));
 
-      HIP_CALL(hipMemcpy(x.data(), _dev_x, x.size() * sizeof(x[0]), hipMemcpyDeviceToHost));
-      HIP_CALL(hipMemcpy(y.data(), _dev_y, y.size() * sizeof(y[0]), hipMemcpyDeviceToHost));
+      HIP_CALL(hipMemcpy(x.data(), _dev_x, x.size(), hipMemcpyDeviceToHost));
+      HIP_CALL(hipMemcpy(y.data(), _dev_y, y.size(), hipMemcpyDeviceToHost));
 
       for(int i = 0; i < 1000; i++) {
         uint131_t k1 = _priv_key_a[i];
@@ -449,8 +415,8 @@ double GPUPointFinder::step()
       std::vector<uint8_t> x(_num_points * sizeof(vec_uint131_t));
       std::vector<uint8_t> y(_num_points * sizeof(vec_uint131_t));
 
-      HIP_CALL(hipMemcpy(x.data(), _dev_x, x.size() * sizeof(x[0]), hipMemcpyDeviceToHost));
-      HIP_CALL(hipMemcpy(y.data(), _dev_y, y.size() * sizeof(y[0]), hipMemcpyDeviceToHost));
+      HIP_CALL(hipMemcpy(x.data(), _dev_x, x.size(), hipMemcpyDeviceToHost));
+      HIP_CALL(hipMemcpy(y.data(), _dev_y, y.size(), hipMemcpyDeviceToHost));
 
       int count = 0;
       for(int i = 0; i < _num_points; i++) {
@@ -559,4 +525,38 @@ void GPUPointFinder::save_progress(const std::string& file_name)
   file.write(tmp.data(), sizeof(uint64_t) * count);
 
   file.close();
+}
+
+void GPUPointFinder::load(const std::string& file_name)
+{
+  std::ifstream file;
+
+  file.open(file_name, std::ios::in | std::ios::binary);
+
+  if(!file.is_open()) {
+    throw std::runtime_error("Unable to open file for reading");
+  }
+
+  // Load the count
+  size_t count = 0;
+
+  IFSTREAM_CALL(file.read((char*)&count, sizeof(count)));
+  
+  assert(count == _num_points);
+
+  // Load counter
+  IFSTREAM_CALL(file.read((char*)&_counter, sizeof(_counter)));
+
+  IFSTREAM_CALL(file.read((char*)_priv_key_a, sizeof(uint131_t) * count));
+
+  std::vector<char> tmp(sizeof(vec_uint131_t) * count);
+
+  IFSTREAM_CALL(file.read(tmp.data(), sizeof(vec_uint131_t) * count));
+  HIP_CALL(hipMemcpy(_dev_x, tmp.data(), sizeof(vec_uint131_t) * count, hipMemcpyHostToDevice));
+  
+  IFSTREAM_CALL(file.read(tmp.data(), sizeof(vec_uint131_t) * count));
+  HIP_CALL(hipMemcpy(_dev_y, tmp.data(), sizeof(vec_uint131_t) * count, hipMemcpyHostToDevice));
+  
+  IFSTREAM_CALL(file.read(tmp.data(), sizeof(uint64_t) * count));
+  memcpy(_walk_start, tmp.data(), sizeof(uint64_t) * count);
 }
