@@ -136,8 +136,8 @@ class RhoSolver:
 
     def iterate(self, a, b, point):
 
-        # The walk was originally done in Montgomery form, convert so we can
-        # get the correct bits
+        # Convert to montgomery form so we can get the correct
+        # distinguished bits
         xm = to_montgomery(point.x, self.curve.p)
 
         idx = xm % 32
@@ -157,27 +157,37 @@ class RhoSolver:
             self.len1, self.len2 = self.len2, self.len1
             self.a1, self.a2 = self.a2, self.a1
 
+        # The starting points only have one exponent, a. b = 0
         p1 = self.curve.multiply(self.a1, self.curve.bp)
         b1 = 0
 
         p2 = self.curve.multiply(self.a2, self.curve.bp)
         b2 = 0
 
-        # Advance the longer walk so that both walks have the same remaining iterations
-        # left. 
+        print(f"x={p1.x:033x}    x={p2.x:033x}")
+        print(f"y={p1.y:033x}    y={p2.y:033x}")
+
+        # Advance the longer walk until boths walks have equal remaining steps
         diff = self.len1 - self.len2
         for _ in range(diff):
             self.a1, b1, p1 = self.iterate(self.a1, b1, p1)
+
+        print('Starting points:')
+        print(f"x={p1.x:033x}    x={p2.x:033x}")
+        print(f"y={p1.y:033x}    y={p2.y:033x}")
         
         # Advance both walks together until a collision
-        while p1.x != p2.x:
+        remaining = self.len2
+        while p1.x != p2.x and remaining > 0:
             self.a1, b1, p1 = self.iterate(self.a1, b1, p1)
             self.a2, b2, p2 = self.iterate(self.a2, b2, p2)
+            remaining -= 1
 
         print('Colliding point:')
-        print('{} {}'.format(hex(p1.x), hex(p1.y)))
-        print('a1 = {} b1 = {}'.format(hex(self.a1), b1))
-        print('a2 = {} b2 = {}'.format(hex(self.a2), b2))
+        print(f"x={p1.x:033x}    x={p2.x:033x}")
+        print(f"y={p1.y:033x}    y={p2.y:033x}")
+        print(f"a={self.a1:033x}    a={self.a2:033x}")
+        print(f"b={b1:033x}    b={b2:033x}")
 
         # Calculate the discrete logarithm
         # a1G + b1Q = a2G + b2Q
