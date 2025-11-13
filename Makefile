@@ -92,7 +92,7 @@ CPP_MATH_TESTS := $(addprefix src/, $(CPP_MATH_TESTS))
 CPP_TOOLS := ecc.cpp montgomery.cpp uint131.cpp util.cpp
 CPP_TOOLS := $(addprefix src/, $(CPP_TOOLS))
 
-CPP_RHO := main.cpp GPUPointFinder.cpp  ec_rho.cpp  ecc.cpp montgomery.cpp uint131.cpp  util.cpp
+CPP_RHO := rho-main.cpp GPUPointFinder.cpp  ec_rho.cpp  ecc.cpp montgomery.cpp uint131.cpp  util.cpp
 ifeq ($(BUILD_HTTP), 1)
 CPP_RHO += http_client.cpp
 endif
@@ -101,7 +101,7 @@ CPP_RHO := $(addprefix src/, $(CPP_RHO))
 CPP_BENCH := benchmark.cpp GPUPointFinder.cpp  ec_rho.cpp ecc.cpp montgomery.cpp uint131.cpp  util.cpp
 CPP_BENCH := $(addprefix src/, $(CPP_BENCH))
 
-CPP_DATABASE := database.cpp ec_rho.cpp  ecc.cpp montgomery.cpp uint131.cpp  util.cpp
+CPP_DATABASE := rho-db.cpp ec_rho.cpp  ecc.cpp montgomery.cpp uint131.cpp  util.cpp
 CPP_DATABASE := $(addprefix src/, $(CPP_DATABASE))
 
 export BUILD_DIR
@@ -123,7 +123,7 @@ ifeq ($(filter amd,$(TARGET_PLATFORMS)),amd)
 TARGETS += benchmark_amd rho_amd
 endif
 
-all:	$(TARGETS) database
+all:	$(TARGETS) rho_db
 
 .PHONY: third_party
 third_party:
@@ -154,8 +154,8 @@ rho_amd:	third_party gpu_amd
 	mkdir -p $(OBJDIR)
 	HIP_PLATFORM=amd $(CXX) $(CFLAGS) $(CPP_RHO) $(OBJDIR)/ecc_amd.co -o rho-amd $(CXX_CFLAGS_AMD) -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LINKER_AMD) $(LIBS_AMD) $(LINKER_RHO)
 
-database:	third_party
-	$(CXX) $(CFLAGS) $(CPP_DATABASE) -o rho-database $(INCLUDE) -L$(LIB_DIR) -Isrc -Isrc/include -lfmt
+rho_db:	third_party
+	$(CXX) $(CFLAGS) $(CPP_DATABASE) -o rho-db $(INCLUDE) -L$(LIB_DIR) -Isrc -Isrc/include -lfmt
 
 .PHONY: tests
 tests:
@@ -174,4 +174,4 @@ clean:
 	rm -v -f benchmark-nvidia
 	rm -v -f tools/rwpoints
 	rm -v -f tests/math_tests
-	rm -v -f rho-database
+	rm -v -f rho-db
