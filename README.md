@@ -31,10 +31,11 @@ Per-GPU data is stored in `/path/to/data/dir/GPU-<serial number>`
 
 The results are stored in `/path/to/data/dir/results`
 
+
 #### rho-db
 This program reads data files output from rho program and indexes the distinguished points. It continually monitors an input directory for new data.
 
-When two identical distinguished points are found, they are written to a file
+When two identical distinguished points are found, they are written to a file.
 
 Usage:
 `rho-db --results-dir /path/to/data/dir/results  --db-dir /path/to/database/dir`
@@ -56,7 +57,6 @@ Usage:
 
 * CUDA SDK for Nvidia GPU target
 *  `libopenmpi` for MPI support
-*  `libcurl` for server upload
 
 # Building
 

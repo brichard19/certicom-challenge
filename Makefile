@@ -72,7 +72,7 @@ BIN_DIR=$(CUR_DIR)/bin
 ROCM_LIB=$(ROCM_HOME)/lib
 OBJDIR=$(CUR_DIR)/obj
 
-INCLUDE+=-I$(CUR_DIR) -I$(CUR_DIR)/src/include -I$(CUR_DIR)/gpu -I$(CUR_DIR)/third_party/json11 -I$(CUR_DIR)/third_party/fmt/include
+INCLUDE+=-I$(CUR_DIR) -I$(CUR_DIR)/src/include -I$(CUR_DIR)/gpu -I$(CUR_DIR)/third_party/fmt/include
 
 ifeq ($(BUILD_MPI),1)
 MPI_LIBS+=-lmpi -lmpi_cxx
@@ -81,11 +81,7 @@ endif
 
 
 
-LINKER_RHO=-lfmt -ljson11
-ifeq ($(BUILD_HTTP), 1)
-LINKER_RHO+=-lcurl
-CFLAGS+=-DBUILD_HTTP
-endif
+LINKER_RHO=-lfmt
 
 CPP_MATH_TESTS := ecc.cpp montgomery.cpp uint131.cpp util.cpp
 CPP_MATH_TESTS := $(addprefix src/, $(CPP_MATH_TESTS))
@@ -93,9 +89,6 @@ CPP_TOOLS := ecc.cpp montgomery.cpp uint131.cpp util.cpp
 CPP_TOOLS := $(addprefix src/, $(CPP_TOOLS))
 
 CPP_RHO := rho-main.cpp GPUPointFinder.cpp  ec_rho.cpp  ecc.cpp montgomery.cpp uint131.cpp  util.cpp
-ifeq ($(BUILD_HTTP), 1)
-CPP_RHO += http_client.cpp
-endif
 
 CPP_RHO := $(addprefix src/, $(CPP_RHO))
 CPP_BENCH := benchmark.cpp GPUPointFinder.cpp  ec_rho.cpp ecc.cpp montgomery.cpp uint131.cpp  util.cpp
@@ -127,7 +120,6 @@ all:	$(TARGETS) rho_db
 
 .PHONY: third_party
 third_party:
-	make -C third_party/json11
 	make -C third_party/fmt
 
 gpu_nvidia:

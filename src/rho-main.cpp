@@ -25,10 +25,6 @@
 #include "mpi_helper.h"
 #endif
 
-#ifdef BUILD_HTTP
-#include "http_client.h"
-#endif
-
 namespace {
 
   std::map<std::string, int> _curve_bits = {
@@ -59,8 +55,6 @@ namespace {
 
   int _dpbits = DP_BITS;
   std::string _curve_name;
-  std::string _upload_server = "";
-  bool _use_upload = false;
 }
 
 // Saves distingusihed points to disk
@@ -144,90 +138,6 @@ void mpi_recv_thread_function()
     std::this_thread::sleep_for(std::chrono::seconds(3));
   }
 }
-#endif
-
-#ifdef BUILD_HTTP
-void upload_thread_function()
-{
-  bool defer_upload = false;
-
-  util::Timer defer_timer;
-
-  while(_running) {
-
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-
-    if(_running && defer_upload && defer_timer.elapsed() < 600.0) {
-      continue;
-    } else {
-      defer_upload = false;
-    }
-
-    std::vector<std::string> files;
-
-    // Get list of results files
-    for(const auto& entry : std::filesystem::directory_iterator(_results_dir)) {
-      std::string f = entry.path().filename().string();
-      if(f.rfind(".dat") != std::string::npos) {
-        files.push_back(f);
-      }
-    }
-
-    if(files.size() == 0) {
-      continue;
-    }
-
-    // Load results from files
-    std::vector<DistinguishedPoint> points;
-
-    for(auto& file : files) {
-      std::ifstream f(_results_dir + "/" + file, std::ios::binary);
-
-      f.seekg(0, std::ios::end);
-      std::streamsize file_size = f.tellg();
-      f.seekg(0, std::ios::beg);
-
-      std::vector<uint8_t> buf(file_size);
-      f.read((char*)buf.data(), buf.size());
-
-      auto dps = decode_dps(buf.data(), buf.size());
-
-      points.insert(points.end(), dps.begin(), dps.end());      
-    }
-
-    // Encode results 
-    bool success = true;
-
-    auto encoded = encode_dps(points, _dpbits, _curve_bits[_curve_name]);
-
-    LOG("Uploading {} points to server", points.size());
-
-    // TODO: Use base64 instead (smaller data)
-    // Upload to server 
-    std::string hex = util::to_hex(encoded.data(), encoded.size());
-
-    try {
-      HTTPClient http(_upload_server, _port);
-      http.submit_points(_curve_name, hex);
-      defer_upload = false;
-    }catch(std::exception& ex) {
-      LOG("Upload error: {}", ex.what());
-      success = false;
-      
-      LOG("Deferring upload for 10 minutes");
-      defer_upload = true;
-      defer_timer.start();
-    }
-
-    // Delete files after successful upload
-    if(success) {
-      for(auto& f : files) {
-        std::filesystem::remove(_results_dir + "/" + f);
-      }
-    }
-  }
-}
-
 #endif
 
 void main_loop()
@@ -329,7 +239,6 @@ int main(int argc, char**argv)
       {"file", required_argument, 0, 'f'},
       {"mpi", no_argument, 0, 'm'},
       {"curve", required_argument, 0, 'c'},
-      {"upload-server", required_argument, 0, 'u'},
       {NULL, 0, NULL, 0}
     };
 
@@ -357,11 +266,6 @@ int main(int argc, char**argv)
 
       case 'm':
         _use_mpi = true;
-        break;
-
-      case 'u':
-        _use_upload = true;
-        _upload_server = std::string(optarg);
         break;
 
       case '?':
@@ -464,16 +368,6 @@ int main(int argc, char**argv)
   // Set interrupt handler
   set_signal_handler(signal_handler);
 
-#ifdef BUILD_HTTP
-  // Start point reporter thread
-  std::thread upload_thread;
-
-  // If using MPI, only rank 0 reports results
-  if(_use_upload && (_use_mpi == false || (_use_mpi == true && _world_rank == 0))) {
-    upload_thread = std::thread(upload_thread_function);
-  }
-#endif
-
 #ifdef BUILD_MPI
   // Thread for receiving MPI messages
   std::thread mpi_thread;
@@ -496,12 +390,6 @@ int main(int argc, char**argv)
   }
 #endif
 
-#ifdef BUILD_HTTP
-  //Wait for point thread to finish
-  if(_use_upload && (_use_mpi == false || (_use_mpi == true && _world_rank == 0))) {
-      upload_thread.join();
-  }
-#endif
 
 #ifdef BUILD_MPI
   if(_use_mpi == true && _world_rank == 0) {
