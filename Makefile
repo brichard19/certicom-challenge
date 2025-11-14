@@ -17,7 +17,7 @@ INCLUDE=
 
 # Debugging
 ifeq ($(DEBUG),1)
-DEFINES+=-DDEBUG -g
+CFLAGS+=-DDEBUG -g
 else
 DEFINES+=-O2
 endif

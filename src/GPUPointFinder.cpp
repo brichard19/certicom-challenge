@@ -100,6 +100,10 @@ GPUPointFinder::GPUPointFinder(int device, int dpbits, bool benchmark)
   HIP_CALL(hipSetDevice(device));
   HIP_CALL(hipSetDeviceFlags(hipDeviceScheduleYield));
 
+#ifdef DEBUG
+  LOG("Debug mode ON");
+#endif
+
   LOG("Initializing GPU {}: {}", _device, get_gpu_name(_device));
   LOG("Compute units: {}", compute_units);
   LOG("SIMD width:    {}", simd_width);
@@ -175,21 +179,23 @@ void GPUPointFinder::refill_staging()
 
   LOG("Refilling staging buffer");
 
-  std::vector<uint131_t> k(_staging_buf_size);
+  int n = _staging_buf_size - count;
 
-  for(int i = count; i < _staging_buf_size; i++) {
+  std::vector<uint131_t> k(n);
+
+  for(int i = 0; i < n; i++) {
     k[i] = ecc::genkey();
   }
 
   std::vector<ecc::ecpoint_t> p = ecc::mul(k, ecc::g());
 
-  for(int i = 0; i < _staging_buf_size; i++) {
+  for(int i = 0; i < n; i++) {
     StagingPoint sp;
     sp.a = k[i];
     sp.x = p[i].x;
     sp.y = p[i].y;
 
-    _staging_buf[i] = sp;
+    _staging_buf[count + i] = sp;
   }
 
   *_staging_count= _staging_buf_size;
