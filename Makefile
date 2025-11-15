@@ -85,8 +85,6 @@ LINKER_RHO=-lfmt
 
 CPP_MATH_TESTS := ecc.cpp montgomery.cpp uint131.cpp util.cpp
 CPP_MATH_TESTS := $(addprefix src/, $(CPP_MATH_TESTS))
-CPP_TOOLS := ecc.cpp montgomery.cpp uint131.cpp util.cpp
-CPP_TOOLS := $(addprefix src/, $(CPP_TOOLS))
 
 CPP_RHO := rho-main.cpp GPUPointFinder.cpp  ec_rho.cpp  ecc.cpp montgomery.cpp uint131.cpp  util.cpp
 
@@ -105,7 +103,7 @@ export INCLUDE
 export CXX
 export CFLAGS
 
-TARGETS = tests tools
+TARGETS = tests
 
 # NVIDIA targets
 ifeq ($(filter nvidia,$(TARGET_PLATFORMS)),nvidia)

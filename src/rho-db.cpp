@@ -317,7 +317,8 @@ int main(int argc, char** argv)
     while(true) {
         static struct option long_options[] = {
             {"input-dir", required_argument, 0, 'i'},
-            {"db-dir", required_argument, 0, 'd'}
+            {"db-dir", required_argument, 0, 'd'},
+            {NULL, 0, NULL, 0}
         };
 
         int opt_idx = 0;
