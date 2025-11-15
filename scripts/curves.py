@@ -33,7 +33,8 @@ ecp131 = CurveParams(
 
     n = int('48E1D43F293469E317F7ED728F6B8E6F1', 16),
     x = int('03DF84A96B5688EF574FA91A32E197198A', 16),
-    y = int('014721161917A44FB7B4626F36F0942E71', 16)
+    y = int('014721161917A44FB7B4626F36F0942E71', 16),
+
     )
 
 # Certicom 79-bit challenge curve
@@ -53,7 +54,7 @@ def getCurveByName(curveName):
         curve = secp521r1
     if( curveName == "secp256k1" ):
         curve = secp256k1 
-    if( curveName == "ecp131p" ):
+    if( curveName == "ecp131" ):
         curve = ecp131
     if(curveName == "ecp79"):
         curve = ecp79
