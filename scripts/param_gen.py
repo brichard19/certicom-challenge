@@ -71,6 +71,8 @@ def to_hex(n):
     return f"{{{{0x{a0:x}, 0x{a1:x}, 0x{a2:x}}}}}"
 
 
+def randint(n):
+    return random.randint(0, 2**256) % n
 
 def main():
 
@@ -128,15 +130,30 @@ def main():
     exponents = []
     r_points = []
 
+    random.seed(1)
+
     p = curve.bp
     q = ecc.ECPoint(qx, qy)
     for _ in range(32):
-        a = random.randint(1, params.n)
-        b = random.randint(1, params.n)
+        a = randint(params.n)
+        b = randint(params.n)
         exponents.append((a, b))
 
         rp = curve.add(curve.multiply(a, p), curve.multiply(b, q))
         r_points.append(rp)
+
+    print()
+    print(f"_a_str = [")
+    for e in exponents:
+        print(f"\"{e[0]:x}\",")
+    print("]")
+    print()
+    print(f"_b_str = [")
+    for e in exponents:
+        print(f"\"{e[1]:x}\",")
+    print("]")
+    print()
+    print()
 
     print(f"std::string _{alt_name}_a_str[] = {{")
     for e in exponents:
