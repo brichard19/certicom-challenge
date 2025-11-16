@@ -47,10 +47,15 @@ template<int CURVE> __device__ uint131_t mont_reduce(const uint262_t& t)
   // Remaining high bits (102 bits)
   uint131_t t_hi;
 
-  t_hi.w.v0 = (t.v[2] >> 32) | (t.v[3] << 32);
-  t_hi.w.v1 = (t.v[3] >> 32) | (t.v[4] << 32);
-  t_hi.w.v2 = 0;
-
+  if(CURVE == 131) {
+    t_hi.w.v0 = (t.v[2] >> 32) | (t.v[3] << 32);
+    t_hi.w.v1 = (t.v[3] >> 32) | (t.v[4] << 32);
+    t_hi.w.v2 = 0;
+  } else if(CURVE == 79) {
+    t_hi.w.v0 = 0;
+    t_hi.w.v1 = 0;
+    t_hi.w.v2 = 0;
+  }
   uint160_t m1;
   uint131_t m2;
   uint131_t m3;
@@ -68,7 +73,11 @@ template<int CURVE> __device__ uint131_t mont_reduce(const uint262_t& t)
 
   m1 = mul_mod_160(t_lo, k);
 
-  m2 = mul_shift_160(m1, p);
+  if(CURVE == 131) {
+    m2 = mul_shift_160_p131(m1, p);
+  } else if(CURVE == 79) {
+    m2 = mul_shift_160_p79(m1, p);
+  }
  
   // Not sure if this is correct, but carry always seems to be 1.
   m3 = add_raw(t_hi, m2, 1);
@@ -83,14 +92,28 @@ template<int CURVE> __device__ uint131_t mont_reduce(const uint262_t& t)
 
 template<int CURVE> __device__ uint131_t mul(uint131_t x, uint131_t y)
 {
-  uint262_t product = mul_131(x, y);
+  uint262_t product;
+  
+  if(CURVE == 131) {
+    product = mul_p131(x, y);
+  } else if(CURVE == 79) {
+    product = mul_p79(x, y);
+  }
+
   return mont_reduce<CURVE>(product);
 }
 
 
 template<int CURVE> __device__ uint131_t square(uint131_t x)
 {
-  uint262_t product = square_131(x);
+  uint262_t product;
+  
+  if(CURVE == 131) {
+    product = square_p131(x);
+  } else if(CURVE == 79) {
+    product = square_p79(x);
+  }
+
   return mont_reduce<CURVE>(product);
 }
 
