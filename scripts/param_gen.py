@@ -13,13 +13,15 @@ challenge_points = {
         [
             int('0679834CEFB7215DC365', 16),
             int('4084BC50388C4E6FDFAB', 16)
-        ]
+        ],        
 }
 
 def calc_sqrt_val(p):
     if p % 4 == 3:
+        print('//(p + 1) // 4')
         return (p + 1) // 4
     elif p % 8 == 5:
+        print('//(p - 5) // 8')
         return (p - 5) // 8
     else:
         raise "sqrt error"
@@ -44,6 +46,8 @@ def get_params(name):
         return curves.ecp131
     if name == "ecp79":
         return curves.ecp79
+    if name == "ecp89":
+        return curves.ecp89
     else:
         raise "Invalid curve"
 
@@ -54,6 +58,8 @@ def get_alt_name(name):
         return "p131"
     if name == "ecp79":
         return "p79"
+    if name == "ecp89":
+        return "p89"
     else:
         raise "Invalid curve"
     
@@ -100,6 +106,7 @@ def main():
     
     print(f"  .k = {to_hex(calc_k(params.p))},")
     print(f"  .one = {to_hex(to_montgomery(1, params.p))},")
+    print(f"  .two = {to_hex(to_montgomery(2, params.p))},")
     
     print(f"  .p_minus_2 = {to_hex(params.p - 2)},")
     print(f"  .sqrt = {to_hex(calc_sqrt_val(params.p))},")

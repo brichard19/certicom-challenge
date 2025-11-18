@@ -456,18 +456,12 @@ uint131_t inv(uint131_t x)
 
 uint131_t sqrt(uint131_t x)
 {
-  if(_params.name == "ecp131") {
-
-    // sqrt(x) = +- x^(p+1)/4 for p congruent to 3 mod 4
+  if(_params.p.v[0] % 4 == 3) {
     return pow(x, _params.sqrt);
-  } else if(_params.name == "ecp79") {
+  } else if(_params.p.v[0] % 8 == 5) {
+    uint131_t v = pow(mul(_params.two, x), _params.sqrt);
 
-    // 2 in montgomery form 
-    uint131_t two = {{0xa88f54e07ed578be, 0x26b0, 0x00}};
-    
-    uint131_t v = pow(mul(two, x), _params.sqrt);
-
-    uint131_t i = mul(mul(square(v), x), two);
+    uint131_t i = mul(mul(square(v), x), _params.two);
 
     uint131_t xv = mul(x, v);
 
