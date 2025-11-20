@@ -4,7 +4,8 @@ import sys
 
 # Certicom challenge points
 QPOINTS = {
-    "ecp79":ecc.ECPoint(0x0679834CEFB7215DC365, 0x4084BC50388C4E6FDFAB)
+    "ecp79":ecc.ECPoint(0x0679834CEFB7215DC365, 0x4084BC50388C4E6FDFAB),
+    "ecp89":ecc.ECPoint(0x00DE1AA94FF94DB64E763E2D, 0x002A44C4C2D4EE27FA0A4BA9)
 }
 
 '''
@@ -100,7 +101,6 @@ def get_r_points(name):
         "500a3f277a391ef173ed",
         "3162535bf0766f03758b"
         ]
-
         q = QPOINTS["ecp79"]
         rwpoints = []
         for i in range(32):
@@ -115,6 +115,91 @@ def get_r_points(name):
                 raise "Invalid point"
 
             rwpoints.append({'a':a, 'b':b, 'r':r})
+    elif name == "ecp89":
+        a_str = [
+        "1a4a0dada8ff9b3353dbf2",
+        "90944f2e1223ada2fe6373",
+        "df4a0580717e733f6509ee",
+        "eccf0e1eecc67e7d2d51ba",
+        "34a7cecd5622ec1fccb805",
+        "3db9106faef4f211b86f46",
+        "206d628fd82f3f8cf7c08c",
+        "2b721e761ae96179ffcc52",
+        "10273929637074fab430b93",
+        "82157440614fb7efc1f7a8",
+        "70cbe069aed013279d9ec6",
+        "3e584b772af8b8cb4e643e",
+        "437535a44320d27861f68f",
+        "18d37c5dc2837b351f98b6",
+        "12f22ef037079792dd1a615",
+        "e0257fe8b74b2faf11bea7",
+        "10c012a09941aabf6c08359",
+        "3720c8660fd83687484cbb",
+        "69e5c7153e1d5c25bfb59",
+        "124a06e492da5faf7693ee9",
+        "1b922194e8550be06bf5b",
+        "dd47cf5735c318aee15b40",
+        "10701daa485386eadb2a892",
+        "3a602074819aa0f2104bb7",
+        "11c6ab1b0958bf9c38180f0",
+        "32f38636e9e9ab27fb67f6",
+        "10d0ec7513fc759ead97aa7",
+        "711464d1088c61f8f18b52",
+        "a1cd764b84bb55914fe2c2",
+        "4658eb940363aa67c2b211",
+        "cd1e7e6cda0eadc0a053e5",
+        "ddc4e005bd535fb2f36283",
+        ]
+
+        b_str = [
+        "a7f6a7f2e76f256c095115",
+        "152691186eec9a4d1c336",
+        "9ffe439631edbc7564e0b8",
+        "11667595e7ed7b81ec2e68d",
+        "b211f196f744455e8e1386",
+        "e3d20c11bf0de746353e0c",
+        "bd8ab6cc0f2bad3fd554ad",
+        "14bde4d32d0e83e3b9d7c58",
+        "784d8489b3d7c6303faa4f",
+        "bb37cc89fbae126905ddc9",
+        "98859bdd38b1b418dd12e4",
+        "a90491a0351165cf876c5c",
+        "fce0bece5e75d66e80f8c3",
+        "ff39d4d8fae4ebbf6f7733",
+        "b127c7dad6245f6d9f4e2",
+        "1527ebed54230c960c860d3",
+        "1541e14ca34b027b0ca76b4",
+        "4b6c4ba15a6024c7190cd0",
+        "b97c64b5c0afcb08d99385",
+        "a0f3786fe87887935f9405",
+        "836263f1f57926211949d1",
+        "2d1d6f6c49a3065f9d58f8",
+        "d6195039176c2f580fd817",
+        "95135bf1863af1d5061bce",
+        "ebe66e88f9bc0611bae27",
+        "14d07436aab9d12a8e4a552",
+        "118e2ede252b7f4aec373aa",
+        "50144ab259be479b8a2ab3",
+        "e3f222243072f9dbca29a4",
+        "9900a0e7aef2842f6af0fb",
+        "783c50fcbe09e5274b1ff8",
+        "846c000769a327ee944dc6",
+        ]
+        q = QPOINTS["ecp89"]
+        rwpoints = []
+        for i in range(32):
+            a = int(a_str[i], 16)
+            b = int(b_str[i], 16)
+
+            ap = curve.multiply(a, curve.bp)
+            bq = curve.multiply(b, q)
+
+            r = curve.add(ap, bq)
+            if not curve.verifyPoint(r):
+                raise "Invalid point"
+
+            rwpoints.append({'a':a, 'b':b, 'r':r})
+
     else:
         raise "Invalid curve name"
     
@@ -219,8 +304,8 @@ def usage():
 
 def main():
 
-    curve = curves.getCurveByName("ecp79")
-    rwpoints = get_r_points("ecp79")
+    #curve = curves.getCurveByName("ecp89")
+    #rwpoints = get_r_points("ecp89")
 
     if len(sys.argv) == 1:
         usage()
@@ -229,6 +314,10 @@ def main():
     filepath = sys.argv[1]
 
     with open(filepath, 'rt') as f:
+
+        # First line is curve name
+        curve_name = f.readline().strip()
+        curve = curves.getCurveByName(curve_name)
         line = f.readline()
 
         lines = line.split(' ')
@@ -248,6 +337,8 @@ def main():
         dp = ecc.ECPoint(x, y)
         if not curve.verifyPoint(dp):
             raise "Invalid point"
+
+    rwpoints = get_r_points(curve_name)
 
     solver = RhoSolver(curve, rwpoints, a1, a2, len1, len2, dp)
     solver.solve()

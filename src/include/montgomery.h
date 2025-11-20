@@ -17,6 +17,7 @@ uint131_t inv(uint131_t a);
 uint131_t sqrt(uint131_t x);
 uint131_t rshift(uint131_t x, int n);
 uint131_t lshift(uint131_t x, int n);
+bool less_than(uint131_t x, uint131_t y);
 
 };
 

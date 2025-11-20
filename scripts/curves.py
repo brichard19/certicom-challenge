@@ -47,7 +47,16 @@ ecp79 = CurveParams(
     x = int('315D4B201C208475057D', 16),
     y = int('035F3DF5AB370252450A', 16)
     )
+ecp89 = CurveParams(
 
+    p = int('0158685C903F1643908BA955', 16),
+    a = int('0C8AE4F7DE8918AA9FAB2260', 16),
+    b = int('00647E7EA1062AE69A7D1037', 16),
+
+    n = int('0158685C903EF906D7F58D47', 16),
+    x = int('00C031D875DBF8E60BE95B0A', 16),
+    y = int('0006F82C1F879745BF676D0A', 16)
+)
 def getCurveByName(curveName):
     curve = None
     if( curveName == "secp521r1" ):
@@ -58,6 +67,8 @@ def getCurveByName(curveName):
         curve = ecp131
     if(curveName == "ecp79"):
         curve = ecp79
+    if(curveName == "ecp89"):
+        curve = ecp89
 
     if curve == None:
         return None 

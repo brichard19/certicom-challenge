@@ -29,7 +29,8 @@ namespace {
 
   std::map<std::string, int> _curve_bits = {
     {"ecp131", 131},
-    {"ecp79", 79}
+    {"ecp79", 79},
+    {"ecp89", 89},
   };
 
   const double _save_interval = 60.0;
@@ -290,7 +291,7 @@ int main(int argc, char**argv)
     return 1;
   }
 
-  if(_curve_name != "ecp131" && _curve_name != "ecp79") {
+  if(_curve_name != "ecp131" && _curve_name != "ecp79" && _curve_name != "ecp89") {
     std::cout << "Invalid curve " << _curve_name << std::endl;
     return 1;
   }
@@ -303,6 +304,8 @@ int main(int argc, char**argv)
   if(_curve_name == "ecp131") {
     _dpbits = DP_BITS;
   } else if(_curve_name == "ecp79") {
+    _dpbits = DP_BITS;
+  } else if(_curve_name == "ecp89") {
     _dpbits = DP_BITS;
   }
 

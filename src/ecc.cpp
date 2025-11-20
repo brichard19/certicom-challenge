@@ -49,6 +49,28 @@ CurveParameters _ecp79 = {
   .name = "ecp79",
 };
 
+CurveParameters _ecp89 = {
+  .p = {{0x903f1643908ba955, 0x158685c, 0x0}},
+  .a = {{0xb1ec24706b2573c1, 0x593048, 0x0}},
+  .b = {{0x37717b7e1c0a25af, 0xc58c6, 0x0}},
+  .n = {{0x903ef906d7f58d47, 0x158685c, 0x0}},
+  .gx = {{0x2c11310d3564b72b, 0xd96524, 0x0}},
+  .gy = {{0x43b68c253c4f8f18, 0xc94f03, 0x0}},
+  .qx = {{0x78b7d9810a131af2, 0x35deeb, 0x0}},
+  .qy = {{0x60bcf87a21747143, 0x24daba, 0x0}},
+  .k = {{0x40a0dbc30d18f403, 0x5ed01b73e78a4d11, 0xf15c3823}},
+  .one = {{0x9e896dc839826cf6, 0x78c8ca, 0x0}},
+  .two = {{0x3d12db907304d9ec, 0xf19195, 0x0}},
+  .p_minus_2 = {{0x903f1643908ba953, 0x158685c, 0x0}},
+  //(p - 5) // 8
+  .sqrt = {{0x9207e2c87211752a, 0x2b0d0b, 0x0}},
+  .r = {{0x9e896dc839826cf6, 0x78c8ca, 0x0}},
+  .r2 = {{0xd96623186da369dd, 0x13e5217, 0x0}},
+  .bits = 89,
+  .words = 2,
+  .name = "ecp89",
+};
+
 CurveParameters _params;
 
 namespace ecc {
@@ -58,6 +80,8 @@ void set_curve(const std::string& curve_name)
     _params = _ecp131;
   } else if(curve_name == "ecp79") {
     _params = _ecp79;
+  } else if(curve_name == "ecp89") {
+    _params = _ecp89;
   } else {
     throw std::runtime_error("Invalid curve name");
   }
@@ -229,28 +253,31 @@ ecpoint_t add(const ecpoint_t& p, const ecpoint_t& q)
 uint131_t genkey(RNG& rng)
 {
   uint131_t r;
-
-  bool gte = true;
-
-  memset(&r, 0, sizeof(r));
-
   do {
-    r.w.v0 = rng.next();
-    r.w.v1 = rng.next();
-    r.w.v2 = (uint32_t)rng.next();
+    uint64_t k[3];
 
-    // mod p
-    if(_params.p.w.v2 == 0) {
-      r.w.v2 = 0;
-      r.w.v1 %= (_params.p.w.v1 + 1);
+    k[0] = rng.next();
+    k[1] = rng.next();
+    k[2] = rng.next();
 
-      gte = r.w.v0 >= _params.p.w.v0;
-    } else {
-      r.w.v2 %= (_params.p.w.v2 + 1);
-      gte = r.w.v1 >= _params.p.w.v1;
+    int words = _params.bits / 64;
+    int high_bits = _params.bits % 64;
+
+    k[words] >>= (64 - high_bits);
+    for(int i = words + 1; i < 3; i++) {
+      k[i] = 0;
     }
 
-  }while (gte);
+    r.w.v0 = k[0];
+    r.w.v1 = k[1];
+    r.w.v2 = (uint32_t)k[2];
+
+    if(!mont::less_than(r, _params.n)) {
+      for(int i = 0; i < 5; i++) {
+        r.v[i] ^= _params.n.v[i];
+      }
+    }
+  }while(!mont::less_than(r, _params.n));
 
   return r;
 }

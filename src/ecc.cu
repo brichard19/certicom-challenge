@@ -163,6 +163,8 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
     one = _p131_one;
   } else if(CURVE == 79) {
     one = _p79_one;
+  } else if(CURVE == 89) {
+    one = _p89_one;
   }
 
   uint131_t inverse = one;
@@ -313,6 +315,11 @@ extern "C" __global__ void sanity_check_p79(uint131_t* global_px, uint131_t* glo
   sanity_check_impl<79>(global_px, global_py, count, errors);
 }
 
+extern "C" __global__ void sanity_check_p89(uint131_t* global_px, uint131_t* global_py, int count, int* errors)
+{
+  sanity_check_impl<89>(global_px, global_py, count, errors);
+}
+
 
 extern "C" __global__ void batch_multiply_p79(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* mbuf, uint131_t* gx, uint131_t* gy, int priv_key_bit, int count)
 {
@@ -352,4 +359,22 @@ extern "C" __global__ void do_step_p131(uint131_t* global_px, uint131_t* global_
                                    uint64_t dpmask)
 {
   do_step_impl<131, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, staging_count, priv_key_a, counter, start_pos, dpmask);
+}
+
+extern "C" __global__ void batch_multiply_p89(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* mbuf, uint131_t* gx, uint131_t* gy, int priv_key_bit, int count)
+{
+    batch_multiply_step<89>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
+}
+
+extern "C" __global__ void do_step_p89(uint131_t* global_px, uint131_t* global_py,
+                                   uint131_t* global_rx, uint131_t* global_ry,
+                                   uint131_t* mbuf, int count,
+                                   DPResult* result, int* result_count,
+                                   StagingPoint* staging, int* staging_count,
+                                   uint131_t* priv_key_a,
+                                   uint64_t counter,
+                                   uint64_t* start_pos,
+                                   uint64_t dpmask)
+{
+  do_step_impl<89, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, staging_count, priv_key_a, counter, start_pos, dpmask);
 }

@@ -15,9 +15,18 @@
 
 #define IFSTREAM_CALL(condition)\
 {\
-  if(!condition) {\
+  auto& ref = condition;\
+  if(!ref) {\
     std::stringstream ss;\
-    ss << "FILE error " << __LINE__ << std::endl;\
+    ss << "FILE error " << " " << __FILE__ << ":" << __LINE__ << ": ";\
+    if(ref.bad()) {\
+        ss << "I/O error";\
+    } else if(ref.eof()) {\
+        ss << "End of file";\
+    } else {\
+        ss << "Read failed";\
+    }\
+    ss << std::endl;\
     throw std::runtime_error(ss.str());\
   }\
 }\
@@ -30,6 +39,7 @@ struct EncodedDP{
 struct JobStats {
     uint64_t num_dps;
     uint64_t total_points;
+    char curve[16];
 };
 
 // The collision database is like a hashtable for distinguished points.
@@ -166,12 +176,18 @@ void load_stats()
 
         f.read((char*)&_stats, sizeof(_stats));
         f.close();
+
+        std::string curve_name(_stats.curve);
     }
 }
 
 void save_stats()
 {
     std::ofstream f(_db_dir + "/" + "stats.bin", std::ios::binary);
+
+    // Save curve name
+    std::string curve_name = ecc::curve_name();
+    sprintf(_stats.curve, "%s", curve_name.c_str());
 
     f.write((char*)&_stats, sizeof(_stats));
     f.close();
@@ -199,6 +215,7 @@ void process_collision(const DistinguishedPoint p1, const DistinguishedPoint p2)
     std::string file_path = _db_dir + "/" + "coll" + std::to_string(rand()) + ".txt";
     std::ofstream of(file_path);
 
+    of << ecc::curve_name() << std::endl;
     of << to_str(p1.p.x) << " " << to_str(p1.p.y) << " " << to_str(p1.a) << " " << p1.length << " " << to_str(p2.a) << " " << p2.length << std::endl;
 }
 
@@ -235,7 +252,9 @@ void main_loop()
     std::vector<std::string> files;
 
     for(const auto& entry : std::filesystem::directory_iterator(_data_dir)) {
-      files.push_back(entry.path().filename());
+      if(entry.is_regular_file() && entry.path().extension() == ".dat") {
+        files.push_back(entry.path().filename());
+      }
     }
 
     if(files.size() == 0) {
@@ -262,6 +281,8 @@ void main_loop()
         ecc::set_curve("ecp131");
       } else if(header.curve == 79) {
         ecc::set_curve("ecp79");
+      } else if(header.curve == 89) {
+        ecc::set_curve("ecp89");
       } else {
         std::cout << "Invalid curve" << std::endl;
         exit(1);
@@ -289,8 +310,9 @@ void main_loop()
       double t0 = util::get_time();
       auto collisions = coll_db.insert(dps);
       double t1 = util::get_time();
-      
-      std::string status = fmt::format("{:<15} | DPs: {:>8} | Ps: {:>12} | Time: {:>6.3f}ms", file_path, dps.size(), count, (t1 - t0));
+      double time_sec = (t1 - t0);
+
+      std::string status = fmt::format("{:<15} | DPs: {:>8} | Ps: {:>12} | Time: {:>6.3f}s", file_path, dps.size(), count, time_sec);
       std::cout << status << std::endl;
 
       // Process any collisions.

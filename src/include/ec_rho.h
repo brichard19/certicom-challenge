@@ -5,7 +5,7 @@
 
 #include "ecc.h"
 
-#define DP_BITS 25
+#define DP_BITS 20
 #define X_TRUNC_LEN (((131 - DP_BITS) + 7) / 8)
 
 // TX = Truncated x coordinate (no distinguished bits)

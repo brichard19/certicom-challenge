@@ -147,6 +147,146 @@ std::string _p79_y_str[] = {
 "5704abe009a23a727e89",
 };
 
+std::string _p89_a_str[] = {
+"1a4a0dada8ff9b3353dbf2",
+"90944f2e1223ada2fe6373",
+"df4a0580717e733f6509ee",
+"eccf0e1eecc67e7d2d51ba",
+"34a7cecd5622ec1fccb805",
+"3db9106faef4f211b86f46",
+"206d628fd82f3f8cf7c08c",
+"2b721e761ae96179ffcc52",
+"10273929637074fab430b93",
+"82157440614fb7efc1f7a8",
+"70cbe069aed013279d9ec6",
+"3e584b772af8b8cb4e643e",
+"437535a44320d27861f68f",
+"18d37c5dc2837b351f98b6",
+"12f22ef037079792dd1a615",
+"e0257fe8b74b2faf11bea7",
+"10c012a09941aabf6c08359",
+"3720c8660fd83687484cbb",
+"69e5c7153e1d5c25bfb59",
+"124a06e492da5faf7693ee9",
+"1b922194e8550be06bf5b",
+"dd47cf5735c318aee15b40",
+"10701daa485386eadb2a892",
+"3a602074819aa0f2104bb7",
+"11c6ab1b0958bf9c38180f0",
+"32f38636e9e9ab27fb67f6",
+"10d0ec7513fc759ead97aa7",
+"711464d1088c61f8f18b52",
+"a1cd764b84bb55914fe2c2",
+"4658eb940363aa67c2b211",
+"cd1e7e6cda0eadc0a053e5",
+"ddc4e005bd535fb2f36283",
+};
+
+std::string _p89_b_str[] = {
+"a7f6a7f2e76f256c095115",
+"152691186eec9a4d1c336",
+"9ffe439631edbc7564e0b8",
+"11667595e7ed7b81ec2e68d",
+"b211f196f744455e8e1386",
+"e3d20c11bf0de746353e0c",
+"bd8ab6cc0f2bad3fd554ad",
+"14bde4d32d0e83e3b9d7c58",
+"784d8489b3d7c6303faa4f",
+"bb37cc89fbae126905ddc9",
+"98859bdd38b1b418dd12e4",
+"a90491a0351165cf876c5c",
+"fce0bece5e75d66e80f8c3",
+"ff39d4d8fae4ebbf6f7733",
+"b127c7dad6245f6d9f4e2",
+"1527ebed54230c960c860d3",
+"1541e14ca34b027b0ca76b4",
+"4b6c4ba15a6024c7190cd0",
+"b97c64b5c0afcb08d99385",
+"a0f3786fe87887935f9405",
+"836263f1f57926211949d1",
+"2d1d6f6c49a3065f9d58f8",
+"d6195039176c2f580fd817",
+"95135bf1863af1d5061bce",
+"ebe66e88f9bc0611bae27",
+"14d07436aab9d12a8e4a552",
+"118e2ede252b7f4aec373aa",
+"50144ab259be479b8a2ab3",
+"e3f222243072f9dbca29a4",
+"9900a0e7aef2842f6af0fb",
+"783c50fcbe09e5274b1ff8",
+"846c000769a327ee944dc6",
+};
+
+std::string _p89_x_str[] = {
+"19285b92503743ee59c307",
+"86b3a09d7b556de36cc88a",
+"42d0c03429989de9c21ab9",
+"e1d4cd06c0eb3b5d6c95a1",
+"7af313891f22fc750e4b39",
+"109b342e16057b7921b84a",
+"122c86bb5e46b8c80d073a0",
+"15ecaf511d4101463037b7",
+"fd36379b5357e7e00df8e0",
+"35530113906b8c101a7885",
+"155bbaa601e01977d854dbf",
+"156acbbee3dbdcdc18c2a35",
+"4db26fa350dd38d52c1956",
+"5c86de3a819acdd110faa5",
+"a30b6163189da725856d59",
+"dfafcba69e6a798be5c2ca",
+"14eee4453472408a34274c6",
+"116b65ba1f334b7d4046a65",
+"a8949246ecfc7c7c625913",
+"bc1152b88189355a6cba6b",
+"3aebcb90e6135e434b5add",
+"12330b7a3aace9e66df68db",
+"b800b8e7a0f683c23f6a1d",
+"6b9e1468805be2c3a2461c",
+"138e1dc1b00e8e670033c5d",
+"b058a921399826ee0974d2",
+"a794f5168bdee3b0e7e4d1",
+"5c71f37febc9d42daa1e54",
+"9c122019ff8693b9bc9611",
+"57d8f31ada30d33f8541c",
+"c03dc2020d3dfc3e193d99",
+"36288ffdaba0e1209cee07",
+};
+
+std::string _p89_y_str[] = {
+"c8b00ad585b7251adfa9ec",
+"5afaf68547b4b34acf6af9",
+"cd8f1801b0104b71674b4",
+"1486754ede30ab8e7000350",
+"41dd7a69215aa563a096ac",
+"891423021f9354795346cb",
+"f3803a7f7ac293c03b92a8",
+"9a124150d2a81f86c227",
+"d00901b9f04ce95ef2a914",
+"119f7d4fca7e7eb685a673f",
+"1613a7ab991eb3c648ace9",
+"1d971d8028d55f9d81f49e",
+"2d433d70205026c0065133",
+"c3756592060f913d51d891",
+"2d9a2354f0bafda179f68e",
+"b4db32ce733d91291ad044",
+"102ce5d8825456ee1ee6338",
+"62415659b95b46214020",
+"726ed29a9397c3635f4369",
+"11f11618ad5950a4cff1190",
+"8b31fc0fd5e081bbf0d23c",
+"14d763dcf259973b6db3e0a",
+"7ab764e438fd418b949e32",
+"2c61eb29290f16196bc1f7",
+"cdec5362b16b6b86197985",
+"3b134cbe22259dc86af6a5",
+"18c95460c79f8c0efbd76",
+"ec8dea47efbe5ad912c735",
+"f54cd5aba5e75cfa8d2073",
+"7146d6e9911cd7ca527303",
+"9a14db5fd2cf0e65f0ffd1",
+"2bb5446b0778ce73f074ce",
+};
+
 // DO NOT MODIFY
 std::string _p131_a_str[] = {
 "395099fedd0c41ba333de03c47d276521",
@@ -305,6 +445,10 @@ std::vector<RWPoint> get_rw_points()
       rw.a = make_uint131(_p79_a_str[i]);
       rw.b = make_uint131(_p79_b_str[i]);
       rw.p = ecc::ecpoint_t(make_uint131(_p79_x_str[i]), make_uint131(_p79_y_str[i]));
+    } else if(ecc::curve_name() == "ecp89") {
+      rw.a = make_uint131(_p89_a_str[i]);
+      rw.b = make_uint131(_p89_b_str[i]);
+      rw.p = ecc::ecpoint_t(make_uint131(_p89_x_str[i]), make_uint131(_p89_y_str[i]));
     } else {
       throw std::runtime_error("No curve selected");
     }
@@ -350,7 +494,7 @@ std::vector<uint8_t> encode_dp(const DistinguishedPoint& dp, int dbits)
 std::vector<uint8_t> encode_dps(const std::vector<DistinguishedPoint>& dps, int dbits, int curve)
 {
 
-  assert(curve == 79 || curve == 131);
+  assert(curve == 79 || curve == 131 || curve == 89);
 
   BinaryEncoder encoder;
 

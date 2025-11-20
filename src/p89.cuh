@@ -1,0 +1,241 @@
+#ifndef _P89_CUH
+#define _P89_CUH
+
+#include "uint131.cuh"
+
+__constant__ uint131_t _p89_p = {{0x903f1643908ba955, 0x158685c, 0x0}};
+__constant__ uint131_t _p89_k = {{0x40a0dbc30d18f403, 0x5ed01b73e78a4d11, 0xf15c3823}};
+__constant__ uint131_t _p89_r2 = {{0xd96623186da369dd, 0x13e5217, 0x0}};
+__constant__ uint131_t _p89_one = {{0x9e896dc839826cf6, 0x78c8ca, 0x0}};
+__constant__ uint131_t _p89_a = {{0xb1ec24706b2573c1, 0x593048, 0x0}};
+__constant__ uint131_t _p89_b = {{0x37717b7e1c0a25af, 0xc58c6, 0x0}};
+
+
+
+__device__ uint131_t sub_p89(uint131_t x, uint131_t y)
+{
+  uint131_t z = {{0}};
+
+  int borrow = 0;
+  
+  uint64_t diff = x.w.v0 - y.w.v0;
+  z.w.v0 = diff;
+  borrow = diff > x.w.v0 ? 1 : 0;
+  
+  diff = x.w.v1 - y.w.v1 - borrow;
+  z.w.v1 = diff;
+  borrow = diff & (1 << 25);
+ 
+//   // High word is only 3 bits
+//   diff = x.w.v2 - y.w.v2 - borrow;
+//   z.w.v2 = diff;
+//   borrow = diff & 0x08;
+
+  // Went below zero. Need to add P.
+  if(borrow) {
+    int carry = 0; 
+    uint64_t sum = z.w.v0 + _p89_p.w.v0;
+    z.w.v0 = sum;
+    carry = sum < _p89_p.w.v0 ? 1 : 0;
+    
+    sum = z.w.v1 + _p89_p.w.v1 + carry;
+    z.w.v1 = sum;
+    //carry = sum < _p89_p.w.v1 ? 1 : 0;
+    
+    //z.w.v2 = z.w.v2 + _p89_p.w.v2 + carry;
+  }
+
+
+  return z;
+}
+
+__device__ uint131_t add_p89(const uint131_t& x, const uint131_t& y)
+{
+  uint131_t z = add_raw(x, y);
+
+  // Reduce mod P
+  if(is_less_than(_p89_p, z)) {
+    z = sub_raw(z, _p89_p);
+  }
+  return z;
+}
+
+// 131 x 131 -> 262 multiplication
+__device__ uint262_t mul_p89(const uint131_t& a, const uint131_t& b)
+{
+  uint262_t tmp;
+  uint64_t high = 0;
+
+  // a0 * b0
+  uint128_t t = (uint128_t)a.w.v0 * b.w.v0;
+  tmp.v[0] = (uint64_t)t;
+  high = (uint64_t)(t >> 64);
+
+  // a0 * b1 
+  t = (uint128_t)a.w.v0 * b.w.v1 + high;
+  tmp.v[1] = (uint64_t)t;
+  high = (uint64_t)(t >> 64);
+
+  // a0 * b2
+  t = (uint128_t)a.w.v0 * b.w.v2 + high;
+  tmp.v[2] = (uint64_t)t;
+  high = (uint64_t)(t >> 64);
+
+  tmp.v[3] = high;
+
+  // a1 * b0
+  t = (uint128_t)a.w.v1 * b.w.v0 + tmp.v[1];
+  tmp.v[1] = (uint64_t)t;
+  high = (uint64_t)(t >> 64);
+
+  // a1 * b1 
+  t = (uint128_t)a.w.v1 * b.w.v1 + tmp.v[2] + high;
+  tmp.v[2] = (uint64_t)t;
+  high = (uint64_t)(t >> 64);
+
+  // a1 * b2
+  t = (uint128_t)a.w.v1 * b.w.v2 + tmp.v[3] + high;
+  tmp.v[3] = (uint64_t)t;
+  uint32_t high32 = (uint32_t)(t >> 64);
+
+  tmp.v[4] = high32;
+
+  // a2 * b0
+  t = (uint128_t)a.w.v2* b.w.v0 + tmp.v[2];
+  tmp.v[2] = (uint64_t)t;
+  high = (uint64_t)(t >> 64);
+
+  // a2 * b1 
+  t = (uint128_t)a.w.v2 * b.w.v1 + tmp.v[3] + high;
+  tmp.v[3] = (uint64_t)t;
+  high32 = (uint32_t)(t >> 64);
+
+  // a2 * b2
+  // The final word is only at most 6 bits, so no 128-bit mul needed
+  uint32_t t32 = (uint32_t)a.w.v2 * b.w.v2 + tmp.v[4] + high32;
+  tmp.v[4] = t32;
+
+  return tmp;
+}
+
+// 131 x 131 -> 262 multiplication
+__device__ uint262_t square_p89(const uint131_t& a)
+{
+  uint262_t tmp;
+  uint64_t high = 0;
+
+  // a0 * a0
+  uint128_t t = (uint128_t)a.w.v0 * a.w.v0;
+  tmp.v[0] = (uint64_t)t;
+  high = (uint64_t)(t >> 64);
+
+  // a0 * a1 
+  t = (uint128_t)a.w.v0 * a.w.v1 + high;
+  tmp.v[1] = (uint64_t)t;
+  high = (uint64_t)(t >> 64);
+
+  // a0 * a2
+  t = (uint128_t)a.w.v0 * a.w.v2 + high;
+  tmp.v[2] = (uint64_t)t;
+  high = (uint64_t)(t >> 64);
+
+  tmp.v[3] = high;
+
+  // a1 * a0
+  t = (uint128_t)a.w.v1 * a.w.v0 + tmp.v[1];
+  tmp.v[1] = (uint64_t)t;
+  high = (uint64_t)(t >> 64);
+
+  // a1 * a1 
+  t = (uint128_t)a.w.v1 * a.w.v1 + tmp.v[2] + high;
+  tmp.v[2] = (uint64_t)t;
+  high = (uint64_t)(t >> 64);
+
+  // a1 * a2
+  t = (uint128_t)a.w.v1 * a.w.v2 + tmp.v[3] + high;
+  tmp.v[3] = (uint64_t)t;
+  uint32_t high32 = (uint32_t)(t >> 64);
+
+  tmp.v[4] = high32;
+
+  // a2 * a0
+  t = (uint128_t)a.w.v2 * a.w.v0 + tmp.v[2];
+  tmp.v[2] = (uint64_t)t;
+  high = (uint64_t)(t >> 64);
+
+  // a2 * a1 
+  t = (uint128_t)a.w.v2 * a.w.v1 + tmp.v[3] + high;
+  tmp.v[3] = (uint64_t)t;
+  high32 = (uint32_t)(t >> 64);
+
+  // a2 * a2
+  // The final word is only at most 6 bits, so no 128-bit mul needed
+  uint32_t t32 = (uint32_t)a.w.v2 * a.w.v2 + tmp.v[4] + high32;
+  tmp.v[4] = t32;
+
+  return tmp;
+}
+
+__device__ uint131_t mul_shift_160_p89(const uint160_t& a, const uint131_t& b)
+{
+  uint64_t tmp[5];
+  uint64_t high = 0;
+
+  // a0 * b0
+  uint128_t t = (uint128_t)a.w.v0 * b.w.v0;
+  high = (uint64_t)(t >> 64);
+
+  // a0 * b1 
+  t = (uint128_t)a.w.v0 * b.w.v1 + high;
+  tmp[1] = (uint64_t)t;
+  high = (uint64_t)(t >> 64);
+
+  // a0 * b2
+  t = (uint128_t)a.w.v0 * b.w.v2 + high;
+  tmp[2] = (uint64_t)t;
+  high = (uint64_t)(t >> 64);
+
+  tmp[3] = high;
+
+  // a1 * b0
+  t = (uint128_t)a.w.v1 * b.w.v0 + tmp[1];
+  tmp[1] = (uint64_t)t;
+  high = (uint64_t)(t >> 64);
+  
+  // a1 * b1 
+  t = (uint128_t)a.w.v1 * b.w.v1 + tmp[2] + high;
+  tmp[2] = (uint64_t)t;
+  high = (uint64_t)(t >> 64);
+  
+  // a1 * b2
+  t = (uint128_t)a.w.v1 * b.w.v2 + tmp[3] + high;
+  tmp[3] = (uint64_t)t;
+  high = (uint64_t)(t >> 64);
+  
+  tmp[4] = high;
+  
+  // a2 * b0
+  t = (uint128_t)a.w.v2 * b.w.v0 + tmp[2];
+  tmp[2] = (uint64_t)t;
+  high = (uint64_t)(t >> 64);
+  
+  // a2 * b1 
+  t = (uint128_t)a.w.v2 * b.w.v1 + tmp[3] + high;
+  tmp[3] = (uint64_t)t;
+  high = (uint64_t)(t >> 64);
+  
+  // a2 * b2
+  // The final word is only at most 35 bits, so no 128-bit mul needed
+  uint64_t t64 = (uint64_t)a.w.v2 * b.w.v2 + tmp[4] + high;
+  tmp[4] = t64;
+
+  uint131_t product;
+  // Divide by 2^160
+  product.w.v0 = (tmp[2] >> 32) | (tmp[3] << 32);
+  product.w.v1 = (tmp[3] >> 32) | (tmp[4] << 32);
+  product.w.v2 = (tmp[4] >> 32);
+
+  return product;
+}
+
+#endif

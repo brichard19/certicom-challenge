@@ -471,4 +471,17 @@ uint131_t sqrt(uint131_t x)
   }
 }
 
+bool less_than(uint131_t x, uint131_t y)
+{
+  for(int i = 4; i >= 0; i--) {
+    if(x.v[i] < y.v[i]) {
+      return true;
+    } else if(x.v[i] > y.v[i]) {
+      return false;
+    }
+  }
+
+  return false;
+}
+
 }

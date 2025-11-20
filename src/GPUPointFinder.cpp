@@ -82,6 +82,10 @@ GPUPointFinder::GPUPointFinder(int device, int dpbits, bool benchmark)
     _do_step_ptr = (void*)do_step_p79;
     _batch_multiply_ptr = (void*)batch_multiply_p79;
     _sanity_check_ptr = (void*)sanity_check_p79;
+  } else if(curve_name == "ecp89") {
+    _do_step_ptr = (void*)do_step_p89;
+    _batch_multiply_ptr = (void*)batch_multiply_p89;
+    _sanity_check_ptr = (void*)sanity_check_p89;
   } else {
     LOG("Invalid curve!");
     throw std::runtime_error("Invalid curve");

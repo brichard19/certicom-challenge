@@ -5,6 +5,7 @@
 #include "math_common.cuh"
 #include "p131.cuh"
 #include "p79.cuh"
+#include "p89.cuh"
 
 
 template<int CURVE> __device__ uint131_t sub(uint131_t x, uint131_t y)
@@ -14,6 +15,8 @@ template<int CURVE> __device__ uint131_t sub(uint131_t x, uint131_t y)
     r = sub_p131(x, y);
   } else if(CURVE == 79) {
     r = sub_p79(x, y);
+  } else if(CURVE == 89) {
+    r = sub_p89(x, y);
   }
 
   return r;
@@ -27,6 +30,8 @@ template<int CURVE> __device__ uint131_t add(const uint131_t& x, const uint131_t
     r = add_p131(x, y);
   } else if(CURVE == 79) {
     r = add_p79(x, y);
+  } else if(CURVE == 89) {
+    r = add_p89(x, y);
   }
 
   return r;
@@ -55,6 +60,10 @@ template<int CURVE> __device__ uint131_t mont_reduce(const uint262_t& t)
     t_hi.w.v0 = 0;
     t_hi.w.v1 = 0;
     t_hi.w.v2 = 0;
+  } else if(CURVE == 89) {
+    t_hi.w.v0 = (t.v[2] >> 32);
+    t_hi.w.v1 = 0;
+    t_hi.w.v2 = 0;
   }
   uint160_t m1;
   uint131_t m2;
@@ -69,7 +78,10 @@ template<int CURVE> __device__ uint131_t mont_reduce(const uint262_t& t)
   } else if(CURVE == 79) {
     p = _p79_p;
     k = _p79_k;
-  } 
+  } else if(CURVE == 89) {
+    p = _p89_p;
+    k = _p89_k;
+  }
 
   m1 = mul_mod_160(t_lo, k);
 
@@ -77,6 +89,8 @@ template<int CURVE> __device__ uint131_t mont_reduce(const uint262_t& t)
     m2 = mul_shift_160_p131(m1, p);
   } else if(CURVE == 79) {
     m2 = mul_shift_160_p79(m1, p);
+  } else if(CURVE == 89) {
+    m2 = mul_shift_160_p89(m1, p);
   }
  
   // Not sure if this is correct, but carry always seems to be 1.
@@ -98,6 +112,8 @@ template<int CURVE> __device__ uint131_t mul(uint131_t x, uint131_t y)
     product = mul_p131(x, y);
   } else if(CURVE == 79) {
     product = mul_p79(x, y);
+  } else if(CURVE == 89) {
+    product = mul_p89(x, y);
   }
 
   return mont_reduce<CURVE>(product);
@@ -112,6 +128,8 @@ template<int CURVE> __device__ uint131_t square(uint131_t x)
     product = square_p131(x);
   } else if(CURVE == 79) {
     product = square_p79(x);
+  } else if(CURVE == 89) {
+    product = square_p89(x);
   }
 
   return mont_reduce<CURVE>(product);
@@ -239,6 +257,36 @@ __device__ uint131_t inv_p79(uint131_t& x)
   return z;
 }
 
+// TODO: Optimize
+__device__ uint131_t inv_p89(uint131_t& x)
+{
+  uint131_t prod = _p89_one;
+  uint131_t y = x;
+
+  uint64_t bits = _p89_p.w.v0 - 2;
+
+  for(int i = 0; i < 64; i++) {
+    if(bits & 1) {
+      prod = mul<89>(prod, y);
+    }
+    y = square<89>(y);
+    
+    bits >>= 1;
+  }
+
+  bits = _p89_p.w.v1;
+  for(int i = 0; i < 25; i++) {
+    if(bits & 1) {
+      prod = mul<89>(prod, y);
+    }
+    y = square<89>(y);
+    
+    bits >>= 1;
+  }
+
+  return prod;
+}
+
 template<int CURVE> __device__ uint131_t inv(uint131_t x)
 {
   uint131_t r;
@@ -246,6 +294,8 @@ template<int CURVE> __device__ uint131_t inv(uint131_t x)
     r = inv_p131(x);
   } else if(CURVE == 79) {
     r = inv_p79(x);
+  } else if(CURVE == 89) {
+    r = inv_p89(x);
   }
   
   return r;
@@ -277,6 +327,10 @@ template<int CURVE> __device__ bool point_exists(uint131_t& x, uint131_t& y)
     case 79:
       a = _p79_a;
       b = _p79_b;
+      break;
+    case 89:
+      a = _p89_a;
+      b = _p89_b;
       break;
   }
 

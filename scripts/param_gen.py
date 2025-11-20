@@ -13,7 +13,12 @@ challenge_points = {
         [
             int('0679834CEFB7215DC365', 16),
             int('4084BC50388C4E6FDFAB', 16)
-        ],        
+        ],
+        'ecp89':
+        [
+            int('00DE1AA94FF94DB64E763E2D', 16),
+            int('002A44C4C2D4EE27FA0A4BA9', 16)
+        ]
 }
 
 def calc_sqrt_val(p):
