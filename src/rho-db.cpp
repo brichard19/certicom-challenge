@@ -12,6 +12,7 @@
 #include "giga/gigaset.h"
 #include "util.h"
 #include "fmt/format.h"
+#include "signal_handler.h"
 
 #define IFSTREAM_CALL(condition)\
 {\
@@ -330,6 +331,12 @@ void main_loop()
   }
 }
 
+void signal_handler(int signal)
+{
+  std::cout << "Exiting..." << std::endl;
+  _running = false;
+}
+
 int main(int argc, char** argv)
 {
 
@@ -368,6 +375,8 @@ int main(int argc, char** argv)
         std::cout << "--input-dir and --db-dir required" << std::endl;
         return 1;
     }
+
+    set_signal_handler(signal_handler);
 
     main_loop();
 
