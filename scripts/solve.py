@@ -278,8 +278,8 @@ class RhoSolver:
         # a1G + b1Q = a2G + b2Q
         # (a1 - a2)G = (b2 - b1)Q
         # (a1 - a2)G = (b2 - b1)kG
-        #(a1 - a2) = (b2 - b1)k
-        #(a1 - a2) / (b2 - b1) = k
+        # (a1 - a2) = (b2 - b1)k
+        # (a1 - a2) / (b2 - b1) = k
 
         d1 = (self.a1 - self.a2) % self.curve.n
         d2 = (b2 - b1) % self.curve.n
@@ -287,7 +287,7 @@ class RhoSolver:
 
         # Validate
         result_q = self.curve.multiply(k, self.curve.bp)
-        real_q = QPOINTS["ecp79"]
+        real_q = QPOINTS[self.curve.name]
 
         if result_q != real_q:
             print("Something went wrong")
@@ -303,9 +303,6 @@ def usage():
     print('solve.py [input file]')
 
 def main():
-
-    #curve = curves.getCurveByName("ecp89")
-    #rwpoints = get_r_points("ecp89")
 
     if len(sys.argv) == 1:
         usage()
