@@ -277,15 +277,12 @@ void main_loop()
       // Read the header
       DPHeader header;
       IFSTREAM_CALL(f.read((char*)&header, sizeof(header)));
-      if(header.curve == 131) {
-        ecc::set_curve("ecp131");
-      } else if(header.curve == 79) {
-        ecc::set_curve("ecp79");
-      } else if(header.curve == 89) {
-        ecc::set_curve("ecp89");
-      } else {
-        std::cout << "Invalid curve" << std::endl;
-        exit(1);
+      try {
+        std::string name = ecc::get_curve_by_strength(header.curve);
+        ecc::set_curve(name);
+      } catch(...) {
+        _running = false;
+        break;
       }
 
       // Read the data

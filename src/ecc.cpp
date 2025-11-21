@@ -1,5 +1,4 @@
 #include <random>
-
 #include "ecc.h"
 #include "ecc_internal.h"
 #include "montgomery.h"
@@ -8,7 +7,8 @@
 
 typedef unsigned __int128 uint128_t;
 
-CurveParameters _ecp131 = {
+std::vector<CurveParameters>_curves = {
+  {
   .p = {{0x194c43186b3abc0b, 0x8e1d43f293469e33, 0x4}},
   .a = {{0xe7f7f250cee8709a, 0xacd15fe1a8ec1522, 0x0}},
   .b = {{0xc85087e5ab4eca9e, 0xde124657d7ba5851, 0x2}},
@@ -27,9 +27,9 @@ CurveParameters _ecp131 = {
   .bits = 131,
   .words = 3,
   .name = "ecp131",
-};
+},
 
-CurveParameters _ecp79 = {
+{
   .p = {{0x5177412aca899cf5, 0x62ce, 0x0}},
   .a = {{0x732c9b460e3c3d, 0x1bb7, 0x0}},
   .b = {{0xc88edfd7d5b44610, 0x250c, 0x0}},
@@ -48,9 +48,9 @@ CurveParameters _ecp79 = {
   .bits = 79,
   .words = 2,
   .name = "ecp79",
-};
+},
 
-CurveParameters _ecp89 = {
+{
   .p = {{0x903f1643908ba955, 0x158685c, 0x0}},
   .a = {{0xb1ec24706b2573c1, 0x593048, 0x0}},
   .b = {{0x37717b7e1c0a25af, 0xc58c6, 0x0}},
@@ -70,6 +70,7 @@ CurveParameters _ecp89 = {
   .bits = 89,
   .words = 2,
   .name = "ecp89",
+}
 };
 
 CurveParameters _params;
@@ -77,15 +78,34 @@ CurveParameters _params;
 namespace ecc {
 void set_curve(const std::string& curve_name)
 {
-  if(curve_name == "ecp131") {
-    _params = _ecp131;
-  } else if(curve_name == "ecp79") {
-    _params = _ecp79;
-  } else if(curve_name == "ecp89") {
-    _params = _ecp89;
-  } else {
-    throw std::runtime_error("Invalid curve name");
+  for(auto& curve : _curves) {
+    if(curve_name == curve.name) {
+      _params = curve;
+      return;
+    }
   }
+  throw std::runtime_error("Invalid curve name");
+}
+
+std::vector<std::string> get_curves()
+{
+  std::vector<std::string> curves;
+  for(auto& curve : _curves) {
+    curves.push_back(curve.name);
+  }
+
+  return curves;
+}
+
+std::string get_curve_by_strength(int strength)
+{
+  for(auto& curve : _curves) {
+    if(curve.bits == strength) {
+      return curve.name;
+    }
+  }
+
+  throw std::runtime_error("Invalid curve strength");
 }
 
 }

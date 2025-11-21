@@ -27,12 +27,6 @@
 
 namespace {
 
-  std::map<std::string, int> _curve_bits = {
-    {"ecp131", 131},
-    {"ecp79", 79},
-    {"ecp89", 89},
-  };
-
   const double _save_interval = 60.0;
   const double _perf_interval = 5.0;
 
@@ -63,11 +57,11 @@ void save_to_disk(const std::vector<DistinguishedPoint>& dps)
 {
   // Use a temp file when writing since another thread periodically picks up all the
   // .dat files
-  //std::string tmp_name = fmt::format("{}/{}.tmp", _results_dir, (int)time(NULL));
   std::string tmp_name = fmt::format("{}/{}.tmp", _results_dir, (int)time(NULL));
   std::string file_name = fmt::format("{}/{}.dat", _results_dir, (int)time(NULL));
 
-  auto encoded = encode_dps(dps, _dpbits, _curve_bits[_curve_name]);
+  //auto encoded = encode_dps(dps, _dpbits, _curve_bits[_curve_name]);
+  auto encoded = encode_dps(dps, _dpbits, ecc::curve_strength());
   std::ofstream of(tmp_name, std::ios::binary);
 
   of.write((const char*)encoded.data(), encoded.size());
@@ -290,23 +284,12 @@ int main(int argc, char**argv)
     std::cout << "--data required" << std::endl;
     return 1;
   }
-
-  if(_curve_name != "ecp131" && _curve_name != "ecp79" && _curve_name != "ecp89") {
-    std::cout << "Invalid curve " << _curve_name << std::endl;
+ 
+  try {
+    ecc::set_curve(_curve_name);
+  }catch (...) {
+    std::cout << "Invalid curve name" << std::endl;
     return 1;
-  }
-
-  if(_curve_bits.find(_curve_name) == _curve_bits.end()) {
-    std::cout << "Invalid curve '" << _curve_name << "'" << std::endl;
-    return 1;
-  }
-
-  if(_curve_name == "ecp131") {
-    _dpbits = DP_BITS;
-  } else if(_curve_name == "ecp79") {
-    _dpbits = DP_BITS;
-  } else if(_curve_name == "ecp89") {
-    _dpbits = DP_BITS;
   }
 
   if(_use_mpi && gpu_flag) {

@@ -113,12 +113,12 @@ int main(int argc, char**argv)
     return 1;
   }
 
-  if(curve_name != "ecp131" && curve_name != "ecp79" && curve_name != "ecp89") {
+  try {
+    ecc::set_curve(curve_name);
+  }catch (...) {
     std::cout << "Invalid curve name" << std::endl;
     return 1;
   }
-
-  ecc::set_curve(curve_name);
 
   // Check device ID
   int device_count = 0;

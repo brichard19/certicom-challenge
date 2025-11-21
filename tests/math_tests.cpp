@@ -246,7 +246,7 @@ bool test12()
 
 int main(int argc, char**argv)
 {
-  std::vector<std::string> curves = {"ecp131", "ecp89", "ecp79"};
+  std::vector<std::string> curves = ecc::get_curves();
 
   for(auto curve : curves ) {
     ecc::set_curve(curve);

@@ -8,6 +8,8 @@
 namespace ecc {
 
 void set_curve(const std::string& curve_name);
+std::vector<std::string> get_curves();
+std::string get_curve_by_strength(int strength);
 
 struct ecpoint_t {
 

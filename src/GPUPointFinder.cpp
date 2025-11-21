@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <chrono>
 #include <fstream>
+#include <map>
 #include "fmt/format.h"
 #include <hip/hip_runtime.h>
 #include <sstream>
@@ -27,6 +28,18 @@ namespace {
   }\
 }\
 
+
+struct KernelInfo {
+  void* do_step;
+  void* batch_mul;
+  void* sanity_check;
+};
+
+std::map<std::string, KernelInfo> _kernel_map = {
+  {"ecp79", {(void*)do_step_p79, (void*)batch_multiply_p79, (void*)sanity_check_p79}},
+  {"ecp89", {(void*)do_step_p89, (void*)batch_multiply_p89, (void*)sanity_check_p89}},
+  {"ecp131", {(void*)do_step_p131, (void*)batch_multiply_p131, (void*)sanity_check_p131}},
+};
 
 typedef unsigned __int128 uint128_t;
 
@@ -74,22 +87,9 @@ GPUPointFinder::GPUPointFinder(int device, int dpbits, bool benchmark)
 
   std::string curve_name = ecc::curve_name();
 
-  if(curve_name == "ecp131") {
-    _do_step_ptr = (void*)do_step_p131;
-    _batch_multiply_ptr = (void*)batch_multiply_p131;
-    _sanity_check_ptr = (void*)sanity_check_p131;
-  } else if(curve_name == "ecp79") {
-    _do_step_ptr = (void*)do_step_p79;
-    _batch_multiply_ptr = (void*)batch_multiply_p79;
-    _sanity_check_ptr = (void*)sanity_check_p79;
-  } else if(curve_name == "ecp89") {
-    _do_step_ptr = (void*)do_step_p89;
-    _batch_multiply_ptr = (void*)batch_multiply_p89;
-    _sanity_check_ptr = (void*)sanity_check_p89;
-  } else {
-    LOG("Invalid curve!");
-    throw std::runtime_error("Invalid curve");
-  }
+  _do_step_ptr = _kernel_map[curve_name].do_step;
+  _batch_multiply_ptr = _kernel_map[curve_name].batch_mul;
+  _sanity_check_ptr = _kernel_map[curve_name].sanity_check;
 
   _device = device;
   _dpbits = dpbits;

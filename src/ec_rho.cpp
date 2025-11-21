@@ -1,5 +1,6 @@
 #include <cassert>
 #include <stdexcept>
+#include <map>
 
 #include "ec_rho.h"
 #include "montgomery.h"
@@ -428,30 +429,53 @@ std::string _p131_y_str[] = {
 "2d24257fa2f8e217a03a4befcc2eda825",
 };
 
+struct RWInfo {
+    std::string* a;
+    std::string* b;
+    std::string* x;
+    std::string* y;
+};
+
+std::map<std::string, RWInfo> _rw_info = {
+  {"ecp79", {
+    _p79_a_str,
+    _p79_b_str,
+    _p79_x_str,
+    _p79_y_str
+    },
+  },
+  {"ecp89", {
+    _p89_a_str,
+    _p89_b_str,
+    _p89_x_str,
+    _p89_y_str
+  }},
+  {"ecp131", {
+    _p131_a_str,
+    _p131_b_str,
+    _p131_x_str,
+    _p131_y_str
+  }},
+};
 }
 
 std::vector<RWPoint> get_rw_points()
 {
   std::vector<RWPoint> rw_vec;
 
+  std::string name = ecc::curve_name();
+
+  if(_rw_info.find(name) == _rw_info.end()) {
+    throw std::runtime_error("No curve selected");
+  }
+
+  RWInfo info = _rw_info[name];
+
   for(int i = 0; i < 32; i++) {
     RWPoint rw;
-
-    if(ecc::curve_name() == "ecp131") {
-      rw.a = make_uint131(_p131_a_str[i]);
-      rw.b = make_uint131(_p131_b_str[i]);
-      rw.p = ecc::ecpoint_t(make_uint131(_p131_x_str[i]), make_uint131(_p131_y_str[i]));
-    } else if(ecc::curve_name() == "ecp79") {
-      rw.a = make_uint131(_p79_a_str[i]);
-      rw.b = make_uint131(_p79_b_str[i]);
-      rw.p = ecc::ecpoint_t(make_uint131(_p79_x_str[i]), make_uint131(_p79_y_str[i]));
-    } else if(ecc::curve_name() == "ecp89") {
-      rw.a = make_uint131(_p89_a_str[i]);
-      rw.b = make_uint131(_p89_b_str[i]);
-      rw.p = ecc::ecpoint_t(make_uint131(_p89_x_str[i]), make_uint131(_p89_y_str[i]));
-    } else {
-      throw std::runtime_error("No curve selected");
-    }
+    rw.a = make_uint131(info.a[i]);
+    rw.b = make_uint131(info.b[i]);
+    rw.p = ecc::ecpoint_t(make_uint131(info.x[i]), make_uint131(info.y[i]));
 
     // Validate
     ecc::ecpoint_t p = ecc::add(ecc::mul(rw.a, ecc::g()), ecc::mul(rw.b, ecc::q()));
