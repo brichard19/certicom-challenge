@@ -575,3 +575,33 @@ std::vector<DistinguishedPoint> decode_dps(const uint8_t* bytes, size_t size)
 
   return dps;
 }
+
+bool verify_dp(const DistinguishedPoint& dp)
+{
+  auto r_points = get_rw_points();
+
+  auto p = ecc::mul(dp.a, ecc::g());
+  auto key_a = dp.a;
+  auto key_b = make_uint131(0);
+
+  uint32_t mask = (1 << DP_BITS) - 1;
+  for(uint64_t i = 0; i < dp.length; i++) {   
+    int idx = p.x.v[0] & 0x1f;
+
+    p = ecc::add(p, r_points[idx].p);
+    key_a = ecc::add_priv_keys(key_a, r_points[idx].a);
+    key_b = ecc::add_priv_keys(key_b, r_points[idx].b);
+  }
+
+  ecc::ecpoint_t p2 = ecc::add(ecc::mul(key_a, ecc::g()), ecc::mul(key_b, ecc::q()));
+  if(!ecc::is_equal(p, p2)) {
+    return false;
+  }
+  
+  if(!ecc::is_equal(p, dp.p)) {
+    return false;
+  }
+
+
+  return true;
+}

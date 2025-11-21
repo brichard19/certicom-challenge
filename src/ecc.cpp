@@ -6,6 +6,7 @@
 #include "util.h"
 #include <stdexcept>
 
+typedef unsigned __int128 uint128_t;
 
 CurveParameters _ecp131 = {
   .p = {{0x194c43186b3abc0b, 0x8e1d43f293469e33, 0x4}},
@@ -138,6 +139,43 @@ public:
         return _state;
     }
 };
+
+uint131_t sub_raw(const uint131_t& x, const uint131_t& y)
+{
+  uint131_t z;
+  int borrow = 0;
+
+  uint128_t diff = (uint128_t)x.w.v0 - y.w.v0 - borrow;
+  z.w.v0 = (uint64_t)diff;
+  borrow = (int)(diff >> 64) & 1;
+  
+  diff = (uint128_t)x.w.v1 - y.w.v1 - borrow;
+  z.w.v1 = (uint64_t)diff;
+  borrow = (int)(diff >> 64) & 1;
+
+  z.w.v2 = x.w.v2 - y.w.v2 - borrow;
+
+  return z;
+}
+
+uint131_t add_raw(const uint131_t& x, const uint131_t& y)
+{
+
+  uint131_t z;
+  int carry = 0;
+  
+  uint128_t sum = (uint128_t)x.w.v0 + y.w.v0 + carry;
+  z.w.v0 = (uint64_t)sum;
+  carry = (uint64_t)(sum >> 64);
+  
+  sum = (uint128_t)x.w.v1 + y.w.v1 + carry;
+  z.w.v1 = (uint64_t)sum;
+  carry = (uint64_t)(sum >> 64);
+ 
+  z.w.v2 = x.w.v2 + y.w.v2 + carry;
+
+  return z;
+}
 
 }
 
@@ -518,6 +556,18 @@ std::string curve_name()
 int curve_strength()
 {
   return _params.bits;
+}
+
+
+uint131_t add_priv_keys(uint131_t k1, uint131_t k2)
+{
+  uint131_t sum = add_raw(k1, k2);
+
+  if(!mont::less_than(sum, _params.n)) {
+    sum = sub_raw(sum, _params.n);
+  }
+  
+  return sum;
 }
 
 }
