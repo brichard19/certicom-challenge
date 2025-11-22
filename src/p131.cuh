@@ -10,7 +10,14 @@ __constant__ uint131_t _p131_one = {{0x6e7743da32b6d0c7, 0x88c614d64c1a8f0b, 0x0
 __constant__ uint131_t _p131_a = {{0xe7f7f250cee8709a, 0xacd15fe1a8ec1522, 0x0}};
 __constant__ uint131_t _p131_b = {{0xc85087e5ab4eca9e, 0xde124657d7ba5851, 0x2}};
 
-
+template<> struct Curve<131> {
+  __device__ static uint131_t p() { return _p131_p;};
+  __device__ static uint131_t k() { return _p131_k;};
+  __device__ static uint131_t r2() { return _p131_r2;};
+  __device__ static uint131_t one() { return _p131_one;};
+  __device__ static uint131_t a() { return _p131_a;};
+  __device__ static uint131_t b() { return _p131_b;};
+};
 
 __device__ uint131_t sub_p131(uint131_t x, uint131_t y)
 {

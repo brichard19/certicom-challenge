@@ -158,14 +158,7 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
 
   int i = gid;
 
-  uint131_t one;
-  if(CURVE == 131) {
-    one = _p131_one;
-  } else if(CURVE == 79) {
-    one = _p79_one;
-  } else if(CURVE == 89) {
-    one = _p89_one;
-  }
+  uint131_t one = Curve<CURVE>::one();
 
   uint131_t inverse = one;
   

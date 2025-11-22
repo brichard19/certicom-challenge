@@ -10,6 +10,16 @@ __constant__ uint131_t _p79_one = {{0x5447aa703f6abc5f, 0x1358, 0x0}};
 __constant__ uint131_t _p79_a = {{0x732c9b460e3c3d, 0x1bb7, 0x0}};
 __constant__ uint131_t _p79_b = {{0xc88edfd7d5b44610, 0x250c, 0x0}};
 
+
+template<> struct Curve<79> {
+  __device__ static uint131_t p() { return _p79_p;};
+  __device__ static uint131_t k() { return _p79_k;};
+  __device__ static uint131_t r2() { return _p79_r2;};
+  __device__ static uint131_t one() { return _p79_one;};
+  __device__ static uint131_t a() { return _p79_a;};
+  __device__ static uint131_t b() { return _p79_b;};
+};
+
 __device__ uint131_t sub_p79(uint131_t x, uint131_t y)
 {
   uint131_t z = {{0}};

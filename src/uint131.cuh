@@ -24,4 +24,6 @@ struct uint262_t {
   uint64_t v[5];
 };
 
+template<int CURVE> struct Curve {};
+
 #endif

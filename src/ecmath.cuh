@@ -65,23 +65,13 @@ template<int CURVE> __device__ uint131_t mont_reduce(const uint262_t& t)
     t_hi.w.v1 = 0;
     t_hi.w.v2 = 0;
   }
+
   uint160_t m1;
   uint131_t m2;
   uint131_t m3;
 
-  uint131_t p;
-  uint131_t k;
-
-  if(CURVE == 131) {
-    p = _p131_p;
-    k = _p131_k;
-  } else if(CURVE == 79) {
-    p = _p79_p;
-    k = _p79_k;
-  } else if(CURVE == 89) {
-    p = _p89_p;
-    k = _p89_k;
-  }
+  uint131_t p = Curve<CURVE>::p();
+  uint131_t k = Curve<CURVE>::k();
 
   m1 = mul_mod_160(t_lo, k);
 
@@ -316,23 +306,8 @@ __device__ void set_point_at_infinity(uint131_t& x)
 
 template<int CURVE> __device__ bool point_exists(uint131_t& x, uint131_t& y)
 {
-  uint131_t a;
-  uint131_t b;
-
-  switch(CURVE) {
-    case 131:
-      a = _p131_a;
-      b = _p131_b;
-      break;
-    case 79:
-      a = _p79_a;
-      b = _p79_b;
-      break;
-    case 89:
-      a = _p89_a;
-      b = _p89_b;
-      break;
-  }
+  uint131_t a = Curve<CURVE>::a();
+  uint131_t b = Curve<CURVE>::b();
 
   uint131_t y2 = square<CURVE>(y);
   uint131_t x3 = mul<CURVE>(x, square<CURVE>(x));
