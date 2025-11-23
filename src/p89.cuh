@@ -18,9 +18,16 @@ template<> struct Curve<89> {
   __device__ static uint131_t one() { return _p89_one;};
   __device__ static uint131_t a() { return _p89_a;};
   __device__ static uint131_t b() { return _p89_b;};
+
+  __device__ static uint131_t sub(uint131_t x, uint131_t y);
+  __device__ static uint131_t add(uint131_t x, uint131_t y);
+  __device__ static uint262_t mul(uint131_t x, uint131_t y);
+  __device__ static uint262_t square(uint131_t x);
+  __device__ static uint131_t mul_shift_160(uint160_t a, uint131_t b);
+  __device__ static uint131_t high_bits(uint262_t x);
 };
 
-__device__ uint131_t sub_p89(uint131_t x, uint131_t y)
+__device__ uint131_t Curve<89>::sub(uint131_t x, uint131_t y)
 {
   uint131_t z = {{0}};
 
@@ -57,7 +64,7 @@ __device__ uint131_t sub_p89(uint131_t x, uint131_t y)
   return z;
 }
 
-__device__ uint131_t add_p89(const uint131_t& x, const uint131_t& y)
+__device__ uint131_t Curve<89>::add(uint131_t x, uint131_t y)
 {
   uint131_t z = add_raw(x, y);
 
@@ -68,8 +75,19 @@ __device__ uint131_t add_p89(const uint131_t& x, const uint131_t& y)
   return z;
 }
 
+__device__ uint131_t Curve<89>::high_bits(uint262_t x)
+{
+  uint131_t hi;
+
+  hi.w.v0 = (x.v[2] >> 32);
+  hi.w.v1 = 0;
+  hi.w.v2 = 0;
+
+  return hi;
+}
+
 // 131 x 131 -> 262 multiplication
-__device__ uint262_t mul_p89(const uint131_t& a, const uint131_t& b)
+__device__ uint262_t Curve<89>::mul(uint131_t a, uint131_t b)
 {
   uint262_t tmp;
   uint64_t high = 0;
@@ -127,7 +145,7 @@ __device__ uint262_t mul_p89(const uint131_t& a, const uint131_t& b)
 }
 
 // 131 x 131 -> 262 multiplication
-__device__ uint262_t square_p89(const uint131_t& a)
+__device__ uint262_t Curve<89>::square(uint131_t a)
 {
   uint262_t tmp;
   uint64_t high = 0;
@@ -184,7 +202,7 @@ __device__ uint262_t square_p89(const uint131_t& a)
   return tmp;
 }
 
-__device__ uint131_t mul_shift_160_p89(const uint160_t& a, const uint131_t& b)
+__device__ uint131_t Curve<89>::mul_shift_160(uint160_t a, uint131_t b)
 {
   uint64_t tmp[5];
   uint64_t high = 0;
