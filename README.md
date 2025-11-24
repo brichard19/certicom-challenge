@@ -4,9 +4,10 @@ My GPU accelerated implementaion for solving the Certicom challenge [(PDF)](http
 
 # Supported curves
 - P131
+- P89
 - P79
 
-The target is the 131-bit prime curve. The 79-bit curve is included for testing purposes.
+The target is the 131-bit prime curve. Smaller curves are included for testing purposes.
 
 # Implementation
 - Parallel Pollard's rho algorithm with an R-adding walk
