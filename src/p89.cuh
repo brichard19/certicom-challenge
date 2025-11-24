@@ -49,11 +49,11 @@ __device__ uint131_t Curve<89>::sub(uint131_t x, uint131_t y)
   // Went below zero. Need to add P.
   if(borrow) {
     int carry = 0; 
-    uint64_t sum = z.w.v0 + _p89_p.w.v0;
+    uint64_t sum = z.w.v0 + p().w.v0;
     z.w.v0 = sum;
-    carry = sum < _p89_p.w.v0 ? 1 : 0;
+    carry = sum < p().w.v0 ? 1 : 0;
     
-    sum = z.w.v1 + _p89_p.w.v1 + carry;
+    sum = z.w.v1 + p().w.v1 + carry;
     z.w.v1 = sum;
     //carry = sum < _p89_p.w.v1 ? 1 : 0;
     
@@ -69,8 +69,8 @@ __device__ uint131_t Curve<89>::add(uint131_t x, uint131_t y)
   uint131_t z = add_raw(x, y);
 
   // Reduce mod P
-  if(is_less_than(_p89_p, z)) {
-    z = sub_raw(z, _p89_p);
+  if(is_less_than(p(), z)) {
+    z = sub_raw(z, p());
   }
   return z;
 }

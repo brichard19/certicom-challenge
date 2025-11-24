@@ -86,7 +86,7 @@ __device__ uint131_t add_raw(const uint131_t& x, const uint131_t& y, int carry_i
   return z;
 }
 
-__device__ int is_less_than(uint131_t& x, uint131_t& y)
+__device__ int is_less_than(uint131_t x, uint131_t y)
 {
   uint131_t diff = sub_raw(x, y);
 
