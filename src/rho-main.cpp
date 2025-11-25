@@ -98,7 +98,7 @@ void dp_callback(const std::vector<DistinguishedPoint>& dps)
 #ifdef BUILD_MPI
 void mpi_recv_thread_function()
 {
-  int buf_size = 128 * 1024;
+  int buf_size = 1024 * 1024 * sizeof(DistinguishedPoint);
   std::vector<char> buf(buf_size);
   
   LOG("MPI thread started");
