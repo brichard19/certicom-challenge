@@ -6,13 +6,14 @@
 #include <iostream>
 #include <sstream>
 #include <getopt.h>
-
+#include <assert.h>
 #include "ec_rho.h"
-#include "giga/gigalist.h"
-#include "giga/gigaset.h"
+#include <filesystem>
 #include "util.h"
 #include "fmt/format.h"
 #include "signal_handler.h"
+#include "rocksdb/db.h"
+#include "rocksdb/write_batch.h"
 
 #define IFSTREAM_CALL(condition)\
 {\
@@ -51,27 +52,14 @@ class CollisionDatabase {
 
 private:
     struct DPKey {
-        uint64_t id;
         uint8_t data[X_TRUNC_LEN];
     };
 
     struct DPData {
         uint8_t data[ENCODED_DP_SIZE - X_TRUNC_LEN];
     };
-
-    static int compare_keys(const DPKey k1, const DPKey k2)
-    {
-        return memcmp(k1.data, k2.data, 13);
-    }
-
-    static uint32_t hash_key(const DPKey k, int n)
-    {
-        return ((uint32_t*)&k.data)[0] % n;
-    }
-
-    GigaList<DPData> _list;
-
-    GigaSet<DPKey, CollisionDatabase::compare_keys, CollisionDatabase::hash_key> _set;
+        
+    rocksdb::DB* _db;
 
     std::vector<DPData> extract_data(const std::vector<EncodedDP> dps)
     {
@@ -112,49 +100,65 @@ private:
     }
 
 public:
-    CollisionDatabase(const std::string dbname) : _list(dbname + "/" + "list.dat"), _set(dbname + "/" + "index.dat")
+    CollisionDatabase(const std::string db_dir)
     {
+        std::filesystem::create_directories(db_dir); 
+        rocksdb::Options options;
+        options.create_if_missing = true;
 
+        rocksdb::Status status = rocksdb::DB::Open(options, db_dir + "/mydb", &_db);
+        if(!status.ok()) {
+            throw std::string("Error opening database");
+        }
     }
 
+    ~CollisionDatabase()
+    {
+        delete _db;
+    }
 
     std::vector<std::pair<DistinguishedPoint, DistinguishedPoint>> insert(const std::vector<EncodedDP> dps)
     {
         std::vector<std::pair<DistinguishedPoint, DistinguishedPoint>> dup_dps;
    
-        // Separate the Disntingusihed Points into key/value pairs
+        // Separate the Distinguished Points into key/value pairs
         std::vector<DPData> dp_data = extract_data(dps);
         std::vector<DPKey> dp_keys = extract_keys(dps);
 
-        // Append to list first
-        std::vector<uint64_t> idxs = _list.append(dp_data);
+        assert(dp_data.size() == dp_keys.size());
 
-        assert(idxs.size() == dp_keys.size());
+        rocksdb::WriteBatch batch;
 
-        // Store the list idx with the key
-        for(int i = 0; i < idxs.size(); i++) {
-            dp_keys[i].id = idxs[i];
-        }
+        // TODO: This might not be optimal, but it works.
+        for(int i = 0; i < dp_data.size(); i++) {
+            rocksdb::Slice key((const char*)dp_keys[i].data, sizeof(dp_keys[i].data));
+            rocksdb::Slice value((const char*)dp_data[i].data, sizeof(dp_data[i].data));
 
-        // Convert duplicates to EncodedDP and return
-        auto dup_keys = _set.insert(dp_keys);
+            // Check if exists
+            std::string existing;
+            rocksdb::Status status = _db->Get(rocksdb::ReadOptions(), key, &existing);
 
-        if(dup_keys.size() > 0) {
+            if(status.IsNotFound()) {
+                batch.Put(key, value);
+            } else if(status.ok() == false) {
+                throw std::runtime_error("rocksdb error: " + status.ToString());
+            } else {
+                // Found possible collision
+                DPData duplicate;
+                memcpy(duplicate.data, existing.data(), sizeof(duplicate.data));
 
-            for(int i = 0; i < dup_keys.size(); i++) {
-
-                DPData data1 = _list.get(dup_keys[i].first.id);
-                DPData data2 = _list.get(dup_keys[i].second.id);
-                 
-                EncodedDP edp1 = construct_encoded_dp(dup_keys[i].first, data1);
-                EncodedDP edp2 = construct_encoded_dp(dup_keys[i].second, data2);
+                EncodedDP edp1 = construct_encoded_dp(dp_keys[i], duplicate);
+                EncodedDP edp2 = construct_encoded_dp(dp_keys[i], dp_data[i]);
 
                 DistinguishedPoint dp1 = decode_dp(edp1.data, DP_BITS);
                 DistinguishedPoint dp2 = decode_dp(edp2.data, DP_BITS);
-
                 dup_dps.push_back(std::pair<DistinguishedPoint, DistinguishedPoint>(dp1, dp2));
             }
+        }
 
+        rocksdb::Status status = _db->Write(rocksdb::WriteOptions(), &batch);
+        if(status.ok() == false) {
+            throw std::runtime_error("rocksdb error: " + status.ToString());
         }
 
         return dup_dps;

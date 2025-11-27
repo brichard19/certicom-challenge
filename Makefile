@@ -145,7 +145,7 @@ rho_amd:	third_party gpu_amd
 	HIP_PLATFORM=amd $(CXX) $(CFLAGS) $(CPP_RHO) $(OBJDIR)/ecc_amd.co -o rho-amd $(CXX_CFLAGS_AMD) -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LINKER_AMD) $(LIBS_AMD) $(LINKER_RHO)
 
 rho_db:	third_party
-	$(CXX) $(CFLAGS) $(CPP_DATABASE) -o rho-db $(INCLUDE) -L$(LIB_DIR) -Isrc -Isrc/include -lfmt
+	$(CXX) $(CFLAGS) $(CPP_DATABASE) -o rho-db $(INCLUDE) -L$(LIB_DIR) -Isrc -Isrc/include -lfmt -lrocksdb
 
 .PHONY: tests
 tests:
