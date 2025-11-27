@@ -53,6 +53,7 @@ Usage:
 ### Required
 
 * ROCm HIP SDK
+* RocksDB
 
 ### Optional
 
