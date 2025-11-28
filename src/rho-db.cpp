@@ -14,6 +14,8 @@
 #include "signal_handler.h"
 #include "rocksdb/db.h"
 #include "rocksdb/write_batch.h"
+#include "rocksdb/table.h"
+#include "rocksdb/filter_policy.h"
 
 #define IFSTREAM_CALL(condition)\
 {\
@@ -103,7 +105,28 @@ public:
     CollisionDatabase(const std::string db_dir)
     {
         std::filesystem::create_directories(db_dir); 
+       
+        rocksdb::BlockBasedTableOptions table_options;
+
+        // Enable a full Bloom filter (default since version 6.x) with 10 bits per key.
+        // The `false` parameter to NewBloomFilterPolicy indicates not to use the old,
+        // block-based filter format, enabling the modern, more efficient "full" filter.
+        table_options.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
+
+        // Ensure whole key filtering is enabled (this is the default, but explicitly setting it is clear)
+        table_options.whole_key_filtering = true;
+
         rocksdb::Options options;
+
+
+        options.compression = rocksdb::kNoCompression;
+        options.bottommost_compression = rocksdb::kNoCompression;
+        options.level_compaction_dynamic_level_bytes = true;
+        
+        std::shared_ptr<rocksdb::Cache> cache = rocksdb::NewLRUCache((size_t)4 * 1024 * 1024 * 1024);
+        table_options.block_cache = cache;
+        options.table_factory.reset(NewBlockBasedTableFactory(table_options));
+        
         options.create_if_missing = true;
 
         rocksdb::Status status = rocksdb::DB::Open(options, db_dir + "/mydb", &_db);
@@ -127,39 +150,54 @@ public:
 
         assert(dp_data.size() == dp_keys.size());
 
-        rocksdb::WriteBatch batch;
+        std::vector<rocksdb::Slice> keys;
+        std::vector<std::string> values;
 
-        // TODO: This might not be optimal, but it works.
-        for(int i = 0; i < dp_data.size(); i++) {
-            rocksdb::Slice key((const char*)dp_keys[i].data, sizeof(dp_keys[i].data));
-            rocksdb::Slice value((const char*)dp_data[i].data, sizeof(dp_data[i].data));
+        for(int i = 0; i < dp_keys.size(); i++) {
+            keys.push_back(rocksdb::Slice((const char*)dp_keys[i].data, sizeof(dp_keys[i].data)));
+        }
 
-            // Check if exists
+        std::vector<rocksdb::Status> statuses = _db->MultiGet(rocksdb::ReadOptions(), keys, &values);
+
+        bool found = false;
+
+        for(int i = 0; i < statuses.size(); i++) {
+            if(statuses[i].IsNotFound() == true) {
+                continue;
+            }
+
             std::string existing;
-            rocksdb::Status status = _db->Get(rocksdb::ReadOptions(), key, &existing);
+            rocksdb::Status status = _db->Get(rocksdb::ReadOptions(), keys[i], &existing);
+                                // Found possible collision
+            DPData duplicate;
+            memcpy(duplicate.data, existing.data(), sizeof(duplicate.data));
 
-            if(status.IsNotFound()) {
+            EncodedDP edp1 = construct_encoded_dp(dp_keys[i], duplicate);
+            EncodedDP edp2 = construct_encoded_dp(dp_keys[i], dp_data[i]);
+
+            DistinguishedPoint dp1 = decode_dp(edp1.data, DP_BITS);
+            DistinguishedPoint dp2 = decode_dp(edp2.data, DP_BITS);
+            dup_dps.push_back(std::pair<DistinguishedPoint, DistinguishedPoint>(dp1, dp2));
+            found = true;
+        }
+
+        if(found == false) {
+            rocksdb::WriteBatch batch;
+            
+            for(int i = 0; i < dp_keys.size(); i++) {
+                rocksdb::Slice key((const char*)dp_keys[i].data, sizeof(dp_keys[i].data));
+                rocksdb::Slice value((const char*)dp_data[i].data, sizeof(dp_data[i].data));
                 batch.Put(key, value);
-            } else if(status.ok() == false) {
+            }
+
+            rocksdb::WriteOptions write_options;
+
+            rocksdb::Status status = _db->Write(write_options, &batch);
+            if(status.ok() == false) {
                 throw std::runtime_error("rocksdb error: " + status.ToString());
-            } else {
-                // Found possible collision
-                DPData duplicate;
-                memcpy(duplicate.data, existing.data(), sizeof(duplicate.data));
-
-                EncodedDP edp1 = construct_encoded_dp(dp_keys[i], duplicate);
-                EncodedDP edp2 = construct_encoded_dp(dp_keys[i], dp_data[i]);
-
-                DistinguishedPoint dp1 = decode_dp(edp1.data, DP_BITS);
-                DistinguishedPoint dp2 = decode_dp(edp2.data, DP_BITS);
-                dup_dps.push_back(std::pair<DistinguishedPoint, DistinguishedPoint>(dp1, dp2));
             }
         }
 
-        rocksdb::Status status = _db->Write(rocksdb::WriteOptions(), &batch);
-        if(status.ok() == false) {
-            throw std::runtime_error("rocksdb error: " + status.ToString());
-        }
 
         return dup_dps;
     }
