@@ -32,10 +32,6 @@
   }\
 }\
 
-struct EncodedDP{ 
-  uint8_t data[ENCODED_DP_SIZE];
-};
-
 
 struct JobStats {
     uint64_t num_dps;
@@ -53,10 +49,6 @@ private:
     struct DPKey {
         uint64_t id;
         uint8_t data[X_TRUNC_LEN];
-    };
-
-    struct DPData {
-        uint8_t data[ENCODED_DP_SIZE - X_TRUNC_LEN];
     };
 
     static int compare_keys(const DPKey k1, const DPKey k2)
@@ -80,7 +72,7 @@ private:
         for(auto dp : dps) {
             DPData d;
 
-            memcpy(d.data, &dp.data[X_TRUNC_LEN], sizeof(d.data));
+            d = dp.data; 
             data.push_back(d);
         }
 
@@ -94,7 +86,7 @@ private:
         for(auto dp : dps) {
             DPKey k;
 
-            memcpy(k.data, dp.data, sizeof(k.data));
+            memcpy(k.data, dp.tx, sizeof(dp.tx));
             keys.push_back(k);
         }
 
@@ -105,8 +97,9 @@ private:
     {
         EncodedDP encoded;
 
-        memcpy(encoded.data, key.data, sizeof(DPKey::data));
-        memcpy(encoded.data + sizeof(DPKey::data), data.data, sizeof(DPData::data));
+        memcpy(encoded.tx, key.data, sizeof(DPKey::data));
+
+        encoded.data = data;
 
         return encoded;
     }
@@ -149,8 +142,8 @@ public:
                 EncodedDP edp1 = construct_encoded_dp(dup_keys[i].first, data1);
                 EncodedDP edp2 = construct_encoded_dp(dup_keys[i].second, data2);
 
-                DistinguishedPoint dp1 = decode_dp(edp1.data, DP_BITS);
-                DistinguishedPoint dp2 = decode_dp(edp2.data, DP_BITS);
+                DistinguishedPoint dp1 = decode_dp(edp1, DP_BITS);
+                DistinguishedPoint dp2 = decode_dp(edp2, DP_BITS);
 
                 dup_dps.push_back(std::pair<DistinguishedPoint, DistinguishedPoint>(dp1, dp2));
             }
@@ -198,7 +191,7 @@ uint64_t extract_length(EncodedDP& encoded)
 {
     uint64_t len = 0;
 
-    memcpy(&len, &encoded.data[LEN_OFFSET], 5);
+    memcpy(&len, encoded.len, sizeof(encoded.len));
 
     return len;
 }
@@ -217,7 +210,7 @@ void process_collision(const DistinguishedPoint p1, const DistinguishedPoint p2)
     std::ofstream of(file_path);
 
     of << ecc::curve_name() << std::endl;
-    of << to_str(p1.p.x) << " " << to_str(p1.p.y) << " " << to_str(p1.a) << " " << p1.length << " " << to_str(p2.a) << " " << p2.length << std::endl;
+    of << to_str(p1.p.x) << " " << to_str(p1.p.y) << " " << to_str(p1.a) << " " << to_str(p2.a) << std::endl;
 }
 
 double calc_probability(uint64_t n)
@@ -296,7 +289,7 @@ void main_loop()
       for(auto dp : dps) {
       
         // Validation
-        decode_dp(dp.data, header.dbits);
+        decode_dp(dp, header.dbits, true);
 
         count += extract_length(dp);
       }
