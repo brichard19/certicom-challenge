@@ -6,21 +6,6 @@
 #include "ecc.h"
 
 #define DP_BITS 20
-#define X_TRUNC_LEN (((131 - DP_BITS) + 7) / 8)
-
-// TX = Truncated x coordinate (no distinguished bits)
-// S = sign bit (1 byte)
-// A = a exponent
-// L = walk length (5 bytes)
-//
-// [        TX        ][S][        A        ][    L    ]
-// Encodes a DistinguishedPoint into a string of bytes
-
-#define X_OFFSET 0
-#define SIGN_OFFSET X_TRUNC_LEN
-#define A_OFFSET (SIGN_OFFSET + 1)
-#define LEN_OFFSET (A_OFFSET + 17)
-#define ENCODED_DP_SIZE (LEN_OFFSET + 5)
 
 struct DistinguishedPoint {
   uint131_t a;
@@ -35,6 +20,33 @@ struct DistinguishedPoint {
   {
     this->length = length;
   }
+};
+
+#define X_TRUNC_LEN (((131 - DP_BITS) + 7) / 8)
+
+// TX = Truncated x coordinate (no distinguished bits)
+// S = sign bit (1 byte)
+// A = a exponent
+// L = walk length (5 bytes)
+//
+// [        TX        ][S][        A        ][    L    ]
+// Encodes a DistinguishedPoint into a string of bytes
+
+struct DPData{
+  uint8_t sign;
+  uint8_t a[17];
+};
+
+struct EncodedDP {
+  // This will be the key in the database
+  uint8_t tx[X_TRUNC_LEN];
+
+  // This will be the value in the database
+  DPData data;
+
+  // Extra info that is discarded before database insertion
+  uint8_t len[5];
+  uint8_t checksum;
 };
 
 struct DPHeader {
@@ -67,8 +79,8 @@ public:
 
 std::vector<RWPoint> get_rw_points();
 
-std::vector<DistinguishedPoint> decode_dps(const uint8_t* bytes, size_t size);
-DistinguishedPoint decode_dp(const uint8_t* bytes, int dbits);
+std::vector<DistinguishedPoint> decode_dps(const uint8_t* bytes, size_t size, bool verify=false);
+DistinguishedPoint decode_dp(const EncodedDP& dp, int dbits, bool verify=false);
 std::vector<uint8_t> encode_dps(const std::vector<DistinguishedPoint>& dps, int dbits, int curve);
 bool verify_dp(const DistinguishedPoint& dp);
 

@@ -208,15 +208,13 @@ def get_r_points(name):
 
 class RhoSolver:
 
-    def __init__(self, curve, rwpoints, a1, a2, len1, len2, dp):
+    def __init__(self, curve, rwpoints, a1, a2, dp):
         self.curve = curve
         self.rwpoints = rwpoints
 
         self.dp = dp
         self.a1 = a1
         self.a2 = a2
-        self.len1 = len1
-        self.len2 = len2
 
 
     def iterate(self, a, b, point):
@@ -235,11 +233,29 @@ class RhoSolver:
             raise "Invalid point"
         return new_a, new_b, new_p
 
+    def get_length(self, a, max_len):
+
+        p = self.curve.multiply(a, self.curve.bp)
+        b = 0
+        count = 0
+
+        while p.x != self.dp.x and count < max_len:
+            a, b, p = self.iterate(a, b, p)
+            count += 1
+
+        return count
+
     def solve(self):
 
+        print('Getting walk 1 length')
+        len1 = self.get_length(self.a1, 0xffffffff)
+        print(len1)
+        print('Getting walk 2 length')
+        len2 = self.get_length(self.a2, 0xffffffff)
+        print(len2)
         # Ensure the first walk is longer
-        if self.len1 < self.len2:
-            self.len1, self.len2 = self.len2, self.len1
+        if len1 < len2:
+            len1, len2 = len2, len1
             self.a1, self.a2 = self.a2, self.a1
 
         # The starting points only have one exponent, a. b = 0
@@ -253,7 +269,7 @@ class RhoSolver:
         print(f"y={p1.y:033x}    y={p2.y:033x}")
 
         # Advance the longer walk until boths walks have equal remaining steps
-        diff = self.len1 - self.len2
+        diff = len1 - len2
         for _ in range(diff):
             self.a1, b1, p1 = self.iterate(self.a1, b1, p1)
 
@@ -262,7 +278,7 @@ class RhoSolver:
         print(f"y={p1.y:033x}    y={p2.y:033x}")
         
         # Advance both walks together until a collision
-        remaining = self.len2
+        remaining = len2
         while p1.x != p2.x and remaining > 0:
             self.a1, b1, p1 = self.iterate(self.a1, b1, p1)
             self.a2, b2, p2 = self.iterate(self.a2, b2, p2)
@@ -322,10 +338,8 @@ def main():
         x = int(lines[0], 16)
         y = int(lines[1], 16)
         a1 = int(lines[2], 16)
-        len1 = int(lines[3])
 
-        a2 = int(lines[4], 16)
-        len2 = int(lines[5])
+        a2 = int(lines[3], 16)
 
         # Convert from Montgomery form
         x = from_montgomery(x, curve.p)
@@ -337,7 +351,7 @@ def main():
 
     rwpoints = get_r_points(curve_name)
 
-    solver = RhoSolver(curve, rwpoints, a1, a2, len1, len2, dp)
+    solver = RhoSolver(curve, rwpoints, a1, a2, dp)
     solver.solve()
 
 if __name__ == "__main__":

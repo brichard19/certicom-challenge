@@ -35,10 +35,6 @@
   }\
 }\
 
-struct EncodedDP{ 
-  uint8_t data[ENCODED_DP_SIZE];
-};
-
 
 struct JobStats {
     uint64_t num_dps;
@@ -56,10 +52,6 @@ private:
     struct DPKey {
         uint8_t data[X_TRUNC_LEN];
     };
-
-    struct DPData {
-        uint8_t data[ENCODED_DP_SIZE - X_TRUNC_LEN];
-    };
         
     rocksdb::DB* _db;
 
@@ -70,7 +62,7 @@ private:
         for(auto dp : dps) {
             DPData d;
 
-            memcpy(d.data, &dp.data[X_TRUNC_LEN], sizeof(d.data));
+            d = dp.data; 
             data.push_back(d);
         }
 
@@ -84,7 +76,7 @@ private:
         for(auto dp : dps) {
             DPKey k;
 
-            memcpy(k.data, dp.data, sizeof(k.data));
+            memcpy(k.data, dp.tx, sizeof(dp.tx));
             keys.push_back(k);
         }
 
@@ -95,8 +87,9 @@ private:
     {
         EncodedDP encoded;
 
-        memcpy(encoded.data, key.data, sizeof(DPKey::data));
-        memcpy(encoded.data + sizeof(DPKey::data), data.data, sizeof(DPData::data));
+        memcpy(encoded.tx, key.data, sizeof(DPKey::data));
+
+        encoded.data = data;
 
         return encoded;
     }
@@ -170,13 +163,13 @@ public:
             rocksdb::Status status = _db->Get(rocksdb::ReadOptions(), keys[i], &existing);
                                 // Found possible collision
             DPData duplicate;
-            memcpy(duplicate.data, existing.data(), sizeof(duplicate.data));
+            memcpy(&duplicate, existing.data(), sizeof(duplicate));
 
             EncodedDP edp1 = construct_encoded_dp(dp_keys[i], duplicate);
             EncodedDP edp2 = construct_encoded_dp(dp_keys[i], dp_data[i]);
 
-            DistinguishedPoint dp1 = decode_dp(edp1.data, DP_BITS);
-            DistinguishedPoint dp2 = decode_dp(edp2.data, DP_BITS);
+            DistinguishedPoint dp1 = decode_dp(edp1, DP_BITS);
+            DistinguishedPoint dp2 = decode_dp(edp2, DP_BITS);
             dup_dps.push_back(std::pair<DistinguishedPoint, DistinguishedPoint>(dp1, dp2));
             found = true;
         }
@@ -186,7 +179,7 @@ public:
             
             for(int i = 0; i < dp_keys.size(); i++) {
                 rocksdb::Slice key((const char*)dp_keys[i].data, sizeof(dp_keys[i].data));
-                rocksdb::Slice value((const char*)dp_data[i].data, sizeof(dp_data[i].data));
+                rocksdb::Slice value((const char*)&dp_data[i], sizeof(dp_data[i]));
                 batch.Put(key, value);
             }
 
@@ -240,7 +233,7 @@ uint64_t extract_length(EncodedDP& encoded)
 {
     uint64_t len = 0;
 
-    memcpy(&len, &encoded.data[LEN_OFFSET], 5);
+    memcpy(&len, encoded.len, sizeof(encoded.len));
 
     return len;
 }
@@ -259,7 +252,7 @@ void process_collision(const DistinguishedPoint p1, const DistinguishedPoint p2)
     std::ofstream of(file_path);
 
     of << ecc::curve_name() << std::endl;
-    of << to_str(p1.p.x) << " " << to_str(p1.p.y) << " " << to_str(p1.a) << " " << p1.length << " " << to_str(p2.a) << " " << p2.length << std::endl;
+    of << to_str(p1.p.x) << " " << to_str(p1.p.y) << " " << to_str(p1.a) << " " << to_str(p2.a) << std::endl;
 }
 
 double calc_probability(uint64_t n)
@@ -338,7 +331,7 @@ void main_loop()
       for(auto dp : dps) {
       
         // Validation
-        decode_dp(dp.data, header.dbits);
+        decode_dp(dp, header.dbits, true);
 
         count += extract_length(dp);
       }
