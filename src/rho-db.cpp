@@ -6,10 +6,10 @@
 #include <iostream>
 #include <sstream>
 #include <getopt.h>
+#include <thread>
+#include <filesystem>
 
 #include "ec_rho.h"
-#include "giga/gigalist.h"
-#include "giga/gigaset.h"
 #include "util.h"
 #include "fmt/format.h"
 #include "signal_handler.h"
@@ -39,120 +39,187 @@ struct JobStats {
     char curve[16];
 };
 
-// The collision database is like a hashtable for distinguished points.
-// Internally it stores the distingusihed points data in a list, and uses a
-// set to index the list i.e. the set contains the truncated X coordinate
-// and list index, and the list contains the data
-class CollisionDatabase {
+
+class RhoDb {
 
 private:
-    struct DPKey {
-        uint64_t id;
-        uint8_t data[X_TRUNC_LEN];
+    static const int NUM_BUCKETS = 256;
+    static const int MAX_CACHE_SIZE = 64 * 1024;
+
+    struct DBRecord {
+        uint8_t key[X_TRUNC_LEN];
+        DPData data;
+
+        bool operator<(const DBRecord& other)
+        {
+            return memcmp(key, other.key, sizeof(key)) < 0;
+        }
     };
+    
+    std::function<void(DistinguishedPoint, DistinguishedPoint)> _callback;
 
-    static int compare_keys(const DPKey k1, const DPKey k2)
+    std::array<std::mutex, NUM_BUCKETS> _locks;
+    std::array<bool, NUM_BUCKETS> _dirty;
+ 
+    std::string _db_path;
+    std::vector<DBRecord> _cache[NUM_BUCKETS];
+    std::thread _coll_check_thread;
+    bool _running = true;
+
+    int get_bucket(const DBRecord& rec)
     {
-        return memcmp(k1.data, k2.data, 13);
+        unsigned int x;
+        memcpy(&x, rec.key, sizeof(x));
+
+        return x % NUM_BUCKETS;
     }
 
-    static uint32_t hash_key(const DPKey k, int n)
+    void flush_cache(int bucket)
     {
-        return ((uint32_t*)&k.data)[0] % n;
+        std::string fname = fmt::format("{}/bucket{}.dat", _db_path, bucket);
+
+        std::ofstream f(fname, std::ios::app);
+
+        f.write((const char*)_cache[bucket].data(), sizeof(DBRecord) * _cache[bucket].size());
+        f.close();
+
+        _cache[bucket].clear();
     }
 
-    GigaList<DPData> _list;
-
-    GigaSet<DPKey, CollisionDatabase::compare_keys, CollisionDatabase::hash_key> _set;
-
-    std::vector<DPData> extract_data(const std::vector<EncodedDP> dps)
+    void flush_cache(bool force)
     {
-        std::vector<DPData> data;
-
-        for(auto dp : dps) {
-            DPData d;
-
-            d = dp.data; 
-            data.push_back(d);
+        for(int i = 0; i < NUM_BUCKETS; i++) {
+            _locks[i].lock();
+            if(force || _cache[i].size() >= MAX_CACHE_SIZE) {
+                flush_cache(i);
+                _dirty[i] = true;
+            }
+            _locks[i].unlock();
         }
-
-        return data;
     }
 
-    std::vector<DPKey> extract_keys(const std::vector<EncodedDP> dps)
-    {
-        std::vector<DPKey> keys;
-
-        for(auto dp : dps) {
-            DPKey k;
-
-            memcpy(k.data, dp.tx, sizeof(dp.tx));
-            keys.push_back(k);
-        }
-
-        return keys;
-    }
-
-    EncodedDP construct_encoded_dp(const DPKey& key, const DPData& data)
+    EncodedDP construct_encoded_dp(const uint8_t* tx, const DPData& data)
     {
         EncodedDP encoded;
 
-        memcpy(encoded.tx, key.data, sizeof(DPKey::data));
+        memcpy(encoded.tx, tx, X_TRUNC_LEN);
 
         encoded.data = data;
 
         return encoded;
     }
+    
+    void check_for_collision(int bucket)
+    {
+        std::string fname = fmt::format("{}/bucket{}.dat", _db_path, bucket);
+        
+
+        std::ifstream f(fname, std::ios::binary);
+
+        // Skip if doesn't exist
+        if(!f) {
+            std::cout << "Skipping " << fname << std::endl;
+            return;
+        }
+        std::cout << "Checking " << fname << " for collisions   ";
+
+        f.seekg(0, std::ios::end);
+        size_t count = f.tellg() / sizeof(DBRecord);
+        f.seekg(0);
+
+        std::vector<DBRecord> recs(count);
+        f.read((char*)recs.data(), count * sizeof(DBRecord));
+
+        f.close();
+
+        std::cout << count << " items" << std::endl;
+
+        if(count >= 2) {
+            // Sort the records
+            std::sort(recs.begin(), recs.end());
+
+            // Check for collision
+            for(int i = 0; i < recs.size() - 1; i++) {
+                if(memcmp(recs[i].key, recs[i + 1].key, sizeof(recs[i].key)) == 0) {
+                    // Collision found
+
+                    EncodedDP edp1 = construct_encoded_dp(recs[i].key, recs[i].data);
+                    EncodedDP edp2 = construct_encoded_dp(recs[i+1].key, recs[i+1].data);
+
+                    DistinguishedPoint dp1 = decode_dp(edp1, DP_BITS);
+                    DistinguishedPoint dp2 = decode_dp(edp2, DP_BITS);
+
+                    _callback(dp1, dp2);
+                }
+            }
+        }
+    }
+
+    void thread_function()
+    {
+        int bucket = 0;
+        double last_flush = util::get_time();
+
+        _dirty.fill(true);
+
+        while(_running) {
+            sleep(5);
+
+            for(int bucket = 0; _running && bucket < NUM_BUCKETS; bucket++) {
+                // Flush to disk every 5 minutes
+                if(util::get_time() - last_flush >= 300.0) {
+                    flush_cache(true);
+                    last_flush = util::get_time();
+                } else {
+                    flush_cache(false);
+                }
+
+                if(_dirty[bucket]) {
+                    check_for_collision(bucket);
+                    _dirty[bucket] = false;
+                }
+            }
+        }
+
+        flush_cache(true);
+    }
 
 public:
-    CollisionDatabase(const std::string dbname) : _list(dbname + "/" + "list.dat"), _set(dbname + "/" + "index.dat")
+    RhoDb(const std::string db_path, std::function<void(DistinguishedPoint, DistinguishedPoint)> callback) : _db_path(db_path), _callback(callback)
     {
+        std::filesystem::path p = _db_path; 
+        std::filesystem::create_directories(_db_path);
 
+        _coll_check_thread = std::thread(&RhoDb::thread_function, this);
     }
 
-
-    std::vector<std::pair<DistinguishedPoint, DistinguishedPoint>> insert(const std::vector<EncodedDP> dps)
+    ~RhoDb()
     {
-        std::vector<std::pair<DistinguishedPoint, DistinguishedPoint>> dup_dps;
-   
-        // Separate the Disntingusihed Points into key/value pairs
-        std::vector<DPData> dp_data = extract_data(dps);
-        std::vector<DPKey> dp_keys = extract_keys(dps);
-
-        // Append to list first
-        std::vector<uint64_t> idxs = _list.append(dp_data);
-
-        assert(idxs.size() == dp_keys.size());
-
-        // Store the list idx with the key
-        for(int i = 0; i < idxs.size(); i++) {
-            dp_keys[i].id = idxs[i];
-        }
-
-        // Convert duplicates to EncodedDP and return
-        auto dup_keys = _set.insert(dp_keys);
-
-        if(dup_keys.size() > 0) {
-
-            for(int i = 0; i < dup_keys.size(); i++) {
-
-                DPData data1 = _list.get(dup_keys[i].first.id);
-                DPData data2 = _list.get(dup_keys[i].second.id);
-                 
-                EncodedDP edp1 = construct_encoded_dp(dup_keys[i].first, data1);
-                EncodedDP edp2 = construct_encoded_dp(dup_keys[i].second, data2);
-
-                DistinguishedPoint dp1 = decode_dp(edp1, DP_BITS);
-                DistinguishedPoint dp2 = decode_dp(edp2, DP_BITS);
-
-                dup_dps.push_back(std::pair<DistinguishedPoint, DistinguishedPoint>(dp1, dp2));
-            }
-
-        }
-
-        return dup_dps;
+        _running = false;
+        _coll_check_thread.join();
     }
 
+    void insert(const std::vector<EncodedDP> dps)
+    {
+        std::vector<DBRecord> buckets[NUM_BUCKETS];
+
+        // Sort the points into different buckets
+        for(auto& dp : dps) {
+            DBRecord rec;
+
+            memcpy(rec.key, dp.tx, sizeof(rec.key));
+            rec.data = dp.data;
+
+            buckets[get_bucket(rec)].push_back(rec);
+        }
+
+        // Write to cache
+        for(int b = 0; b < NUM_BUCKETS; b++) {
+            _locks[b].lock();
+            _cache[b].insert(_cache[b].end(), buckets[b].begin(), buckets[b].end());
+            _locks[b].unlock();
+        }
+    }
 };
 
 namespace {
@@ -172,6 +239,7 @@ void load_stats()
         f.close();
 
         std::string curve_name(_stats.curve);
+        ecc::set_curve(curve_name);
     }
 }
 
@@ -227,12 +295,19 @@ void display_status()
     std::cout << status << std::endl;
 }
 
+void collision_callback(DistinguishedPoint p1, DistinguishedPoint p2)
+{
+    std::cout << "=========================================================================" << std::endl;
+    process_collision(p1, p2);
+    std::cout << "=========================================================================" << std::endl;
+    
+}
+
 void main_loop()
 {
   std::cout << "Monitoring " << _data_dir << " for files..." << std::endl;
 
-  CollisionDatabase coll_db(_db_dir);
-
+  RhoDb coll_db(_db_dir, collision_callback);
   memset(&_stats, 0, sizeof(_stats));
   load_stats();
 
@@ -299,21 +374,13 @@ void main_loop()
       _stats.num_dps += dps.size();
 
       double t0 = util::get_time();
-      auto collisions = coll_db.insert(dps);
+
+      coll_db.insert(dps);
       double t1 = util::get_time();
       double time_sec = (t1 - t0);
 
       std::string status = fmt::format("{:<15} | DPs: {:>8} | Ps: {:>12} | Time: {:>6.3f}s", file_path, dps.size(), count, time_sec);
       std::cout << status << std::endl;
-
-      // Process any collisions.
-      if(collisions.size() > 0) {
-        std::cout << "=========================================================================" << std::endl;
-        for(auto coll : collisions) {
-            process_collision(coll.first, coll.second);
-        }
-        std::cout << "=========================================================================" << std::endl;
-      }
 
       // Remove file
       std::filesystem::remove(_data_dir + "/" + file_path);

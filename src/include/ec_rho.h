@@ -46,6 +46,8 @@ struct EncodedDP {
 
   // Extra info that is discarded before database insertion
   uint8_t len[5];
+
+  // A few bits of the Y coordinate.
   uint8_t checksum;
 };
 
