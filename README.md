@@ -38,7 +38,7 @@ This program reads data files output from rho program and indexes the distinguis
 
 When two identical distinguished points are found, they are written to a file.
 
-The database strategy is similar to the one described in  [(PDF)](/docs/breaking-ecc2k-130.pdf  "Breaking ECC2K-130").
+The database strategy is similar to the one described in  [Breaking ECC2K-130](/docs/breaking-ecc2k-130.pdf  "Breaking ECC2K-130").
 
 Usage:
 `rho-db --results-dir /path/to/data/dir/results  --db-dir /path/to/database/dir`
