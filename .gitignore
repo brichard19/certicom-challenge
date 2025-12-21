@@ -33,5 +33,6 @@
 
 tools/rwpoints
 bin/*
+obj/
 __pycache__/
 .vscode
