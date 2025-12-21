@@ -1,6 +1,6 @@
 # Certicom ECC Challenge
 
-My GPU accelerated implementaion for solving the Certicom challenge [(PDF)](https://github.com/brichard19/certicom-challenge/blob/main/docs/challenge-2009.pdf  "Certicom challenge") using GPUs.
+My GPU accelerated implementaion for solving the Certicom challenge [(PDF)](/docs/challenge-2009.pdf  "Certicom challenge") using GPUs.
 
 # Supported curves
 - P131
@@ -37,6 +37,8 @@ The results are stored in `/path/to/data/dir/results`
 This program reads data files output from rho program and indexes the distinguished points. It continually monitors an input directory for new data.
 
 When two identical distinguished points are found, they are written to a file.
+
+The database strategy is similar to the one described in  [(PDF)](/docs/breaking-ecc2k-130.pdf  "Breaking ECC2K-130").
 
 Usage:
 `rho-db --results-dir /path/to/data/dir/results  --db-dir /path/to/database/dir`
