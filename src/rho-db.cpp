@@ -58,7 +58,7 @@ private:
     
     std::function<void(DistinguishedPoint, DistinguishedPoint)> _callback;
 
-    std::array<std::mutex, NUM_BUCKETS> _locks;
+    std::array<std::mutex, NUM_BUCKETS> _cache_locks;
     std::array<bool, NUM_BUCKETS> _dirty;
  
     std::string _db_path;
@@ -89,12 +89,12 @@ private:
     void flush_cache(bool force)
     {
         for(int i = 0; i < NUM_BUCKETS; i++) {
-            _locks[i].lock();
+            _cache_locks[i].lock();
             if(force || _cache[i].size() >= MAX_CACHE_SIZE) {
                 flush_cache(i);
                 _dirty[i] = true;
             }
-            _locks[i].unlock();
+            _cache_locks[i].unlock();
         }
     }
 
@@ -113,15 +113,19 @@ private:
     {
         std::string fname = fmt::format("{}/bucket{}.dat", _db_path, bucket);
         
+        _cache_locks[bucket].lock();
 
         std::ifstream f(fname, std::ios::binary);
 
         // Skip if doesn't exist
         if(!f) {
             std::cout << "Skipping " << fname << std::endl;
+            _cache_locks[bucket].unlock();
             return;
         }
         std::cout << "Checking " << fname << " for collisions   ";
+
+        util::Timer timer;
 
         f.seekg(0, std::ios::end);
         size_t count = f.tellg() / sizeof(DBRecord);
@@ -131,8 +135,10 @@ private:
         f.read((char*)recs.data(), count * sizeof(DBRecord));
 
         f.close();
+        
+        _cache_locks[bucket].unlock();
 
-        std::cout << count << " items" << std::endl;
+        std::cout << count << " items  ";
 
         if(count >= 2) {
             // Sort the records
@@ -153,6 +159,7 @@ private:
                 }
             }
         }
+        std::cout << fmt::format("{:.3f}s", timer.elapsed()) << std::endl;
     }
 
     void thread_function()
@@ -215,9 +222,9 @@ public:
 
         // Write to cache
         for(int b = 0; b < NUM_BUCKETS; b++) {
-            _locks[b].lock();
+            _cache_locks[b].lock();
             _cache[b].insert(_cache[b].end(), buckets[b].begin(), buckets[b].end());
-            _locks[b].unlock();
+            _cache_locks[b].unlock();
         }
     }
 };
@@ -373,11 +380,9 @@ void main_loop()
       _stats.total_points += count;
       _stats.num_dps += dps.size();
 
-      double t0 = util::get_time();
-
+      util::Timer timer;
       coll_db.insert(dps);
-      double t1 = util::get_time();
-      double time_sec = (t1 - t0);
+      double time_sec = timer.elapsed();
 
       std::string status = fmt::format("{:<15} | DPs: {:>8} | Ps: {:>12} | Time: {:>6.3f}s", file_path, dps.size(), count, time_sec);
       std::cout << status << std::endl;
