@@ -353,6 +353,9 @@ void main_loop()
       // Read the header
       DPHeader header;
       IFSTREAM_CALL(f.read((char*)&header, sizeof(header)));
+
+      // TODO: Handle this better. Maybe include the curve name when creating the DB so that we don't
+      // need to infer it from incoming data
       try {
         std::string name = ecc::get_curve_by_strength(header.curve);
         ecc::set_curve(name);
