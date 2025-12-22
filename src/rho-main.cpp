@@ -260,7 +260,12 @@ int main(int argc, char**argv)
         break;
 
       case 'm':
+#ifdef BUILD_MPI
         _use_mpi = true;
+#else
+      std::cout << "Error: using --mpi but not built with MPI support!" << std::endl;
+      return 1;
+#endif
         break;
 
       case '?':
