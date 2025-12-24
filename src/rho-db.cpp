@@ -38,25 +38,34 @@ struct JobStats {
     uint64_t num_dps;
     uint64_t total_points;
     char curve[16];
+    int dp_bits;
 };
 
-
 class RhoDb {
+
+public:
+    virtual ~RhoDb() = default;
+    virtual void insert(const std::vector<EncodedDP> dps) = 0;
+};
+
+template<int NUM_DP_BITS> class RhoDbImpl : public RhoDb {
 
 private:
     static const int NUM_BUCKETS = 256;
     static const int MAX_CACHE_SIZE = 64 * 1024;
 
-    struct DBRecord {
-        uint8_t key[X_TRUNC_LEN];
+    template<int DP_BITS> struct DBRecordImpl {
+        uint8_t key[(131 - DP_BITS + 7) / 8];
         DPData data;
 
-        bool operator<(const DBRecord& other)
+        bool operator<(const DBRecordImpl& other)
         {
             return memcmp(key, other.key, sizeof(key)) < 0;
         }
     };
-    
+   
+    using DBRecord = DBRecordImpl<NUM_DP_BITS>;
+
     std::function<void(DistinguishedPoint, DistinguishedPoint)> _callback;
 
     std::array<std::mutex, NUM_BUCKETS> _cache_locks;
@@ -99,11 +108,11 @@ private:
         }
     }
 
-    EncodedDP construct_encoded_dp(const uint8_t* tx, const DPData& data)
+    EncodedDP reconstruct_encoded_dp(DBRecord& rec, const DPData& data, int dpbits)
     {
         EncodedDP encoded;
 
-        memcpy(encoded.tx, tx, X_TRUNC_LEN);
+        memcpy(encoded.tx, rec.key, sizeof(rec.key));
 
         encoded.data = data;
 
@@ -150,11 +159,11 @@ private:
                 if(memcmp(recs[i].key, recs[i + 1].key, sizeof(recs[i].key)) == 0) {
                     // Collision found
 
-                    EncodedDP edp1 = construct_encoded_dp(recs[i].key, recs[i].data);
-                    EncodedDP edp2 = construct_encoded_dp(recs[i+1].key, recs[i+1].data);
+                    EncodedDP edp1 = reconstruct_encoded_dp(recs[i], recs[i].data, NUM_DP_BITS);
+                    EncodedDP edp2 = reconstruct_encoded_dp(recs[i+1], recs[i+1].data, NUM_DP_BITS);
 
-                    DistinguishedPoint dp1 = decode_dp(edp1, DP_BITS);
-                    DistinguishedPoint dp2 = decode_dp(edp2, DP_BITS);
+                    DistinguishedPoint dp1 = decode_dp(edp1, NUM_DP_BITS);
+                    DistinguishedPoint dp2 = decode_dp(edp2, NUM_DP_BITS);
 
                     _callback(dp1, dp2);
                 }
@@ -193,15 +202,15 @@ private:
     }
 
 public:
-    RhoDb(const std::string db_path, std::function<void(DistinguishedPoint, DistinguishedPoint)> callback) : _db_path(db_path), _callback(callback)
+    RhoDbImpl(const std::string db_path, std::function<void(DistinguishedPoint, DistinguishedPoint)> callback) : _db_path(db_path), _callback(callback)
     {
         std::filesystem::path p = _db_path; 
         std::filesystem::create_directories(_db_path);
 
-        _coll_check_thread = std::thread(&RhoDb::thread_function, this);
+        _coll_check_thread = std::thread(&RhoDbImpl::thread_function, this);
     }
 
-    ~RhoDb()
+    ~RhoDbImpl()
     {
         _running = false;
         _coll_check_thread.join();
@@ -235,10 +244,11 @@ namespace {
     bool _running = true;
     std::string _data_dir = "";
     std::string _db_dir = "";
+    int _dp_bits = 0;
     JobStats _stats;
 };
 
-void load_stats()
+bool load_stats()
 {
     if(std::filesystem::exists(_db_dir + "/" + "stats.bin")) {
         std::ifstream f(_db_dir + "/" + "stats.bin", std::ios::binary);
@@ -248,7 +258,11 @@ void load_stats()
 
         std::string curve_name(_stats.curve);
         ecc::set_curve(curve_name);
+        _dp_bits = _stats.dp_bits;
+
+        return true;
     }
+    return false;
 }
 
 void save_stats()
@@ -311,13 +325,44 @@ void collision_callback(DistinguishedPoint p1, DistinguishedPoint p2)
     
 }
 
+RhoDb* get_db(int dp_bits, std::string db_path, std::function<void(DistinguishedPoint, DistinguishedPoint)> callback)
+{
+    #define CASE(N) case N: return new RhoDbImpl<N>(db_path, callback)
+
+    switch(dp_bits) {
+        CASE(16);
+        CASE(17);
+        CASE(18);
+        CASE(19);
+        CASE(20);
+        CASE(21);
+        CASE(22);
+        CASE(23);
+        CASE(24);
+        CASE(25);
+        CASE(26);
+        CASE(27);
+        CASE(28);
+        CASE(29);
+        CASE(30);
+        default:
+            return nullptr;
+    }
+
+}
+
 void main_loop()
 {
   std::cout << "Monitoring " << _data_dir << " for files..." << std::endl;
 
-  RhoDb coll_db(_db_dir, collision_callback);
+  RhoDb* coll_db = get_db(_dp_bits, _db_dir, collision_callback);
+
   memset(&_stats, 0, sizeof(_stats));
-  load_stats();
+ 
+  // To create the DB we need the number of distinguished bits. 
+  if(load_stats()) {
+    coll_db = get_db(_stats.dp_bits, _db_dir, collision_callback);
+  }
 
   std::filesystem::create_directories(_data_dir);
 
@@ -355,8 +400,6 @@ void main_loop()
       DPHeader header;
       IFSTREAM_CALL(f.read((char*)&header, sizeof(header)));
 
-      // TODO: Handle this better. Maybe include the curve name when creating the DB so that we don't
-      // need to infer it from incoming data
       try {
         std::string name = ecc::get_curve_by_strength(header.curve);
         ecc::set_curve(name);
@@ -369,13 +412,20 @@ void main_loop()
       std::vector<EncodedDP> dps(header.count);
 
       IFSTREAM_CALL(f.read((char *)dps.data(), header.count * sizeof(EncodedDP)));
+      f.close();
+     
+      // Get number of DP bits from the header
+      if(coll_db == nullptr) {
+        _stats.dp_bits = header.dp_bits;
+        coll_db = get_db(_stats.dp_bits, _db_dir, collision_callback);
+      }
 
       // Count the length of all the walks
       uint64_t count = 0;
       for(auto dp : dps) {
       
         // Validation
-        decode_dp(dp, header.dbits, true);
+        decode_dp(dp, _stats.dp_bits, true);
 
         count += extract_length(dp);
       }
@@ -385,7 +435,7 @@ void main_loop()
       _stats.num_dps += dps.size();
 
       util::Timer timer;
-      coll_db.insert(dps);
+      coll_db->insert(dps);
       double time_sec = timer.elapsed();
 
       std::string status = fmt::format("{:<15} | DPs: {:>8} | Ps: {:>12} | Time: {:>6.3f}s", file_path, dps.size(), count, time_sec);
@@ -398,6 +448,8 @@ void main_loop()
     save_stats();
     display_status();
   }
+
+  delete coll_db;
 }
 
 void signal_handler(int signal)

@@ -48,7 +48,7 @@ namespace {
   int _world_rank = -1;
   volatile bool _mpi_thread_running = true;
 
-  int _dpbits = DP_BITS;
+  int _dpbits = 0;
   std::string _curve_name;
 }
 
@@ -60,8 +60,7 @@ void save_to_disk(const std::vector<DistinguishedPoint>& dps)
   std::string tmp_name = fmt::format("{}/{}.tmp", _results_dir, (int)time(NULL));
   std::string file_name = fmt::format("{}/{}.dat", _results_dir, (int)time(NULL));
 
-  //auto encoded = encode_dps(dps, _dpbits, _curve_bits[_curve_name]);
-  auto encoded = encode_dps(dps, _dpbits, ecc::curve_strength());
+  auto encoded = encode_dps(dps, ecc::curve_strength(), _dpbits);
   std::ofstream of(tmp_name, std::ios::binary);
 
   of.write((const char*)encoded.data(), encoded.size());
@@ -234,6 +233,7 @@ int main(int argc, char**argv)
       {"file", required_argument, 0, 'f'},
       {"mpi", no_argument, 0, 'm'},
       {"curve", required_argument, 0, 'c'},
+      {"dp-bits", required_argument, 0, 'b'},
       {NULL, 0, NULL, 0}
     };
 
@@ -255,8 +255,12 @@ int main(int argc, char**argv)
         break;
 
       case 'g':
-        _hip_device = atoi(optarg);
+        _hip_device = std::stoi(optarg);
         gpu_flag = true;
+        break;
+
+      case 'b':
+        _dpbits = std::stoi(optarg);
         break;
 
       case 'm':
@@ -289,7 +293,12 @@ int main(int argc, char**argv)
     std::cout << "--data required" << std::endl;
     return 1;
   }
- 
+
+  if(_dpbits == 0) {
+    std::cout << "--dp-bits required" << std::endl;
+    return 1;
+  }
+
   try {
     ecc::set_curve(_curve_name);
   }catch (...) {

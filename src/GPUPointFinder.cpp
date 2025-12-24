@@ -166,7 +166,7 @@ void GPUPointFinder::report_points()
 
       assert((p.x.w.v0 & _dpmask) == 0);
  
-      dps.push_back(DistinguishedPoint(a, p, length));
+      dps.push_back(DistinguishedPoint(a, p, _dpbits, length));
     }
 
     if(_callback) {

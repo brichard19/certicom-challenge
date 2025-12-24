@@ -7,7 +7,7 @@ class BinaryEncoder {
 
 private:
 
-    const size_t INITIAL_SIZE = 1024;
+    static const size_t DEFAULT_INITIAL_SIZE = 4096;
 
     uint8_t* _buf = nullptr;
     size_t _count = 0;
@@ -26,9 +26,9 @@ private:
 
 public:
 
-    BinaryEncoder()
+    BinaryEncoder(size_t initial_size = DEFAULT_INITIAL_SIZE)
     {
-        _size = INITIAL_SIZE;
+        _size = initial_size;
         _buf = new uint8_t[_size];
         _count = 0;
     }
@@ -53,14 +53,18 @@ public:
         encode((const void*)&value, sizeof(T));
     }
 
-    void encode(const void* ptr, size_t size)
+    void encode(const void* ptr, size_t data_size)
     {
-        if(_size - _count < size) {
-            resize(_size + size + 256);
+        if(_size - _count < data_size) {
+            size_t new_size = _size;
+            while(new_size - _count < data_size) {
+                new_size *= 2;
+            }
+            resize(new_size);
         }
 
-        std::memcpy(_buf + _count, ptr, size);
-        _count += size;
+        std::memcpy(_buf + _count, ptr, data_size);
+        _count += data_size;
     }
 };
 

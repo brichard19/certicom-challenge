@@ -489,13 +489,13 @@ std::vector<RWPoint> get_rw_points()
 }
 
 
-EncodedDP encode_dp(const DistinguishedPoint& dp, int dbits)
+EncodedDP encode_dp(const DistinguishedPoint& dp)
 {
   EncodedDP encoded;
 
   // Remove distinguished bits by shifting right then
   // copy into array
-  uint131_t x2 = mont::rshift(dp.p.x, dbits);
+  uint131_t x2 = mont::rshift(dp.p.x, dp.dp_bits);
   
   memcpy(encoded.tx, &x2, sizeof(encoded.tx));
 
@@ -511,25 +511,25 @@ EncodedDP encode_dp(const DistinguishedPoint& dp, int dbits)
   return encoded;
 }
 
-std::vector<uint8_t> encode_dps(const std::vector<DistinguishedPoint>& dps, int dbits, int curve)
+std::vector<uint8_t> encode_dps(const std::vector<DistinguishedPoint>& dps, int curve, int dpbits)
 {
 
   assert(curve == 79 || curve == 131 || curve == 89);
 
-  BinaryEncoder encoder;
+  BinaryEncoder encoder(dps.size() * sizeof(EncodedDP));
 
   // Encode header
   DPHeader header;
   header.version = 1;
   header.count = dps.size();
-  header.dbits = dbits;
   header.curve = curve;
+  header.dp_bits = dpbits;
 
   encoder.encode(header);
 
   // Encode points
   for(auto dp : dps) {
-    EncodedDP encoded = encode_dp(dp, dbits);
+    EncodedDP encoded = encode_dp(dp);
     encoder.encode(&encoded, sizeof(encoded));
   }
 
@@ -540,14 +540,14 @@ std::vector<uint8_t> encode_dps(const std::vector<DistinguishedPoint>& dps, int 
   return vec;
 }
 
-DistinguishedPoint decode_dp(const EncodedDP& dp, int dbits, bool verify)
+DistinguishedPoint decode_dp(const EncodedDP& dp, int dpbits, bool verify)
 {
   ecc::ecpoint_t p;
   memset(&p, 0, sizeof(p));
 
   // extract x
   memcpy(&p.x, dp.tx, sizeof(dp.tx));
-  p.x = mont::lshift(p.x, dbits);
+  p.x = mont::lshift(p.x, dpbits);
 
   // sign
   uint8_t sign = dp.data.sign;
@@ -567,7 +567,7 @@ DistinguishedPoint decode_dp(const EncodedDP& dp, int dbits, bool verify)
   if(verify) {
     assert(dp.checksum == (uint8_t)p.y.v[0]);
   }
-  return DistinguishedPoint(a, p, length);
+  return DistinguishedPoint(a, p, dpbits, length);
 }
 
 std::vector<DistinguishedPoint> decode_dps(const uint8_t* bytes, size_t size, bool verify)
@@ -588,7 +588,7 @@ std::vector<DistinguishedPoint> decode_dps(const uint8_t* bytes, size_t size, bo
   for(int i = 0; i < header.count; i++) {
 
     decoder.decode(&encoded, sizeof(encoded));
-    dps.push_back(decode_dp(encoded, header.dbits, verify));
+    dps.push_back(decode_dp(encoded, header.dp_bits, verify));
   }
 
   return dps;
@@ -602,7 +602,7 @@ bool verify_dp(const DistinguishedPoint& dp)
   auto key_a = dp.a;
   auto key_b = make_uint131(0);
 
-  uint32_t mask = (1 << DP_BITS) - 1;
+  uint32_t mask = (1 << dp.dp_bits) - 1;
   for(uint64_t i = 0; i < dp.length; i++) {   
     int idx = p.x.v[0] & 0x1f;
 
