@@ -328,23 +328,17 @@ void collision_callback(DistinguishedPoint p1, DistinguishedPoint p2)
 RhoDb* get_db(int dp_bits, std::string db_path, std::function<void(DistinguishedPoint, DistinguishedPoint)> callback)
 {
     #define CASE(N) case N: return new RhoDbImpl<N>(db_path, callback)
+    #define CASE_4X(N) \
+    CASE(N); \
+    CASE(N+1); \
+    CASE(N+2); \
+    CASE(N+3); \
 
     switch(dp_bits) {
-        CASE(16);
-        CASE(17);
-        CASE(18);
-        CASE(19);
-        CASE(20);
-        CASE(21);
-        CASE(22);
-        CASE(23);
-        CASE(24);
-        CASE(25);
-        CASE(26);
-        CASE(27);
-        CASE(28);
-        CASE(29);
-        CASE(30);
+        CASE_4X(16)
+        CASE_4X(20)
+        CASE_4X(24)
+        CASE_4X(28)
         default:
             return nullptr;
     }

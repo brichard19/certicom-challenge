@@ -26,9 +26,9 @@ The target is the 131-bit prime curve. Smaller curves are included for testing p
   This program runs the R-added walks on the GPUs and finds distinguished points and saves them to a file.
 
 usage:
-`rho-amd --curve ecp131 --data-dir /path/to/data/dir`
+`rho-amd --dp-bits 20 --curve ecp131 --data-dir /path/to/data/dir`
 
-Per-GPU data is stored in `/path/to/data/dir/GPU-<serial number>`
+Per-GPU data is stored in `/path/to/data/dir/hostname/GPU-<serial number>`
 
 The results are stored in `/path/to/data/dir/results`
 
@@ -41,7 +41,7 @@ When two identical distinguished points are found, they are written to a file.
 The database strategy is similar to the one described in  [Breaking ECC2K-130](/docs/breaking-ecc2k-130.pdf  "Breaking ECC2K-130").
 
 Usage:
-`rho-db --results-dir /path/to/data/dir/results  --db-dir /path/to/database/dir`
+`rho-db --input-dir /path/to/data/dir/results  --db-dir /path/to/database/dir`
 
 #### solver.py
 

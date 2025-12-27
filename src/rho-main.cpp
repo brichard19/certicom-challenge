@@ -299,6 +299,11 @@ int main(int argc, char**argv)
     return 1;
   }
 
+  if(_dpbits < 16 || _dpbits > 31) {
+    std::cout << "--dp-bits must be between 16 and 30" << std::endl;
+    return 1;
+  }
+
   try {
     ecc::set_curve(_curve_name);
   }catch (...) {
