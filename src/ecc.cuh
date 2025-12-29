@@ -38,4 +38,8 @@ extern "C" __global__ void batch_multiply_p79(uint131_t* global_px, uint131_t* g
 extern "C" __global__ void batch_multiply_p89(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* mbuf, uint131_t* gx, uint131_t* gy, int priv_key_bit, int count);
 extern "C" __global__ void batch_multiply_p131(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* mbuf, uint131_t* gx, uint131_t* gy, int priv_key_bit, int count);
 
+extern "C" __global__ void refill_staging_step_p131(uint131_t* gx_lookup, uint131_t* gy_lookup, uint131_t* mbuf, StagingPoint* staging, int priv_key_bit, int count);
+extern "C" __global__ void refill_staging_step_p89(uint131_t* gx_lookup, uint131_t* gy_lookup, uint131_t* mbuf, StagingPoint* staging, int priv_key_bit, int count);
+extern "C" __global__ void refill_staging_step_p79(uint131_t* gx_lookup, uint131_t* gy_lookup, uint131_t* mbuf, StagingPoint* staging, int priv_key_bit, int count);
+
 #endif

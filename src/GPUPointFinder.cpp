@@ -33,12 +33,13 @@ struct KernelInfo {
   void* do_step;
   void* batch_mul;
   void* sanity_check;
+  void* refill_staging;
 };
 
 std::map<std::string, KernelInfo> _kernel_map = {
-  {"ecp79", {(void*)do_step_p79, (void*)batch_multiply_p79, (void*)sanity_check_p79}},
-  {"ecp89", {(void*)do_step_p89, (void*)batch_multiply_p89, (void*)sanity_check_p89}},
-  {"ecp131", {(void*)do_step_p131, (void*)batch_multiply_p131, (void*)sanity_check_p131}},
+  {"ecp79", {(void*)do_step_p79, (void*)batch_multiply_p79, (void*)sanity_check_p79, (void*)refill_staging_step_p79}},
+  {"ecp89", {(void*)do_step_p89, (void*)batch_multiply_p89, (void*)sanity_check_p89, (void*)refill_staging_step_p89}},
+  {"ecp131", {(void*)do_step_p131, (void*)batch_multiply_p131, (void*)sanity_check_p131, (void*)refill_staging_step_p131}},
 };
 
 typedef unsigned __int128 uint128_t;
@@ -90,6 +91,7 @@ GPUPointFinder::GPUPointFinder(int device, int dpbits, bool benchmark)
   _do_step_ptr = _kernel_map[curve_name].do_step;
   _batch_multiply_ptr = _kernel_map[curve_name].batch_mul;
   _sanity_check_ptr = _kernel_map[curve_name].sanity_check;
+  _refill_staging_step_ptr = _kernel_map[curve_name].refill_staging;
 
   _device = device;
   _dpbits = dpbits;
@@ -127,13 +129,14 @@ GPUPointFinder::GPUPointFinder(int device, int dpbits, bool benchmark)
   // approximate how many results we will get per iteration
   double prob = 1.0 / pow(2.0, (double)_dpbits);
 
+  const int iters = 64 * 1024;
   // Can run ~65k iteration before buffer is full
-  _result_buf_size = 65536 * (int)((double)_num_points * prob + 1.0);
+  _result_buf_size = iters * (int)((double)_num_points * prob + 1.0);
 
   _report_count = (int)((double)_result_buf_size * 0.85);
 
   // Calculate an appropriate size for the staging buffer
-  _staging_buf_size = (int)(((double)_num_points * prob + 1.0) * 65536);
+  _staging_buf_size = (int)(((double)_num_points * prob + 1.0) * iters);
 
   // Refill after we reach 15%
   _staging_min = (int)((double)_staging_buf_size * 0.15);
@@ -185,23 +188,70 @@ void GPUPointFinder::refill_staging()
 
   int n = _staging_buf_size - count;
 
-  std::vector<uint131_t> k(n);
+  // Create lookup table for G, 2G, 4G ... nG
+  uint131_t* dev_gx = nullptr;
+  uint131_t* dev_gy = nullptr;
+  uint131_t* mbuf = nullptr;
 
-  for(int i = 0; i < n; i++) {
-    k[i] = ecc::genkey();
+  HIP_CALL(hipMallocManaged(&dev_gx, sizeof(uint131_t) * (ecc::curve_strength() + 1)));
+  HIP_CALL(hipMallocManaged(&dev_gy, sizeof(uint131_t) * (ecc::curve_strength() + 1)));
+  HIP_CALL(hipMalloc(&mbuf, sizeof(uint131_t) * n));
+
+  // Generate G, 2G, 4G, 8G ... nG for batch multiplication
+  ecc::ecpoint_t g = ecc::g();
+
+  for(int i = 0; i < ecc::curve_strength() + 1; i++) {
+    dev_gx[i] = g.x;
+    dev_gy[i] = g.y;
+
+    g = ecc::dbl(g);
   }
 
-  std::vector<ecc::ecpoint_t> p = ecc::mul(k, ecc::g());
+  // Staging point buffer
+  StagingPoint* tmp = nullptr;
+  HIP_CALL(hipMallocManaged(&tmp, sizeof(StagingPoint) * n));
 
+  // Generate random keys
+  // Initialize X to point at infinity
   for(int i = 0; i < n; i++) {
-    StagingPoint sp;
-    sp.a = k[i];
-    sp.x = p[i].x;
-    sp.y = p[i].y;
-
-    _staging_buf[count + i] = sp;
+    tmp[i].a = ecc::genkey();
+    tmp[i].x.w.v2 = (uint32_t)-1;
   }
 
+  // Initialize keys
+  int bits = ecc::curve_strength();
+  for(int b = 0; b < bits; b++) {
+    HIP_CALL(hipLaunchKernel(_refill_staging_step_ptr, dim3(_blocks), dim3(_threads_per_block), 0, dev_gx, dev_gy, mbuf, tmp, b, n));
+  }
+  HIP_CALL(hipDeviceSynchronize());
+
+  // Verify
+  // std::vector<uint131_t> keys;
+  // for(int i = 0; i < n; i++) {
+  //   keys.push_back(tmp[i].a);
+  // }
+
+  // auto expected = ecc::mul(keys, ecc::g());
+
+  // LOG("Verifying");
+  // for(int i = 0; i < n; i++) {
+  //   //LOG("{}/{}", i+1, n); 
+  //   //ecc::ecpoint_t p1 = ecc::mul(tmp[i].a, ecc::g());
+  //   ecc::ecpoint_t actual = ecc::ecpoint_t(tmp[i].x, tmp[i].y);
+
+  //   assert(ecc::is_equal(expected[i], actual));
+  // }
+
+  // Copy into staging buffer
+  for(int i = 0; i < n; i++) {
+    _staging_buf[count + i] = tmp[i];
+  }
+
+  HIP_CALL(hipFree(dev_gx));
+  HIP_CALL(hipFree(dev_gy));
+  HIP_CALL(hipFree(tmp));
+  HIP_CALL(hipFree(mbuf));
+  
   *_staging_count= _staging_buf_size;
 }
 
@@ -214,7 +264,7 @@ void GPUPointFinder::init(const std::string& filename)
 {  
   allocate_buffers(_num_points);
 
-  // Don't need staging for benchmark, avoid costly refill
+  // Don't need staging buffer for benchmark
   if(_benchmark == false) {
     refill_staging();
   }
