@@ -145,108 +145,6 @@ template<int CURVE, int N> __device__ void do_step_impl(uint131_t* global_px, ui
 
 
 // If the private key bit for P is 1, then add Q to P
-template<int CURVE> __device__ void refill_staging_step(uint131_t* gx_lookup, uint131_t* gy_lookup, uint131_t* mbuf, StagingPoint* staging, int priv_key_bit, int count)
-{
-
-  int gid = get_global_id();
-  int dim = get_global_size();
-
-  const uint131_t qx = gx_lookup[priv_key_bit];
-  const uint131_t qy = gy_lookup[priv_key_bit];
-
-  int i = gid;
-
-  uint131_t one = Curve<CURVE>::one();
-
-  uint131_t inverse = one;
-  
-  // Perform Qx - Px and then multiply them together
-  for(; i < count; i+=dim) {
-
-    //uint131_t px = load_uint131(global_px, i, count);
-    uint131_t px = staging[i].x;
-    uint131_t t;
-
-    int bit = get_bit(staging[i].a, priv_key_bit);
-
-    if(!bit || is_infinity(px) || equal(px, qx)) {
-      
-      // Nothing to do, just use 1
-      t = one;
-    } else {
-      // Point addition, qx - px
-      t = sub<CURVE>(qx, px);
-    }
-
-    inverse = mul<CURVE>(inverse, t);
-    store_uint131(mbuf, i, count, inverse);
-  }
-
-  // Perform inversion
-  inverse = inv<CURVE>(inverse);
-
-  // Start at last element (undo final loop counter add)
-  i -= dim;
-
-  // Complete addition
-
-  for(; i >= gid; i-=dim) {
-    uint131_t px = staging[i].x;
-    uint131_t py = staging[i].y;
-
-    int bit = get_bit(staging[i].a, priv_key_bit);
-
-    if(!bit) {
-      continue;
-    } else if(is_infinity(px)) {
-      staging[i].x = qx;
-      staging[i].y = qy;
-      continue;
-    } else if(equal(px, qx)) {
-      staging[i].x = gx_lookup[priv_key_bit + 1];
-      staging[i].y = gy_lookup[priv_key_bit + 1];
-      continue;
-    }
-    
-    uint131_t s;
-    if(i > gid) {
-
-      // Get the 2nd-last element (product of all factors up to that number)
-      // e.g. abcd
-      uint131_t m = load_uint131(mbuf, i - dim, count);
-      // Multiply to cancel out all factors except the last one
-      // e.g. abcd * (abcde)^-1 = e^-1
-      s = mul<CURVE>(inverse, m);
-
-      // Cancel out from the inverse
-      // e.g. abcde * e^-1 = abcd
-      uint131_t diff = sub<CURVE>(qx, px);
-      
-      inverse = mul<CURVE>(inverse, diff);
-
-    } else {
-      s = inverse;
-    }
-
-    // Perform point addition
-    uint131_t rise = sub<CURVE>(qy, py);
-    s = mul<CURVE>(s, rise);
-    uint131_t s2 = square<CURVE>(s);
-
-    uint131_t tmp1 = sub<CURVE>(s2, px);
-    uint131_t x = sub<CURVE>(tmp1, qx);
-
-    uint131_t tmp2 = sub<CURVE>(px, x);
-    uint131_t tmp3 = mul<CURVE>(s, tmp2);
-    uint131_t y = sub<CURVE>(tmp3, py);
-
-    staging[i].x = x;
-    staging[i].y = y;
-  }
-}
-
-
-// If the private key bit for P is 1, then add Q to P
 template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* global_qx, uint131_t* global_qy, uint131_t* mbuf, int priv_key_bit, int count)
 {
 
@@ -395,23 +293,6 @@ extern "C" __global__ void reset_counters(uint64_t* start_pos, uint64_t value, i
 {
   reset_counters_impl(start_pos, value, count);
 }
-
-
-extern "C" __global__ void refill_staging_step_p131(uint131_t* gx_lookup, uint131_t* gy_lookup, uint131_t* mbuf, StagingPoint* staging, int priv_key_bit, int count)
-{
-  refill_staging_step<131>(gx_lookup, gy_lookup, mbuf, staging, priv_key_bit, count);
-}
-
-extern "C" __global__ void refill_staging_step_p89(uint131_t* gx_lookup, uint131_t* gy_lookup, uint131_t* mbuf, StagingPoint* staging, int priv_key_bit, int count)
-{
-  refill_staging_step<89>(gx_lookup, gy_lookup, mbuf, staging, priv_key_bit, count);
-}
-
-extern "C" __global__ void refill_staging_step_p79(uint131_t* gx_lookup, uint131_t* gy_lookup, uint131_t* mbuf, StagingPoint* staging, int priv_key_bit, int count)
-{
-  refill_staging_step<79>(gx_lookup, gy_lookup, mbuf, staging, priv_key_bit, count);
-}
-
 
 extern "C" __global__ void sanity_check_p131(uint131_t* global_px, uint131_t* global_py, int count, int* errors)
 {

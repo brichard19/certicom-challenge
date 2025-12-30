@@ -18,7 +18,6 @@ private:
   void* _do_step_ptr = nullptr;
   void* _batch_multiply_ptr = nullptr;
   void* _sanity_check_ptr = nullptr;
-  void* _refill_staging_step_ptr = nullptr;
 
   bool _first_run = true;
 

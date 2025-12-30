@@ -37,9 +37,9 @@ struct KernelInfo {
 };
 
 std::map<std::string, KernelInfo> _kernel_map = {
-  {"ecp79", {(void*)do_step_p79, (void*)batch_multiply_p79, (void*)sanity_check_p79, (void*)refill_staging_step_p79}},
-  {"ecp89", {(void*)do_step_p89, (void*)batch_multiply_p89, (void*)sanity_check_p89, (void*)refill_staging_step_p89}},
-  {"ecp131", {(void*)do_step_p131, (void*)batch_multiply_p131, (void*)sanity_check_p131, (void*)refill_staging_step_p131}},
+  {"ecp79", {(void*)do_step_p79, (void*)batch_multiply_p79, (void*)sanity_check_p79}},
+  {"ecp89", {(void*)do_step_p89, (void*)batch_multiply_p89, (void*)sanity_check_p89}},
+  {"ecp131", {(void*)do_step_p131, (void*)batch_multiply_p131, (void*)sanity_check_p131}},
 };
 
 typedef unsigned __int128 uint128_t;
@@ -91,7 +91,6 @@ GPUPointFinder::GPUPointFinder(int device, int dpbits, bool benchmark)
   _do_step_ptr = _kernel_map[curve_name].do_step;
   _batch_multiply_ptr = _kernel_map[curve_name].batch_mul;
   _sanity_check_ptr = _kernel_map[curve_name].sanity_check;
-  _refill_staging_step_ptr = _kernel_map[curve_name].refill_staging;
 
   _device = device;
   _dpbits = dpbits;
@@ -192,10 +191,18 @@ void GPUPointFinder::refill_staging()
   uint131_t* dev_gx = nullptr;
   uint131_t* dev_gy = nullptr;
   uint131_t* mbuf = nullptr;
+  uint131_t* priv_keys = nullptr;
+  uint131_t* x_ptr = nullptr;
+  uint131_t* y_ptr = nullptr;
 
   HIP_CALL(hipMallocManaged(&dev_gx, sizeof(uint131_t) * (ecc::curve_strength() + 1)));
   HIP_CALL(hipMallocManaged(&dev_gy, sizeof(uint131_t) * (ecc::curve_strength() + 1)));
   HIP_CALL(hipMalloc(&mbuf, sizeof(uint131_t) * n));
+  
+  HIP_CALL(hipMallocManaged(&priv_keys, sizeof(uint131_t) * n));
+  HIP_CALL(hipMallocManaged(&x_ptr, sizeof(uint131_t) * n));
+  HIP_CALL(hipMallocManaged(&y_ptr, sizeof(uint131_t) * n));
+
 
   // Generate G, 2G, 4G, 8G ... nG for batch multiplication
   ecc::ecpoint_t g = ecc::g();
@@ -207,50 +214,53 @@ void GPUPointFinder::refill_staging()
     g = ecc::dbl(g);
   }
 
-  // Staging point buffer
-  StagingPoint* tmp = nullptr;
-  HIP_CALL(hipMallocManaged(&tmp, sizeof(StagingPoint) * n));
-
   // Generate random keys
-  // Initialize X to point at infinity
   for(int i = 0; i < n; i++) {
-    tmp[i].a = ecc::genkey();
-    tmp[i].x.w.v2 = (uint32_t)-1;
+    priv_keys[i] = ecc::genkey();
   }
+
+  // Initialize keys
+  HIP_CALL(hipLaunchKernel((void*)clear_public_keys, dim3(_blocks), dim3(_threads_per_block), 0, x_ptr, y_ptr, n));
 
   // Initialize keys
   int bits = ecc::curve_strength();
   for(int b = 0; b < bits; b++) {
-    HIP_CALL(hipLaunchKernel(_refill_staging_step_ptr, dim3(_blocks), dim3(_threads_per_block), 0, dev_gx, dev_gy, mbuf, tmp, b, n));
+    HIP_CALL(hipLaunchKernel(_batch_multiply_ptr, dim3(_blocks), dim3(_threads_per_block), 0, x_ptr, y_ptr, priv_keys, mbuf, dev_gx, dev_gy, b, n));
   }
   HIP_CALL(hipDeviceSynchronize());
 
-  // Verify
-  // std::vector<uint131_t> keys;
-  // for(int i = 0; i < n; i++) {
-  //   keys.push_back(tmp[i].a);
-  // }
+  if(_verify_points) {
+    // Verify
+    LOG("Verifying");
+    std::vector<uint131_t> keys;
+    for(int i = 0; i < n; i++) {
+      keys.push_back(priv_keys[i]);
+    }
 
-  // auto expected = ecc::mul(keys, ecc::g());
+    auto expected = ecc::mul(keys, ecc::g());
 
-  // LOG("Verifying");
-  // for(int i = 0; i < n; i++) {
-  //   //LOG("{}/{}", i+1, n); 
-  //   //ecc::ecpoint_t p1 = ecc::mul(tmp[i].a, ecc::g());
-  //   ecc::ecpoint_t actual = ecc::ecpoint_t(tmp[i].x, tmp[i].y);
+    for(int i = 0; i < n; i++) {
+      ecc::ecpoint_t actual = ecc::ecpoint_t(load_uint131(x_ptr, i, n), load_uint131(y_ptr, i, n));
 
-  //   assert(ecc::is_equal(expected[i], actual));
-  // }
+      assert(ecc::is_equal(expected[i], actual));
+    }
+  }
 
   // Copy into staging buffer
   for(int i = 0; i < n; i++) {
-    _staging_buf[count + i] = tmp[i];
+    StagingPoint sp;
+    sp.a = priv_keys[i];
+    sp.x = load_uint131(x_ptr, i, n);
+    sp.y = load_uint131(y_ptr, i, n);
+    _staging_buf[count + i] = sp;
   }
 
   HIP_CALL(hipFree(dev_gx));
   HIP_CALL(hipFree(dev_gy));
-  HIP_CALL(hipFree(tmp));
   HIP_CALL(hipFree(mbuf));
+  HIP_CALL(hipFree(x_ptr));
+  HIP_CALL(hipFree(y_ptr));
+  HIP_CALL(hipFree(priv_keys));
   
   *_staging_count= _staging_buf_size;
 }
