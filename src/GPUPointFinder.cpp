@@ -33,7 +33,6 @@ struct KernelInfo {
   void* do_step;
   void* batch_mul;
   void* sanity_check;
-  void* refill_staging;
 };
 
 std::map<std::string, KernelInfo> _kernel_map = {
@@ -130,9 +129,12 @@ GPUPointFinder::GPUPointFinder(int device, int dpbits, bool benchmark)
 
   const int iters = 64 * 1024;
   // Can run ~65k iteration before buffer is full
-  _result_buf_size = iters * (int)((double)_num_points * prob + 1.0);
+  int result_buf_size = iters * (int)((double)_num_points * prob + 1.0);
 
-  _report_count = (int)((double)_result_buf_size * 0.85);
+  if(_benchmark == false) {
+    _results = stack_create<DPResult>(result_buf_size);
+  }
+  //int report_count = (int)((double)_result_buf_size * 0.85);
 
   // Calculate an appropriate size for the staging buffer
   int staging_buf_size = (int)(((double)_num_points * prob + 1.0) * iters);
@@ -144,22 +146,26 @@ GPUPointFinder::GPUPointFinder(int device, int dpbits, bool benchmark)
 GPUPointFinder::~GPUPointFinder()
 {
   stack_destroy(_staging);
+  stack_destroy(_results);
   free_buffers();
 }
 
 
 void GPUPointFinder::report_points()
 {
-  int count = *_result_count;
+  int count = *_results.size;
  
   if(count > 0) {
 
     std::vector<DistinguishedPoint> dps;
-    for(int i = 0; i < count; i++) {
-      uint131_t x = _result_buf[i].x;
-      uint131_t y = _result_buf[i].y;
-      uint131_t a = _result_buf[i].a;
-      uint64_t length = _result_buf[i].length;
+
+    while(*_results.size > 0) {
+      DPResult r = stack_pop(_results);
+
+      uint131_t x = r.x;
+      uint131_t y = r.y;
+      uint131_t a = r.a;
+      uint64_t length = r.length;
       
       ecc::ecpoint_t p(x, y);
 
@@ -167,15 +173,16 @@ void GPUPointFinder::report_points()
       assert(ecc::exists(p));
 
       assert((p.x.w.v0 & _dpmask) == 0);
- 
+
       dps.push_back(DistinguishedPoint(a, p, _dpbits, length));
     }
+
 
     if(_callback) {
       _callback(dps);
     }
 
-    *_result_count = 0;
+    //*_result_count = 0;
   }
 }
 
@@ -405,8 +412,8 @@ void GPUPointFinder::free_buffers()
   HIP_IGNORE(hipFree(_dev_ry));
 
   HIP_IGNORE(hipFree(_priv_key_a));
-  HIP_IGNORE(hipFree(_result_buf));
-  HIP_IGNORE(hipFree(_result_count));
+  //HIP_IGNORE(hipFree(_result_buf));
+  //HIP_IGNORE(hipFree(_result_count));
   HIP_IGNORE(hipFree(_sanity_flag));
 
   HIP_IGNORE(hipFree(_walk_start));
@@ -424,10 +431,10 @@ void GPUPointFinder::allocate_buffers(int n)
 
   HIP_CALL(hipMallocManaged(&_priv_key_a, _num_points * sizeof(uint131_t)));
  
-  HIP_CALL(hipMallocManaged(&_result_buf, _result_buf_size * sizeof(DPResult)));
+  //HIP_CALL(hipMallocManaged(&_result_buf, _result_buf_size * sizeof(DPResult)));
 
-  HIP_CALL(hipMallocManaged(&_result_count, sizeof(uint32_t)));
-  *_result_count = 0;
+  //HIP_CALL(hipMallocManaged(&_result_count, sizeof(uint32_t)));
+  //*_result_count = 0;
   
   HIP_CALL(hipMallocManaged(&_sanity_flag, sizeof(uint32_t)));
   *_sanity_flag = 0;
@@ -441,7 +448,7 @@ double GPUPointFinder::step()
 {
 
   // We don't need result buf for benchmark
-  DPResult* result_buf = _benchmark ? nullptr : _result_buf;
+  //DPResult* result_buf = _benchmark ? nullptr : _result_buf;
 
   hipEvent_t start;
   hipEvent_t stop;
@@ -454,7 +461,8 @@ double GPUPointFinder::step()
   for(int i = 0; i < _iters_per_step; i++) {
     HIP_CALL(hipLaunchKernel(_do_step_ptr, dim3(_blocks), dim3(_threads_per_block), 0, _dev_x, _dev_y, _dev_rx, _dev_ry,
                   _mbuf, _num_points,
-                  result_buf, _result_count,
+                  //_results.ptr, _results.size,
+                  _results,
                   _staging,
                   _priv_key_a,
                   _counter,
@@ -510,7 +518,8 @@ double GPUPointFinder::step()
       refill_staging();
     }
 
-    if(*_result_count >= _report_count) {
+    // Report at 85% capacity
+    if(*_results.size >= (int)(_results.max_size * 0.85)) {
       report_points();
     }
   }

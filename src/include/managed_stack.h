@@ -36,17 +36,27 @@ template<typename T> void stack_fill(ManagedStack<T>& stack, T* data, int count)
     *stack.size += count;
 }
 
+#if !defined(__HIPCC__)
+template<typename T> __device__ T stack_pop(ManagedStack<T>& stack)
+{
+    int idx = *stack.size - 1;
+    (*stack.size)--;
+
+    return stack.ptr[idx];
+}
+#endif
+
 // Device functions
 
 #if defined(__HIPCC__)
 
-template<typename T> __device__ T stack_pop(ManagedStack<T>& stack)
+template<typename T> __device__ __inline__ T stack_pop(ManagedStack<T>& stack)
 {
     int idx = atomicSub(stack.size, 1) - 1;
     return stack.ptr[idx];
 }
 
-template<typename T> __device__ void stack_push(ManagedStack<T>& stack, T val)
+template<typename T> __device__ __inline__ void stack_push(ManagedStack<T>& stack, T& val)
 {
     int idx = atomicAdd(stack.size, 1);
     stack.ptr[idx] = val;

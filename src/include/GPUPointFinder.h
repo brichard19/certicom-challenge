@@ -45,8 +45,7 @@ private:
 
   ManagedStack<StagingPoint> _staging;
 
-  DPResult* _result_buf = nullptr;
-  uint32_t* _result_count = nullptr;
+  ManagedStack<DPResult> _results;
 
   uint32_t* _sanity_flag = nullptr;
 
