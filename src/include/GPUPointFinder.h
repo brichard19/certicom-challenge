@@ -5,6 +5,7 @@
 
 #include "ec_rho.h"
 #include "ecc.cuh"
+#include "managed_stack.h"
 
 class GPUPointFinder : public DistinguishedPointFinder {
 
@@ -26,9 +27,7 @@ private:
 
   int _iters_per_step = 10;
   int _result_buf_size;
-  int _staging_buf_size = 1024;
   int _report_count = 16;
-  int _staging_min = 16;
 
   int _dpbits = 16;
   uint64_t _dpmask;
@@ -44,8 +43,7 @@ private:
 
   uint131_t* _priv_key_a = nullptr;
 
-  StagingPoint* _staging_buf = nullptr;
-  uint32_t* _staging_count = nullptr;
+  ManagedStack<StagingPoint> _staging;
 
   DPResult* _result_buf = nullptr;
   uint32_t* _result_count = nullptr;

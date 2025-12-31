@@ -28,7 +28,7 @@ template<int CURVE, int N> __device__ void do_step_impl(uint131_t* global_px, ui
                                    uint131_t* global_rx, uint131_t* global_ry,
                                    uint131_t* mbuf, int count,
                                    DPResult* result, int* result_count,
-                                   StagingPoint* staging, int* staging_count,
+                                   ManagedStack<StagingPoint> staging,
                                    uint131_t* priv_key_a,
                                    uint64_t counter,
                                    uint64_t* start_pos,
@@ -60,11 +60,11 @@ template<int CURVE, int N> __device__ void do_step_impl(uint131_t* global_px, ui
       result[idx] = r;
 
       // Grab a new point from the staging buffer
-      idx = atomicSub(staging_count, 1) - 1;
-    
-      uint131_t new_x = staging[idx].x;
-      uint131_t new_y = staging[idx].y;
-      priv_key_a[i] = staging[idx].a;
+      StagingPoint sp = stack_pop(staging);
+      
+      uint131_t new_x = sp.x;
+      uint131_t new_y = sp.y;
+      priv_key_a[i] = sp.a;
 
       start_pos[i] = counter;
       px = new_x;
@@ -320,13 +320,13 @@ extern "C" __global__ void do_step_p79(uint131_t* global_px, uint131_t* global_p
                                    uint131_t* global_rx, uint131_t* global_ry,
                                    uint131_t* mbuf, int count,
                                    DPResult* result, int* result_count,
-                                   StagingPoint* staging, int* staging_count,
+                                   ManagedStack<StagingPoint> staging,
                                    uint131_t* priv_key_a,
                                    uint64_t counter,
                                    uint64_t* start_pos,
                                    uint64_t dpmask)
 {
-  do_step_impl<79, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, staging_count, priv_key_a, counter, start_pos, dpmask);
+  do_step_impl<79, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, priv_key_a, counter, start_pos, dpmask);
 }
 
 
@@ -341,13 +341,13 @@ extern "C" __global__ void do_step_p131(uint131_t* global_px, uint131_t* global_
                                    uint131_t* global_rx, uint131_t* global_ry,
                                    uint131_t* mbuf, int count,
                                    DPResult* result, int* result_count,
-                                   StagingPoint* staging, int* staging_count,
+                                   ManagedStack<StagingPoint> staging,
                                    uint131_t* priv_key_a,
                                    uint64_t counter,
                                    uint64_t* start_pos,
                                    uint64_t dpmask)
 {
-  do_step_impl<131, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, staging_count, priv_key_a, counter, start_pos, dpmask);
+  do_step_impl<131, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, priv_key_a, counter, start_pos, dpmask);
 }
 
 extern "C" __global__ void batch_multiply_p89(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* mbuf, uint131_t* gx, uint131_t* gy, int priv_key_bit, int count)
@@ -359,11 +359,11 @@ extern "C" __global__ void do_step_p89(uint131_t* global_px, uint131_t* global_p
                                    uint131_t* global_rx, uint131_t* global_ry,
                                    uint131_t* mbuf, int count,
                                    DPResult* result, int* result_count,
-                                   StagingPoint* staging, int* staging_count,
+                                   ManagedStack<StagingPoint> staging,
                                    uint131_t* priv_key_a,
                                    uint64_t counter,
                                    uint64_t* start_pos,
                                    uint64_t dpmask)
 {
-  do_step_impl<89, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, staging_count, priv_key_a, counter, start_pos, dpmask);
+  do_step_impl<89, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, priv_key_a, counter, start_pos, dpmask);
 }

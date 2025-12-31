@@ -135,15 +135,15 @@ GPUPointFinder::GPUPointFinder(int device, int dpbits, bool benchmark)
   _report_count = (int)((double)_result_buf_size * 0.85);
 
   // Calculate an appropriate size for the staging buffer
-  _staging_buf_size = (int)(((double)_num_points * prob + 1.0) * iters);
+  int staging_buf_size = (int)(((double)_num_points * prob + 1.0) * iters);
 
-  // Refill after we reach 15%
-  _staging_min = (int)((double)_staging_buf_size * 0.15);
+  _staging = stack_create<StagingPoint>(staging_buf_size);
 }
 
 
 GPUPointFinder::~GPUPointFinder()
 {
+  stack_destroy(_staging);
   free_buffers();
 }
 
@@ -181,11 +181,9 @@ void GPUPointFinder::report_points()
 
 void GPUPointFinder::refill_staging()
 {
-  int count = *_staging_count;
-
   LOG("Refilling staging buffer");
 
-  int n = _staging_buf_size - count;
+  int n = _staging.max_size - *_staging.size;
 
   // Create lookup table for G, 2G, 4G ... nG
   uint131_t* dev_gx = nullptr;
@@ -246,14 +244,17 @@ void GPUPointFinder::refill_staging()
     }
   }
 
+  std::vector<StagingPoint> tmp;
   // Copy into staging buffer
   for(int i = 0; i < n; i++) {
     StagingPoint sp;
     sp.a = priv_keys[i];
     sp.x = load_uint131(x_ptr, i, n);
     sp.y = load_uint131(y_ptr, i, n);
-    _staging_buf[count + i] = sp;
+    tmp.push_back(sp);
   }
+
+  stack_fill(_staging, tmp.data(), tmp.size());
 
   HIP_CALL(hipFree(dev_gx));
   HIP_CALL(hipFree(dev_gy));
@@ -261,8 +262,6 @@ void GPUPointFinder::refill_staging()
   HIP_CALL(hipFree(x_ptr));
   HIP_CALL(hipFree(y_ptr));
   HIP_CALL(hipFree(priv_keys));
-  
-  *_staging_count= _staging_buf_size;
 }
 
 void GPUPointFinder::init()
@@ -408,8 +407,6 @@ void GPUPointFinder::free_buffers()
   HIP_IGNORE(hipFree(_priv_key_a));
   HIP_IGNORE(hipFree(_result_buf));
   HIP_IGNORE(hipFree(_result_count));
-  HIP_IGNORE(hipFree(_staging_buf));
-  HIP_IGNORE(hipFree(_staging_count));
   HIP_IGNORE(hipFree(_sanity_flag));
 
   HIP_IGNORE(hipFree(_walk_start));
@@ -427,10 +424,6 @@ void GPUPointFinder::allocate_buffers(int n)
 
   HIP_CALL(hipMallocManaged(&_priv_key_a, _num_points * sizeof(uint131_t)));
  
-  HIP_CALL(hipMallocManaged(&_staging_buf, _staging_buf_size * sizeof(StagingPoint)));
-  HIP_CALL(hipMallocManaged(&_staging_count, sizeof(uint32_t)));
-  *_staging_count = 0;
-
   HIP_CALL(hipMallocManaged(&_result_buf, _result_buf_size * sizeof(DPResult)));
 
   HIP_CALL(hipMallocManaged(&_result_count, sizeof(uint32_t)));
@@ -462,7 +455,7 @@ double GPUPointFinder::step()
     HIP_CALL(hipLaunchKernel(_do_step_ptr, dim3(_blocks), dim3(_threads_per_block), 0, _dev_x, _dev_y, _dev_rx, _dev_ry,
                   _mbuf, _num_points,
                   result_buf, _result_count,
-                  _staging_buf, _staging_count,
+                  _staging,
                   _priv_key_a,
                   _counter,
                   _walk_start,
@@ -511,7 +504,9 @@ double GPUPointFinder::step()
 
   // Don't need to check these during benchmark
   if(_benchmark == false) {
-    if(*_staging_count <= _staging_min) {
+
+    // Refill at 10% capacity
+    if(*_staging.size <= (int)(_staging.max_size * 0.1)) {
       refill_staging();
     }
 
