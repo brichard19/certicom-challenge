@@ -30,7 +30,7 @@ private:
   int _report_count = 16;
 
   int _dpbits = 16;
-  uint64_t _dpmask;
+  uint32_t _dpmask;
 
   std::function<void(const std::vector<DistinguishedPoint> &)> _callback;
 

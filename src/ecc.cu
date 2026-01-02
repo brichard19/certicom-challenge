@@ -25,7 +25,7 @@ __device__ void do_step_impl(uint131_t *global_px, uint131_t *global_py, uint131
                              uint131_t *global_ry, uint131_t *mbuf, DPResult *result,
                              int *result_count, ManagedStack<StagingPoint> staging,
                              uint131_t *priv_key_a, uint64_t counter, uint64_t *start_pos,
-                             uint64_t dpmask)
+                             uint32_t dpmask)
 {
   const int rmask = 0x1f;
   const int gid = get_global_id();
@@ -323,7 +323,7 @@ extern "C" __global__ void do_step_p79(uint131_t *global_px, uint131_t *global_p
                                        uint131_t *global_rx, uint131_t *global_ry, uint131_t *mbuf,
                                        DPResult *result, int *result_count,
                                        ManagedStack<StagingPoint> staging, uint131_t *priv_key_a,
-                                       uint64_t counter, uint64_t *start_pos, uint64_t dpmask)
+                                       uint64_t counter, uint64_t *start_pos, uint32_t dpmask)
 {
   do_step_impl<79, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf,
                                       result, result_count, staging, priv_key_a, counter, start_pos,
@@ -342,7 +342,7 @@ extern "C" __global__ void do_step_p131(uint131_t *global_px, uint131_t *global_
                                         uint131_t *global_rx, uint131_t *global_ry, uint131_t *mbuf,
                                         DPResult *result, int *result_count,
                                         ManagedStack<StagingPoint> staging, uint131_t *priv_key_a,
-                                        uint64_t counter, uint64_t *start_pos, uint64_t dpmask)
+                                        uint64_t counter, uint64_t *start_pos, uint32_t dpmask)
 {
   do_step_impl<131, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf,
                                        result, result_count, staging, priv_key_a, counter,
@@ -361,7 +361,7 @@ extern "C" __global__ void do_step_p89(uint131_t *global_px, uint131_t *global_p
                                        uint131_t *global_rx, uint131_t *global_ry, uint131_t *mbuf,
                                        DPResult *result, int *result_count,
                                        ManagedStack<StagingPoint> staging, uint131_t *priv_key_a,
-                                       uint64_t counter, uint64_t *start_pos, uint64_t dpmask)
+                                       uint64_t counter, uint64_t *start_pos, uint32_t dpmask)
 {
   do_step_impl<89, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf,
                                       result, result_count, staging, priv_key_a, counter, start_pos,

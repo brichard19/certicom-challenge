@@ -34,19 +34,19 @@ extern "C" __global__ void do_step_p79(uint131_t *global_px, uint131_t *global_p
                                        uint131_t *global_rx, uint131_t *global_ry, uint131_t *mbuf,
                                        DPResult *result, int *result_count,
                                        ManagedStack<StagingPoint> staging, uint131_t *priv_key_a,
-                                       uint64_t counter, uint64_t *start_pos, uint64_t dpmask);
+                                       uint64_t counter, uint64_t *start_pos, uint32_t dpmask);
 
 extern "C" __global__ void do_step_p89(uint131_t *global_px, uint131_t *global_py,
                                        uint131_t *global_rx, uint131_t *global_ry, uint131_t *mbuf,
                                        DPResult *result, int *result_count,
                                        ManagedStack<StagingPoint> staging, uint131_t *priv_key_a,
-                                       uint64_t counter, uint64_t *start_pos, uint64_t dpmask);
+                                       uint64_t counter, uint64_t *start_pos, uint32_t dpmask);
 
 extern "C" __global__ void do_step_p131(uint131_t *global_px, uint131_t *global_py,
                                         uint131_t *global_rx, uint131_t *global_ry, uint131_t *mbuf,
                                         DPResult *result, int *result_count,
                                         ManagedStack<StagingPoint> staging, uint131_t *priv_key_a,
-                                        uint64_t counter, uint64_t *start_pos, uint64_t dpmask);
+                                        uint64_t counter, uint64_t *start_pos, uint32_t dpmask);
 
 extern "C" __global__ void batch_multiply_p79(uint131_t *global_px, uint131_t *global_py,
                                               uint131_t *private_keys, uint131_t *mbuf,

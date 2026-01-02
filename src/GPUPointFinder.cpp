@@ -117,7 +117,7 @@ GPUPointFinder::GPUPointFinder(int device, int dpbits, bool benchmark)
   _num_points = (num_points + total_threads - 1) / total_threads * total_threads;
 
   // Create DP mask
-  _dpmask = ((uint64_t)1 << _dpbits) - 1;
+  _dpmask = ((uint32_t)1 << _dpbits) - 1;
 
   // Using the number of DP bits and the number of parallel walks, we can
   // approximate how many results we will get per iteration
