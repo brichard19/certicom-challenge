@@ -445,7 +445,7 @@ double GPUPointFinder::step()
   HIP_CALL(hipEventRecord(start));
   for(int i = 0; i < _iters_per_step; i++) {
     HIP_CALL(hipLaunchKernel(_do_step_ptr, dim3(_blocks), dim3(_threads_per_block), 0, _dev_x,
-                             _dev_y, _dev_rx, _dev_ry, _mbuf, _num_points, result_buf,
+                             _dev_y, _dev_rx, _dev_ry, _mbuf, result_buf,
                              _result_count, _staging, _priv_key_a, _counter, _walk_start, _dpmask));
     _counter++;
   }
