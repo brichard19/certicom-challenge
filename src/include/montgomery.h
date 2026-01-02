@@ -3,7 +3,6 @@
 
 #include "uint131.h"
 
-
 namespace mont {
 
 uint131_t to(uint131_t a);
@@ -19,6 +18,6 @@ uint131_t rshift(uint131_t x, int n);
 uint131_t lshift(uint131_t x, int n);
 bool less_than(uint131_t x, uint131_t y);
 
-};
+}; // namespace mont
 
 #endif

@@ -10,27 +10,27 @@ namespace util {
 double get_time();
 std::string get_date_time();
 std::string get_hostname();
-std::string to_hex(const void* bytes, size_t count);
+std::string to_hex(const void *bytes, size_t count);
 
-bool file_exists(const std::string& path);
+bool file_exists(const std::string &path);
 
 class Timer {
 
 private:
-    double _start = 0.0;
+  double _start = 0.0;
 
-    double _end = 0.0;
+  double _end = 0.0;
 
-    bool _running = false;
+  bool _running = false;
 
 public:
-    Timer();
+  Timer();
 
-    void start();
-    void stop();
-    double elapsed();
+  void start();
+  void stop();
+  double elapsed();
 };
 
-};
+}; // namespace util
 
 #endif

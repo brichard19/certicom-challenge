@@ -10,7 +10,7 @@ union uint131_t {
     uint64_t v0;
     uint64_t v1;
     uint32_t v2;
-  }w;
+  } w;
   uint32_t v[5];
 };
 
@@ -19,11 +19,13 @@ union uint160_t {
     uint64_t v0;
     uint64_t v1;
     uint32_t v2;
-  }w;
+  } w;
 };
 
 struct uint262_t {
   uint64_t v[5];
 };
+
+typedef unsigned __int128 uint128_t;
 
 #endif

@@ -1,8 +1,8 @@
+#include "hip_helper.h"
 #include <algorithm>
 #include <cassert>
 #include <getopt.h>
 #include <hip/hip_runtime.h>
-#include "hip_helper.h"
 #include <iostream>
 
 #include "GPUPointFinder.h"
@@ -13,7 +13,7 @@ double _benchmark_run_time = 10.0;
 
 void benchmark(int hip_device)
 {
-  DistinguishedPointFinder* pf = new GPUPointFinder(hip_device, 63, true);
+  DistinguishedPointFinder *pf = new GPUPointFinder(hip_device, 63, true);
 
   pf->init();
 
@@ -33,7 +33,7 @@ void benchmark(int hip_device)
     steps++;
 
     // Print performance info
-    double t = run_timer.elapsed(); 
+    double t = run_timer.elapsed();
     if(t >= 3.0) {
       total_time += t;
       run_timer.start();
@@ -64,22 +64,22 @@ void benchmark(int hip_device)
   }
 
   double avg = sum / (ara.size() - 1);
-  
+
   std::cout << std::endl;
   std::cout << (avg / 1e6) << " MKeys/sec" << std::endl;
 
   delete pf;
 }
 
-int main(int argc, char**argv)
+int main(int argc, char **argv)
 {
   std::string curve_name;
   int device = 0;
 
   while(true) {
     static struct option long_options[] = {
-      {"curve", required_argument, 0, 'c'},
-      {"gpu", required_argument, 0, 'g'},
+        {"curve", required_argument, 0, 'c'},
+        {"gpu", required_argument, 0, 'g'},
     };
 
     int opt_idx = 0;
@@ -91,20 +91,20 @@ int main(int argc, char**argv)
     }
 
     switch(c) {
-      case 'c':
-        curve_name = std::string(optarg);
-        break;
-      
-        case 'g':
-        device = atoi(optarg);
-        break;
+    case 'c':
+      curve_name = std::string(optarg);
+      break;
 
-      case '?':
-        break;
+    case 'g':
+      device = atoi(optarg);
+      break;
 
-      default:
-        std::cout << "Invalid argument" << std::endl;
-        exit(1);
+    case '?':
+      break;
+
+    default:
+      std::cout << "Invalid argument" << std::endl;
+      exit(1);
     }
   }
 
@@ -115,7 +115,7 @@ int main(int argc, char**argv)
 
   try {
     ecc::set_curve(curve_name);
-  }catch (...) {
+  } catch(...) {
     std::cout << "Invalid curve name" << std::endl;
     return 1;
   }

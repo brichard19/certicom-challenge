@@ -1,15 +1,12 @@
-#include "ecmath.cuh"
 #include "ecc.cuh"
+#include "ecmath.cuh"
+#include "managed_stack.h"
 
 #define get_global_id() (blockDim.x * blockIdx.x + threadIdx.x)
 
 #define get_global_size() (blockDim.x * gridDim.x)
 
-__device__ void print_big_int(uint131_t& x)
-{
-  printf("%.8X%.16lX%.16lX", x.w.v2, x.w.v1, x.w.v0);
-}
-
+__device__ void print_big_int(uint131_t &x) { printf("%.8X%.16lX%.16lX", x.w.v2, x.w.v1, x.w.v0); }
 
 __device__ int get_bit(uint131_t x, int bit)
 {
@@ -22,17 +19,13 @@ __device__ int get_bit(uint131_t x, int bit)
   }
 }
 
-
 // If the private key bit for P is 1, then add Q to P
-template<int CURVE, int N> __device__ void do_step_impl(uint131_t* global_px, uint131_t* global_py,
-                                   uint131_t* global_rx, uint131_t* global_ry,
-                                   uint131_t* mbuf, int count,
-                                   DPResult* result, int* result_count,
-                                   ManagedStack<StagingPoint> staging,
-                                   uint131_t* priv_key_a,
-                                   uint64_t counter,
-                                   uint64_t* start_pos,
-                                   uint64_t dpmask)
+template <int CURVE, int N>
+__device__ void do_step_impl(uint131_t *global_px, uint131_t *global_py, uint131_t *global_rx,
+                             uint131_t *global_ry, uint131_t *mbuf, int count, DPResult *result,
+                             int *result_count, ManagedStack<StagingPoint> staging,
+                             uint131_t *priv_key_a, uint64_t counter, uint64_t *start_pos,
+                             uint64_t dpmask)
 {
   const int rmask = 0x1f;
   const int gid = get_global_id();
@@ -61,7 +54,7 @@ template<int CURVE, int N> __device__ void do_step_impl(uint131_t* global_px, ui
 
       // Grab a new point from the staging buffer
       StagingPoint sp = stack_pop(staging);
-      
+
       uint131_t new_x = sp.x;
       uint131_t new_y = sp.y;
       priv_key_a[i] = sp.a;
@@ -117,7 +110,7 @@ template<int CURVE, int N> __device__ void do_step_impl(uint131_t* global_px, ui
       // Cancel out from the inverse
       // e.g. abcde * e^-1 = abcd
       uint131_t diff = sub<CURVE>(rx, px);
-      
+
       inverse = mul<CURVE>(inverse, diff);
 
     } else {
@@ -143,9 +136,12 @@ template<int CURVE, int N> __device__ void do_step_impl(uint131_t* global_px, ui
   }
 }
 
-
 // If the private key bit for P is 1, then add Q to P
-template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* global_qx, uint131_t* global_qy, uint131_t* mbuf, int priv_key_bit, int count)
+template <int CURVE>
+__device__ void batch_multiply_step(uint131_t *global_px, uint131_t *global_py,
+                                    uint131_t *private_keys, uint131_t *global_qx,
+                                    uint131_t *global_qy, uint131_t *mbuf, int priv_key_bit,
+                                    int count)
 {
 
   int gid = get_global_id();
@@ -159,9 +155,9 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
   uint131_t one = Curve<CURVE>::one();
 
   uint131_t inverse = one;
-  
+
   // Perform Qx - Px and then multiply them together
-  for(; i < count; i+=dim) {
+  for(; i < count; i += dim) {
 
     uint131_t px = load_uint131(global_px, i, count);
     uint131_t t;
@@ -169,7 +165,7 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
     int bit = get_bit(private_keys[i], priv_key_bit);
 
     if(!bit || is_infinity(px) || equal(px, qx)) {
-      
+
       // Nothing to do, just use 1
       t = one;
     } else {
@@ -189,7 +185,7 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
 
   // Complete addition
 
-  for(; i >= gid; i-=dim) {
+  for(; i >= gid; i -= dim) {
     uint131_t px = load_uint131(global_px, i, count);
     uint131_t py = load_uint131(global_py, i, count);
 
@@ -207,7 +203,7 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
       store_uint131(global_py, i, count, global_qy[priv_key_bit + 1]);
       continue;
     }
-    
+
     uint131_t s;
     if(i > gid) {
 
@@ -221,7 +217,7 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
       // Cancel out from the inverse
       // e.g. abcde * e^-1 = abcd
       uint131_t diff = sub<CURVE>(qx, px);
-      
+
       inverse = mul<CURVE>(inverse, diff);
 
     } else {
@@ -245,7 +241,9 @@ template<int CURVE> __device__ void batch_multiply_step(uint131_t* global_px, ui
   }
 }
 
-template<int CURVE> __device__ void sanity_check_impl(uint131_t* global_px, uint131_t* global_py, int count, int* errors)
+template <int CURVE>
+__device__ void sanity_check_impl(uint131_t *global_px, uint131_t *global_py, int count,
+                                  int *errors)
 {
   int gid = get_global_id();
   int dim = get_global_size();
@@ -260,11 +258,11 @@ template<int CURVE> __device__ void sanity_check_impl(uint131_t* global_px, uint
   }
 }
 
-__device__ void clear_public_keys_impl(uint131_t* x_ptr, uint131_t* y_ptr, int count)
+__device__ void clear_public_keys_impl(uint131_t *x_ptr, uint131_t *y_ptr, int count)
 {
   int idx = get_global_id();
   int dim = get_global_size();
- 
+
   uint131_t x;
   set_point_at_infinity(x);
 
@@ -273,97 +271,98 @@ __device__ void clear_public_keys_impl(uint131_t* x_ptr, uint131_t* y_ptr, int c
   }
 }
 
-__device__ void reset_counters_impl(uint64_t* start_pos, uint64_t value, int count)
+__device__ void reset_counters_impl(uint64_t *start_pos, uint64_t value, int count)
 {
   int idx = get_global_id();
   int dim = get_global_size();
-  
+
   for(int i = idx; i < count; i += dim) {
     start_pos[i] = value;
   }
 }
 
 // Set all public keys to point-at-infinity
-extern "C" __global__ void clear_public_keys(uint131_t* x, uint131_t* y, int count)
+extern "C" __global__ void clear_public_keys(uint131_t *x, uint131_t *y, int count)
 {
   clear_public_keys_impl(x, y, count);
 }
 
-extern "C" __global__ void reset_counters(uint64_t* start_pos, uint64_t value, int count)
+extern "C" __global__ void reset_counters(uint64_t *start_pos, uint64_t value, int count)
 {
   reset_counters_impl(start_pos, value, count);
 }
 
-extern "C" __global__ void sanity_check_p131(uint131_t* global_px, uint131_t* global_py, int count, int* errors)
+extern "C" __global__ void sanity_check_p131(uint131_t *global_px, uint131_t *global_py, int count,
+                                             int *errors)
 {
   sanity_check_impl<131>(global_px, global_py, count, errors);
 }
 
-extern "C" __global__ void sanity_check_p79(uint131_t* global_px, uint131_t* global_py, int count, int* errors)
+extern "C" __global__ void sanity_check_p79(uint131_t *global_px, uint131_t *global_py, int count,
+                                            int *errors)
 {
   sanity_check_impl<79>(global_px, global_py, count, errors);
 }
 
-extern "C" __global__ void sanity_check_p89(uint131_t* global_px, uint131_t* global_py, int count, int* errors)
+extern "C" __global__ void sanity_check_p89(uint131_t *global_px, uint131_t *global_py, int count,
+                                            int *errors)
 {
   sanity_check_impl<89>(global_px, global_py, count, errors);
 }
 
-
-extern "C" __global__ void batch_multiply_p79(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* mbuf, uint131_t* gx, uint131_t* gy, int priv_key_bit, int count)
+extern "C" __global__ void batch_multiply_p79(uint131_t *global_px, uint131_t *global_py,
+                                              uint131_t *private_keys, uint131_t *mbuf,
+                                              uint131_t *gx, uint131_t *gy, int priv_key_bit,
+                                              int count)
 {
-    batch_multiply_step<79>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
+  batch_multiply_step<79>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
 }
 
-
-extern "C" __global__ void do_step_p79(uint131_t* global_px, uint131_t* global_py,
-                                   uint131_t* global_rx, uint131_t* global_ry,
-                                   uint131_t* mbuf, int count,
-                                   DPResult* result, int* result_count,
-                                   ManagedStack<StagingPoint> staging,
-                                   uint131_t* priv_key_a,
-                                   uint64_t counter,
-                                   uint64_t* start_pos,
-                                   uint64_t dpmask)
+extern "C" __global__ void do_step_p79(uint131_t *global_px, uint131_t *global_py,
+                                       uint131_t *global_rx, uint131_t *global_ry, uint131_t *mbuf,
+                                       int count, DPResult *result, int *result_count,
+                                       ManagedStack<StagingPoint> staging, uint131_t *priv_key_a,
+                                       uint64_t counter, uint64_t *start_pos, uint64_t dpmask)
 {
-  do_step_impl<79, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, priv_key_a, counter, start_pos, dpmask);
+  do_step_impl<79, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, count,
+                                      result, result_count, staging, priv_key_a, counter, start_pos,
+                                      dpmask);
 }
 
-
-
-extern "C" __global__ void batch_multiply_p131(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* mbuf, uint131_t* gx, uint131_t* gy, int priv_key_bit, int count)
+extern "C" __global__ void batch_multiply_p131(uint131_t *global_px, uint131_t *global_py,
+                                               uint131_t *private_keys, uint131_t *mbuf,
+                                               uint131_t *gx, uint131_t *gy, int priv_key_bit,
+                                               int count)
 {
-    batch_multiply_step<131>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
+  batch_multiply_step<131>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
 }
 
-
-extern "C" __global__ void do_step_p131(uint131_t* global_px, uint131_t* global_py,
-                                   uint131_t* global_rx, uint131_t* global_ry,
-                                   uint131_t* mbuf, int count,
-                                   DPResult* result, int* result_count,
-                                   ManagedStack<StagingPoint> staging,
-                                   uint131_t* priv_key_a,
-                                   uint64_t counter,
-                                   uint64_t* start_pos,
-                                   uint64_t dpmask)
+extern "C" __global__ void do_step_p131(uint131_t *global_px, uint131_t *global_py,
+                                        uint131_t *global_rx, uint131_t *global_ry, uint131_t *mbuf,
+                                        int count, DPResult *result, int *result_count,
+                                        ManagedStack<StagingPoint> staging, uint131_t *priv_key_a,
+                                        uint64_t counter, uint64_t *start_pos, uint64_t dpmask)
 {
-  do_step_impl<131, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, priv_key_a, counter, start_pos, dpmask);
+  do_step_impl<131, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, count,
+                                       result, result_count, staging, priv_key_a, counter,
+                                       start_pos, dpmask);
 }
 
-extern "C" __global__ void batch_multiply_p89(uint131_t* global_px, uint131_t* global_py, uint131_t* private_keys, uint131_t* mbuf, uint131_t* gx, uint131_t* gy, int priv_key_bit, int count)
+extern "C" __global__ void batch_multiply_p89(uint131_t *global_px, uint131_t *global_py,
+                                              uint131_t *private_keys, uint131_t *mbuf,
+                                              uint131_t *gx, uint131_t *gy, int priv_key_bit,
+                                              int count)
 {
-    batch_multiply_step<89>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
+  batch_multiply_step<89>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
 }
 
-extern "C" __global__ void do_step_p89(uint131_t* global_px, uint131_t* global_py,
-                                   uint131_t* global_rx, uint131_t* global_ry,
-                                   uint131_t* mbuf, int count,
-                                   DPResult* result, int* result_count,
-                                   ManagedStack<StagingPoint> staging,
-                                   uint131_t* priv_key_a,
-                                   uint64_t counter,
-                                   uint64_t* start_pos,
-                                   uint64_t dpmask)
+extern "C" __global__ void do_step_p89(uint131_t *global_px, uint131_t *global_py,
+                                       uint131_t *global_rx, uint131_t *global_ry, uint131_t *mbuf,
+                                       int count, DPResult *result, int *result_count,
+                                       ManagedStack<StagingPoint> staging, uint131_t *priv_key_a,
+                                       uint64_t counter, uint64_t *start_pos, uint64_t dpmask)
 {
-  do_step_impl<89, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, count, result, result_count, staging, priv_key_a, counter, start_pos, dpmask);
+  do_step_impl<89, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, count,
+                                      result, result_count, staging, priv_key_a, counter, start_pos,
+                                      dpmask);
 }

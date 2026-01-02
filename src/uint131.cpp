@@ -11,47 +11,44 @@ namespace {
 uint8_t from_hex(char hex)
 {
   if(hex >= 'a' && hex <= 'f') {
-      return hex - 'a' + 10;
+    return hex - 'a' + 10;
   } else if(hex >= 'A' && hex <= 'F') {
-      return hex - 'A' + 10;
+    return hex - 'A' + 10;
   } else if(hex >= '0' && hex <= '9') {
-      return hex - '0';
+    return hex - '0';
   }
 
   return '0';
 }
 
-std::vector<uint64_t> parse_hex_uint64(const std::string& s)
+std::vector<uint64_t> parse_hex_uint64(const std::string &s)
 {
-    std::string hex = s;
+  std::string hex = s;
 
-    // Pad with leading zeros
-    if (hex.length() % 16 != 0)
-    {
-      hex = std::string(16 - hex.length() % 16, '0') + hex;
+  // Pad with leading zeros
+  if(hex.length() % 16 != 0) {
+    hex = std::string(16 - hex.length() % 16, '0') + hex;
+  }
+
+  std::vector<uint64_t> ara;
+
+  for(int i = 0; i < hex.length() / 16; i++) {
+    uint64_t word = 0;
+    for(int j = 0; j < 8; j++) {
+      word <<= 8;
+      uint8_t high = from_hex(hex[16 * i + 2 * j]);
+      uint8_t low = from_hex(hex[16 * i + 2 * j + 1]);
+
+      uint8_t value = (high << 4) | low;
+      word |= value;
     }
+    ara.push_back(word);
+  }
 
-    std::vector<uint64_t> ara;
-
-    for (int i = 0; i < hex.length() / 16; i++)
-    {
-      uint64_t word = 0;
-      for (int j = 0; j < 8; j++)
-      {
-        word <<= 8;
-        uint8_t high = from_hex(hex[16 * i + 2 * j]);
-        uint8_t low = from_hex(hex[16 * i + 2 * j + 1]);
-
-        uint8_t value = (high << 4) | low;
-        word |= value;
-      }
-      ara.push_back(word);
-    }
-
-    return ara;
+  return ara;
 }
 
-}
+} // namespace
 
 uint131_t make_uint131(uint32_t x)
 {
@@ -63,7 +60,7 @@ uint131_t make_uint131(uint32_t x)
   return val;
 }
 
-uint131_t make_uint131(const std::string& hex)
+uint131_t make_uint131(const std::string &hex)
 {
 
   assert(hex.length() <= 33);
@@ -75,7 +72,7 @@ uint131_t make_uint131(const std::string& hex)
 
   if(words.size() >= 1) {
     val.w.v0 = words[words.size() - 1];
-  }  
+  }
   if(words.size() >= 2) {
     val.w.v1 = words[words.size() - 2];
   }
@@ -86,22 +83,16 @@ uint131_t make_uint131(const std::string& hex)
   return val;
 }
 
-bool operator==(const uint131_t& a, const uint131_t& b)
+bool operator==(const uint131_t &a, const uint131_t &b)
 {
   return a.w.v0 == b.w.v0 && a.w.v1 == b.w.v1 && a.w.v2 == b.w.v2;
 }
 
-bool operator!=(const uint131_t& a, const uint131_t& b)
-{
-  return !(a == b);
-}
+bool operator!=(const uint131_t &a, const uint131_t &b) { return !(a == b); }
 
-bool is_odd(const uint131_t& x)
-{
-  return x.w.v0 & 0x01;
-}
+bool is_odd(const uint131_t &x) { return x.w.v0 & 0x01; }
 
-std::string to_str(const uint131_t& x)
+std::string to_str(const uint131_t &x)
 {
   char buf[256] = "";
 

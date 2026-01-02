@@ -1,13 +1,13 @@
+#include "fmt/format.h"
 #include <assert.h>
 #include <chrono>
 #include <fstream>
-#include <map>
-#include "fmt/format.h"
 #include <hip/hip_runtime.h>
+#include <map>
+#include <math.h>
 #include <sstream>
 #include <stdexcept>
 #include <stdint.h>
-#include <math.h>
 
 #include "GPUPointFinder.h"
 #include "ec_rho.h"
@@ -19,38 +19,35 @@
 
 namespace {
 
-#define IFSTREAM_CALL(condition)\
-{\
-  if(!condition) {\
-    std::stringstream ss;\
-    ss << "FILE error " << __LINE__ << std::endl;\
-    throw std::runtime_error(ss.str());\
-  }\
-}\
-
+#define IFSTREAM_CALL(condition)                                                                   \
+  {                                                                                                \
+    if(!condition) {                                                                               \
+      std::stringstream ss;                                                                        \
+      ss << "FILE error " << __LINE__ << std::endl;                                                \
+      throw std::runtime_error(ss.str());                                                          \
+    }                                                                                              \
+  }
 
 struct KernelInfo {
-  void* do_step;
-  void* batch_mul;
-  void* sanity_check;
-  void* refill_staging;
+  void *do_step;
+  void *batch_mul;
+  void *sanity_check;
+  void *refill_staging;
 };
 
 std::map<std::string, KernelInfo> _kernel_map = {
-  {"ecp79", {(void*)do_step_p79, (void*)batch_multiply_p79, (void*)sanity_check_p79}},
-  {"ecp89", {(void*)do_step_p89, (void*)batch_multiply_p89, (void*)sanity_check_p89}},
-  {"ecp131", {(void*)do_step_p131, (void*)batch_multiply_p131, (void*)sanity_check_p131}},
+    {"ecp79", {(void *)do_step_p79, (void *)batch_multiply_p79, (void *)sanity_check_p79}},
+    {"ecp89", {(void *)do_step_p89, (void *)batch_multiply_p89, (void *)sanity_check_p89}},
+    {"ecp131", {(void *)do_step_p131, (void *)batch_multiply_p131, (void *)sanity_check_p131}},
 };
 
-typedef unsigned __int128 uint128_t;
-
-uint131_t load_uint131(const void* p, int idx, int n)
+uint131_t load_uint131(const void *p, int idx, int n)
 {
-  const uint128_t* p128 = (const uint128_t*)p;
-  const uint8_t* p8 = (const uint8_t*)p;
+  const uint128_t *p128 = (const uint128_t *)p;
+  const uint8_t *p8 = (const uint8_t *)p;
 
   uint128_t u128 = p128[idx];
-  
+
   uint131_t x;
   x.w.v0 = (uint64_t)u128;
   x.w.v1 = (uint64_t)(u128 >> 64);
@@ -59,10 +56,10 @@ uint131_t load_uint131(const void* p, int idx, int n)
   return x;
 }
 
-void store_uint131(void* p, int idx, int n, uint131_t x)
+void store_uint131(void *p, int idx, int n, uint131_t x)
 {
-  uint128_t* p128 = (uint128_t*)p;
-  uint8_t* p8 = (uint8_t*)p;
+  uint128_t *p128 = (uint128_t *)p;
+  uint8_t *p8 = (uint8_t *)p;
 
   uint128_t u128 = ((uint128_t)x.w.v1 << 64) | x.w.v0;
   p128[idx] = u128;
@@ -70,15 +67,13 @@ void store_uint131(void* p, int idx, int n, uint131_t x)
   p8[n * sizeof(uint128_t) + idx] = (uint8_t)x.w.v2;
 }
 
-}
-
-typedef unsigned __int128 uint128_t;
+} // namespace
 
 // uint131_t is 20 bytes while we only need 17 bytes to store it, so
 // to allocate vectorized uint131_t arrays, use sizeof(vec_uint131_t);
 typedef struct {
   uint8_t data[17];
-}vec_uint131_t;
+} vec_uint131_t;
 
 GPUPointFinder::GPUPointFinder(int device, int dpbits, bool benchmark)
 {
@@ -101,7 +96,7 @@ GPUPointFinder::GPUPointFinder(int device, int dpbits, bool benchmark)
   // Use these for now
   _blocks = compute_units * 32;
   _threads_per_block = simd_width;
-  
+
   HIP_CALL(hipSetDevice(device));
   HIP_CALL(hipSetDeviceFlags(hipDeviceScheduleYield));
 
@@ -140,18 +135,16 @@ GPUPointFinder::GPUPointFinder(int device, int dpbits, bool benchmark)
   _staging = stack_create<StagingPoint>(staging_buf_size);
 }
 
-
 GPUPointFinder::~GPUPointFinder()
 {
   stack_destroy(_staging);
   free_buffers();
 }
 
-
 void GPUPointFinder::report_points()
 {
   int count = *_result_count;
- 
+
   if(count > 0) {
 
     std::vector<DistinguishedPoint> dps;
@@ -160,14 +153,14 @@ void GPUPointFinder::report_points()
       uint131_t y = _result_buf[i].y;
       uint131_t a = _result_buf[i].a;
       uint64_t length = _result_buf[i].length;
-      
+
       ecc::ecpoint_t p(x, y);
 
       // Do a quick verification
       assert(ecc::exists(p));
 
       assert((p.x.w.v0 & _dpmask) == 0);
- 
+
       dps.push_back(DistinguishedPoint(a, p, _dpbits, length));
     }
 
@@ -186,21 +179,20 @@ void GPUPointFinder::refill_staging()
   int n = _staging.max_size - *_staging.size;
 
   // Create lookup table for G, 2G, 4G ... nG
-  uint131_t* dev_gx = nullptr;
-  uint131_t* dev_gy = nullptr;
-  uint131_t* mbuf = nullptr;
-  uint131_t* priv_keys = nullptr;
-  uint131_t* x_ptr = nullptr;
-  uint131_t* y_ptr = nullptr;
+  uint131_t *dev_gx = nullptr;
+  uint131_t *dev_gy = nullptr;
+  uint131_t *mbuf = nullptr;
+  uint131_t *priv_keys = nullptr;
+  uint131_t *x_ptr = nullptr;
+  uint131_t *y_ptr = nullptr;
 
   HIP_CALL(hipMallocManaged(&dev_gx, sizeof(uint131_t) * (ecc::curve_strength() + 1)));
   HIP_CALL(hipMallocManaged(&dev_gy, sizeof(uint131_t) * (ecc::curve_strength() + 1)));
   HIP_CALL(hipMalloc(&mbuf, sizeof(uint131_t) * n));
-  
+
   HIP_CALL(hipMallocManaged(&priv_keys, sizeof(uint131_t) * n));
   HIP_CALL(hipMallocManaged(&x_ptr, sizeof(uint131_t) * n));
   HIP_CALL(hipMallocManaged(&y_ptr, sizeof(uint131_t) * n));
-
 
   // Generate G, 2G, 4G, 8G ... nG for batch multiplication
   ecc::ecpoint_t g = ecc::g();
@@ -218,12 +210,14 @@ void GPUPointFinder::refill_staging()
   }
 
   // Initialize keys
-  HIP_CALL(hipLaunchKernel((void*)clear_public_keys, dim3(_blocks), dim3(_threads_per_block), 0, x_ptr, y_ptr, n));
+  HIP_CALL(hipLaunchKernel((void *)clear_public_keys, dim3(_blocks), dim3(_threads_per_block), 0,
+                           x_ptr, y_ptr, n));
 
   // Initialize keys
   int bits = ecc::curve_strength();
   for(int b = 0; b < bits; b++) {
-    HIP_CALL(hipLaunchKernel(_batch_multiply_ptr, dim3(_blocks), dim3(_threads_per_block), 0, x_ptr, y_ptr, priv_keys, mbuf, dev_gx, dev_gy, b, n));
+    HIP_CALL(hipLaunchKernel(_batch_multiply_ptr, dim3(_blocks), dim3(_threads_per_block), 0, x_ptr,
+                             y_ptr, priv_keys, mbuf, dev_gx, dev_gy, b, n));
   }
   HIP_CALL(hipDeviceSynchronize());
 
@@ -264,13 +258,10 @@ void GPUPointFinder::refill_staging()
   HIP_CALL(hipFree(priv_keys));
 }
 
-void GPUPointFinder::init()
-{
-  init("");
-}
+void GPUPointFinder::init() { init(""); }
 
-void GPUPointFinder::init(const std::string& filename)
-{  
+void GPUPointFinder::init(const std::string &filename)
+{
   allocate_buffers(_num_points);
 
   // Don't need staging buffer for benchmark
@@ -292,7 +283,6 @@ void GPUPointFinder::init(const std::string& filename)
   HIP_CALL(hipMemcpy(_dev_rx, rx.data(), rx.size() * sizeof(rx[0]), hipMemcpyHostToDevice));
   HIP_CALL(hipMemcpy(_dev_ry, ry.data(), ry.size() * sizeof(ry[0]), hipMemcpyHostToDevice));
 
-
   if(!filename.empty() && util::file_exists(filename)) {
     LOG("Loading {}", filename);
     load(filename);
@@ -300,7 +290,8 @@ void GPUPointFinder::init(const std::string& filename)
     // Check sanity
     *_sanity_flag = 0;
 
-    HIP_CALL(hipLaunchKernel((void*)_sanity_check_ptr, dim3(_blocks), dim3(_threads_per_block), 0, _dev_x, _dev_y, _num_points, _sanity_flag));
+    HIP_CALL(hipLaunchKernel((void *)_sanity_check_ptr, dim3(_blocks), dim3(_threads_per_block), 0,
+                             _dev_x, _dev_y, _num_points, _sanity_flag));
     HIP_CALL(hipDeviceSynchronize());
 
     if(*_sanity_flag != 0) {
@@ -309,25 +300,27 @@ void GPUPointFinder::init(const std::string& filename)
     }
 
   } else {
-  
+
     if(!filename.empty()) {
       LOG("Data will be saved to: {}", filename);
     }
-    
+
     // Generate new private keys
     for(int i = 0; i < _num_points; i++) {
       _priv_key_a[i] = ecc::genkey();
     }
 
     // Clear keys on device
-    HIP_CALL(hipLaunchKernel((void*)clear_public_keys, dim3(_blocks), dim3(_threads_per_block), 0, _dev_x, _dev_y, _num_points));
+    HIP_CALL(hipLaunchKernel((void *)clear_public_keys, dim3(_blocks), dim3(_threads_per_block), 0,
+                             _dev_x, _dev_y, _num_points));
     HIP_CALL(hipDeviceSynchronize());
 
-    HIP_CALL(hipLaunchKernel((void*)reset_counters, dim3(_blocks), dim3(_threads_per_block), 0, _walk_start, _counter, _num_points));
+    HIP_CALL(hipLaunchKernel((void *)reset_counters, dim3(_blocks), dim3(_threads_per_block), 0,
+                             _walk_start, _counter, _num_points));
     HIP_CALL(hipDeviceSynchronize());
 
-    uint131_t* dev_gx = nullptr;
-    uint131_t* dev_gy = nullptr;
+    uint131_t *dev_gx = nullptr;
+    uint131_t *dev_gy = nullptr;
 
     HIP_CALL(hipMallocManaged(&dev_gx, sizeof(uint131_t) * (ecc::curve_strength() + 1)));
     HIP_CALL(hipMallocManaged(&dev_gy, sizeof(uint131_t) * (ecc::curve_strength() + 1)));
@@ -345,7 +338,8 @@ void GPUPointFinder::init(const std::string& filename)
     // Initialize keys
     int bits = ecc::curve_strength();
     for(int i = 0; i < bits; i++) {
-      HIP_CALL(hipLaunchKernel(_batch_multiply_ptr, dim3(_blocks), dim3(_threads_per_block), 0, _dev_x, _dev_y, _priv_key_a, _mbuf, dev_gx, dev_gy, i, _num_points));
+      HIP_CALL(hipLaunchKernel(_batch_multiply_ptr, dim3(_blocks), dim3(_threads_per_block), 0,
+                               _dev_x, _dev_y, _priv_key_a, _mbuf, dev_gx, dev_gy, i, _num_points));
       HIP_CALL(hipDeviceSynchronize());
     }
 
@@ -381,7 +375,7 @@ void GPUPointFinder::init(const std::string& filename)
           LOG("{}", to_str(sum.y));
           LOG("{}", to_str(mont::from(sum.x)));
           LOG("{}", to_str(mont::from(sum.y)));
-          
+
           LOG("Got:");
           LOG("{}", to_str(xval));
           LOG("{}", to_str(yval));
@@ -423,25 +417,23 @@ void GPUPointFinder::allocate_buffers(int n)
   HIP_CALL(hipMalloc(&_dev_ry, _NUM_R_POINTS * sizeof(vec_uint131_t)));
 
   HIP_CALL(hipMallocManaged(&_priv_key_a, _num_points * sizeof(uint131_t)));
- 
+
   HIP_CALL(hipMallocManaged(&_result_buf, _result_buf_size * sizeof(DPResult)));
 
   HIP_CALL(hipMallocManaged(&_result_count, sizeof(uint32_t)));
   *_result_count = 0;
-  
+
   HIP_CALL(hipMallocManaged(&_sanity_flag, sizeof(uint32_t)));
   *_sanity_flag = 0;
 
-
   HIP_CALL(hipMallocManaged(&_walk_start, _num_points * sizeof(uint64_t)));
 }
-
 
 double GPUPointFinder::step()
 {
 
   // We don't need result buf for benchmark
-  DPResult* result_buf = _benchmark ? nullptr : _result_buf;
+  DPResult *result_buf = _benchmark ? nullptr : _result_buf;
 
   hipEvent_t start;
   hipEvent_t stop;
@@ -452,14 +444,9 @@ double GPUPointFinder::step()
 
   HIP_CALL(hipEventRecord(start));
   for(int i = 0; i < _iters_per_step; i++) {
-    HIP_CALL(hipLaunchKernel(_do_step_ptr, dim3(_blocks), dim3(_threads_per_block), 0, _dev_x, _dev_y, _dev_rx, _dev_ry,
-                  _mbuf, _num_points,
-                  result_buf, _result_count,
-                  _staging,
-                  _priv_key_a,
-                  _counter,
-                  _walk_start,
-                  _dpmask));
+    HIP_CALL(hipLaunchKernel(_do_step_ptr, dim3(_blocks), dim3(_threads_per_block), 0, _dev_x,
+                             _dev_y, _dev_rx, _dev_ry, _mbuf, _num_points, result_buf,
+                             _result_count, _staging, _priv_key_a, _counter, _walk_start, _dpmask));
     _counter++;
   }
   HIP_CALL(hipEventRecord(stop));
@@ -469,7 +456,8 @@ double GPUPointFinder::step()
   HIP_CALL(hipEventElapsedTime(&elapsed, start, stop));
 
   if(_first_run || _verify_points) {
-    HIP_CALL(hipLaunchKernel((void*)_sanity_check_ptr, dim3(_blocks), dim3(_threads_per_block), 0, _dev_x, _dev_y, _num_points, _sanity_flag));
+    HIP_CALL(hipLaunchKernel((void *)_sanity_check_ptr, dim3(_blocks), dim3(_threads_per_block), 0,
+                             _dev_x, _dev_y, _num_points, _sanity_flag));
     HIP_CALL(hipDeviceSynchronize());
 
     if(*_sanity_flag != 0) {
@@ -494,7 +482,7 @@ double GPUPointFinder::step()
       }
 
       LOG("Host detected {} errors", count);
-      
+
       throw std::runtime_error("Error verifying points");
     }
 
@@ -518,27 +506,19 @@ double GPUPointFinder::step()
   return (double)elapsed / 1000.0f;
 }
 
-void GPUPointFinder::set_callback(std::function<void(const std::vector<DistinguishedPoint>&)> callback)
+void GPUPointFinder::set_callback(
+    std::function<void(const std::vector<DistinguishedPoint> &)> callback)
 {
   _callback = callback;
 }
 
-size_t GPUPointFinder::work_per_step()
-{
-  return _num_points * _iters_per_step;
-}
+size_t GPUPointFinder::work_per_step() { return _num_points * _iters_per_step; }
 
-int GPUPointFinder::iters_per_step()
-{
-  return _iters_per_step;
-}
+int GPUPointFinder::iters_per_step() { return _iters_per_step; }
 
-int GPUPointFinder::parallel_walks()
-{
-  return _num_points;
-}
+int GPUPointFinder::parallel_walks() { return _num_points; }
 
-void GPUPointFinder::save_progress(const std::string& file_name)
+void GPUPointFinder::save_progress(const std::string &file_name)
 {
 
   report_points();
@@ -556,14 +536,14 @@ void GPUPointFinder::save_progress(const std::string& file_name)
 
   size_t count = _num_points;
 
-  file.write((char*)&count, sizeof(count));
+  file.write((char *)&count, sizeof(count));
   if(!file.good()) {
     LOG("File not good");
     return;
   }
 
   // Write the counter
-  file.write((char*)&_counter, sizeof(_counter));
+  file.write((char *)&_counter, sizeof(_counter));
   if(!file.good()) {
     LOG("File not good");
     return;
@@ -573,7 +553,7 @@ void GPUPointFinder::save_progress(const std::string& file_name)
   file.write((char *)_priv_key_a, sizeof(uint131_t) * count);
   if(!file.good()) {
     LOG("File not good");
-    return; 
+    return;
   }
 
   std::vector<char> tmp(sizeof(vec_uint131_t) * count);
@@ -592,7 +572,7 @@ void GPUPointFinder::save_progress(const std::string& file_name)
   file.close();
 }
 
-void GPUPointFinder::load(const std::string& file_name)
+void GPUPointFinder::load(const std::string &file_name)
 {
   std::ifstream file;
 
@@ -605,23 +585,23 @@ void GPUPointFinder::load(const std::string& file_name)
   // Load the count
   size_t count = 0;
 
-  IFSTREAM_CALL(file.read((char*)&count, sizeof(count)));
-  
+  IFSTREAM_CALL(file.read((char *)&count, sizeof(count)));
+
   assert(count == _num_points);
 
   // Load counter
-  IFSTREAM_CALL(file.read((char*)&_counter, sizeof(_counter)));
+  IFSTREAM_CALL(file.read((char *)&_counter, sizeof(_counter)));
 
-  IFSTREAM_CALL(file.read((char*)_priv_key_a, sizeof(uint131_t) * count));
+  IFSTREAM_CALL(file.read((char *)_priv_key_a, sizeof(uint131_t) * count));
 
   std::vector<char> tmp(sizeof(vec_uint131_t) * count);
 
   IFSTREAM_CALL(file.read(tmp.data(), sizeof(vec_uint131_t) * count));
   HIP_CALL(hipMemcpy(_dev_x, tmp.data(), sizeof(vec_uint131_t) * count, hipMemcpyHostToDevice));
-  
+
   IFSTREAM_CALL(file.read(tmp.data(), sizeof(vec_uint131_t) * count));
   HIP_CALL(hipMemcpy(_dev_y, tmp.data(), sizeof(vec_uint131_t) * count, hipMemcpyHostToDevice));
-  
+
   IFSTREAM_CALL(file.read(tmp.data(), sizeof(uint64_t) * count));
   memcpy(_walk_start, tmp.data(), sizeof(uint64_t) * count);
 }

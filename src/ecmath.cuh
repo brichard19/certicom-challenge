@@ -7,26 +7,23 @@
 #include "p79.cuh"
 #include "p89.cuh"
 
-
-template<int CURVE> __device__ uint131_t sub(uint131_t x, uint131_t y)
+template <int CURVE> __device__ uint131_t sub(uint131_t x, uint131_t y)
 {
   return Curve<CURVE>::sub(x, y);
 }
 
-
-template<int CURVE> __device__ uint131_t add(const uint131_t& x, const uint131_t& y)
+template <int CURVE> __device__ uint131_t add(const uint131_t &x, const uint131_t &y)
 {
   return Curve<CURVE>::add(x, y);
 }
 
-
-template<int CURVE> __device__ uint131_t mont_reduce(const uint262_t& t)
+template <int CURVE> __device__ uint131_t mont_reduce(const uint262_t &t)
 {
   // m1 = t_lo * k mod R
   // m2 = m1 * p / r
   // m3 = m2 + t_hi + 1
 
-  uint160_t t_lo; 
+  uint160_t t_lo;
   t_lo.w.v0 = t.v[0];
   t_lo.w.v1 = t.v[1];
   t_lo.w.v2 = (uint32_t)t.v[2];
@@ -55,24 +52,21 @@ template<int CURVE> __device__ uint131_t mont_reduce(const uint262_t& t)
   return m3;
 }
 
-
-template<int CURVE> __device__ uint131_t mul(uint131_t x, uint131_t y)
+template <int CURVE> __device__ uint131_t mul(uint131_t x, uint131_t y)
 {
   uint262_t product = Curve<CURVE>::mul(x, y);
-  
+
   return mont_reduce<CURVE>(product);
 }
 
-
-template<int CURVE> __device__ uint131_t square(uint131_t x)
+template <int CURVE> __device__ uint131_t square(uint131_t x)
 {
   uint262_t product = Curve<CURVE>::square(x);
 
   return mont_reduce<CURVE>(product);
 }
 
-
-template<int CURVE> __device__ uint131_t square(uint131_t x, int n)
+template <int CURVE> __device__ uint131_t square(uint131_t x, int n)
 {
   for(int i = 0; i < n; i++) {
     x = square<CURVE>(x);
@@ -81,10 +75,8 @@ template<int CURVE> __device__ uint131_t square(uint131_t x, int n)
   return x;
 }
 
-
-
 // Modular inverse using Fermat's method
-__device__ uint131_t inv_p131(uint131_t& x)
+__device__ uint131_t inv_p131(uint131_t &x)
 {
   uint131_t z, t0, t1, t2, t3, t4, t5;
 
@@ -149,10 +141,10 @@ __device__ uint131_t inv_p131(uint131_t& x)
   return z;
 }
 
-__device__ uint131_t inv_p79(uint131_t& x)
+__device__ uint131_t inv_p79(uint131_t &x)
 {
   uint131_t z, t0, t1, t2, t3, t4, t5, t6, t7;
-  
+
   t6 = square<79>(x);
   t0 = mul<79>(x, t6);
   z = square<79>(t0);
@@ -194,7 +186,7 @@ __device__ uint131_t inv_p79(uint131_t& x)
 }
 
 // TODO: Optimize
-__device__ uint131_t inv_p89(uint131_t& x)
+__device__ uint131_t inv_p89(uint131_t &x)
 {
   uint131_t prod = _p89_one;
   uint131_t y = x;
@@ -206,7 +198,7 @@ __device__ uint131_t inv_p89(uint131_t& x)
       prod = mul<89>(prod, y);
     }
     y = square<89>(y);
-    
+
     bits >>= 1;
   }
 
@@ -216,14 +208,14 @@ __device__ uint131_t inv_p89(uint131_t& x)
       prod = mul<89>(prod, y);
     }
     y = square<89>(y);
-    
+
     bits >>= 1;
   }
 
   return prod;
 }
 
-template<int CURVE> __device__ uint131_t inv(uint131_t x)
+template <int CURVE> __device__ uint131_t inv(uint131_t x)
 {
   uint131_t r;
   if(CURVE == 131) {
@@ -233,24 +225,18 @@ template<int CURVE> __device__ uint131_t inv(uint131_t x)
   } else if(CURVE == 89) {
     r = inv_p89(x);
   }
-  
+
   return r;
 }
 
 // ECC functons
 
 // Check for point-at-infinity using the x coordinate
-__device__ bool is_infinity(uint131_t x)
-{
-  return (x.w.v2 & 0xff) == 0xff;
-}
+__device__ bool is_infinity(uint131_t x) { return (x.w.v2 & 0xff) == 0xff; }
 
-__device__ void set_point_at_infinity(uint131_t& x)
-{
-  x.w.v2 = (uint32_t)-1;
-}
+__device__ void set_point_at_infinity(uint131_t &x) { x.w.v2 = (uint32_t)-1; }
 
-template<int CURVE> __device__ bool point_exists(uint131_t& x, uint131_t& y)
+template <int CURVE> __device__ bool point_exists(uint131_t &x, uint131_t &y)
 {
   uint131_t a = Curve<CURVE>::a();
   uint131_t b = Curve<CURVE>::b();
@@ -263,6 +249,5 @@ template<int CURVE> __device__ bool point_exists(uint131_t& x, uint131_t& y)
 
   return equal(y2, rs);
 }
-
 
 #endif

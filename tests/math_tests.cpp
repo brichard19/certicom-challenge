@@ -7,7 +7,7 @@
 #include "uint131.h"
 
 namespace {
-  bool _verbose = false;
+bool _verbose = false;
 }
 
 bool test0()
@@ -36,8 +36,7 @@ bool test1()
     uint131_t b = ecc::genkey();
     uint131_t c = ecc::genkey();
 
-
-    uint131_t left = mont::mul(mont::add(a, b),c);
+    uint131_t left = mont::mul(mont::add(a, b), c);
     uint131_t right = mont::add(mont::mul(a, c), mont::mul(b, c));
 
     if(_verbose) {
@@ -63,7 +62,7 @@ bool test2()
     uint131_t a = ecc::genkey();
 
     uint131_t inverse = mont::inv(a);
-    
+
     uint131_t one = mont::mul(a, inverse);
 
     if(_verbose) {
@@ -78,13 +77,12 @@ bool test2()
   return true;
 }
 
-
 bool test3()
 {
   // Test algebraic property (a - b)(a + b) = a^2 - b^2
   for(int i = 0; i < 1000; i++) {
     uint131_t a = ecc::genkey();
-    uint131_t b  = ecc::genkey();
+    uint131_t b = ecc::genkey();
 
     uint131_t ls = mont::mul(mont::sub(a, b), mont::add(a, b));
     uint131_t rs = mont::sub(mont::square(a), mont::square(b));
@@ -194,9 +192,9 @@ bool test10()
     uint131_t s2 = mont::sub(ecc::p(), s1);
 
     // Square both roots
-    //uint131_t y1 = mont::square(s1);
+    // uint131_t y1 = mont::square(s1);
     uint131_t y1 = mont::mul(s1, s1);
-    //uint131_t y2 = mont::square(s2);
+    // uint131_t y2 = mont::square(s2);
     uint131_t y2 = mont::mul(s2, s2);
 
     // Verify they come out to x2
@@ -244,11 +242,11 @@ bool test12()
   return true;
 }
 
-int main(int argc, char**argv)
+int main(int argc, char **argv)
 {
   std::vector<std::string> curves = ecc::get_curves();
 
-  for(auto curve : curves ) {
+  for(auto curve : curves) {
     ecc::set_curve(curve);
 
     std::cout << "Testing curve " << curve << std::endl;
@@ -269,8 +267,8 @@ int main(int argc, char**argv)
     test_functions.push_back(test12);
 
     for(int i = 0; i < test_functions.size(); i++) {
-      std::cout << "Test " << (i+1) << "/" << test_functions.size() << std::endl;
-    //for(auto f : test_functions) {
+      std::cout << "Test " << (i + 1) << "/" << test_functions.size() << std::endl;
+      // for(auto f : test_functions) {
       if(test_functions[i]()) {
         std::cout << "    PASS" << std::endl;
       } else {

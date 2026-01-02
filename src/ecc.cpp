@@ -1,84 +1,81 @@
-#include <random>
 #include "ecc.h"
 #include "ecc_internal.h"
 #include "montgomery.h"
 #include "util.h"
+#include <random>
 #include <stdexcept>
 
-typedef unsigned __int128 uint128_t;
+std::vector<CurveParameters> _curves = {
+    {
+        .p = {{0x194c43186b3abc0b, 0x8e1d43f293469e33, 0x4}},
+        .a = {{0xe7f7f250cee8709a, 0xacd15fe1a8ec1522, 0x0}},
+        .b = {{0xc85087e5ab4eca9e, 0xde124657d7ba5851, 0x2}},
+        .n = {{0x7f7ed728f6b8e6f1, 0x8e1d43f293469e31, 0x4}},
+        .gx = {{0xb137748018df6458, 0xb188ba8cd2a386d9, 0x0}},
+        .gy = {{0x4b5a2a8f9b90cbef, 0x7dabb39a1bb0a5fa, 0x2}},
+        .qx = {{0xc83af1fe332475e3, 0xe38a3357a4b0bb01, 0x2}},
+        .qy = {{0xfe97756ed241b570, 0xb167247624e73021, 0x3}},
+        .k = {{0xe0587d72985b105d, 0xf1fd54b0309e1ab9, 0x7cfd70cf}},
+        .one = {{0x6e7743da32b6d0c7, 0x88c614d64c1a8f0b, 0x0}},
+        .two = {{0xdcee87b4656da18e, 0x118c29ac98351e16, 0x1}},
+        .p_minus_2 = {{0x194c43186b3abc09, 0x8e1d43f293469e33, 0x4}},
+        .sqrt = {{0xc65310c61aceaf03, 0x238750fca4d1a78c, 0x1}},
+        .r = {{0x6e7743da32b6d0c7, 0x88c614d64c1a8f0b, 0x0}},
+        .r2 = {{0xf95d709f92600513, 0xf3d6fa1fb65ef639, 0x3}},
+        .bits = 131,
+        .words = 3,
+        .name = "ecp131",
+    },
 
-std::vector<CurveParameters>_curves = {
-  {
-  .p = {{0x194c43186b3abc0b, 0x8e1d43f293469e33, 0x4}},
-  .a = {{0xe7f7f250cee8709a, 0xacd15fe1a8ec1522, 0x0}},
-  .b = {{0xc85087e5ab4eca9e, 0xde124657d7ba5851, 0x2}},
-  .n = {{0x7f7ed728f6b8e6f1, 0x8e1d43f293469e31, 0x4}},
-  .gx = {{0xb137748018df6458, 0xb188ba8cd2a386d9, 0x0}},
-  .gy = {{0x4b5a2a8f9b90cbef, 0x7dabb39a1bb0a5fa, 0x2}},
-  .qx = {{0xc83af1fe332475e3, 0xe38a3357a4b0bb01, 0x2}},
-  .qy = {{0xfe97756ed241b570, 0xb167247624e73021, 0x3}},
-  .k = {{0xe0587d72985b105d, 0xf1fd54b0309e1ab9, 0x7cfd70cf}},
-  .one = {{0x6e7743da32b6d0c7, 0x88c614d64c1a8f0b, 0x0}},
-  .two = {{0xdcee87b4656da18e, 0x118c29ac98351e16, 0x1}},
-  .p_minus_2 = {{0x194c43186b3abc09, 0x8e1d43f293469e33, 0x4}},
-  .sqrt = {{0xc65310c61aceaf03, 0x238750fca4d1a78c, 0x1}},
-  .r = {{0x6e7743da32b6d0c7, 0x88c614d64c1a8f0b, 0x0}},
-  .r2 = {{0xf95d709f92600513, 0xf3d6fa1fb65ef639, 0x3}},
-  .bits = 131,
-  .words = 3,
-  .name = "ecp131",
-},
+    {
+        .p = {{0x5177412aca899cf5, 0x62ce, 0x0}},
+        .a = {{0x732c9b460e3c3d, 0x1bb7, 0x0}},
+        .b = {{0xc88edfd7d5b44610, 0x250c, 0x0}},
+        .n = {{0x5177407b7258dc31, 0x62ce, 0x0}},
+        .gx = {{0x8fa818f2b62053c8, 0x3e37, 0x0}},
+        .gy = {{0xddab9a8daa5aa60b, 0x21a9, 0x0}},
+        .qx = {{0x96642c5fb8dbd341, 0x7a7, 0x0}},
+        .qy = {{0xbf3614d658e2931c, 0x426c, 0x0}},
+        .k = {{0x6e3655426732d0a3, 0xcafea9fd045a89b6, 0xe6bb05ec}},
+        .one = {{0x5447aa703f6abc5f, 0x1358, 0x0}},
+        .two = {{0xa88f54e07ed578be, 0x26b0, 0x0}},
+        .p_minus_2 = {{0x5177412aca899cf3, 0x62ce, 0x0}},
+        .sqrt = {{0xca2ee8255951339e, 0xc59, 0x0}},
+        .r = {{0x5447aa703f6abc5f, 0x1358, 0x0}},
+        .r2 = {{0x7b0baef57de52417, 0xe79, 0x0}},
+        .bits = 79,
+        .words = 2,
+        .name = "ecp79",
+    },
 
-{
-  .p = {{0x5177412aca899cf5, 0x62ce, 0x0}},
-  .a = {{0x732c9b460e3c3d, 0x1bb7, 0x0}},
-  .b = {{0xc88edfd7d5b44610, 0x250c, 0x0}},
-  .n = {{0x5177407b7258dc31, 0x62ce, 0x0}},
-  .gx = {{0x8fa818f2b62053c8, 0x3e37, 0x0}},
-  .gy = {{0xddab9a8daa5aa60b, 0x21a9, 0x0}},
-  .qx = {{0x96642c5fb8dbd341, 0x7a7, 0x0}},
-  .qy = {{0xbf3614d658e2931c, 0x426c, 0x0}},
-  .k = {{0x6e3655426732d0a3, 0xcafea9fd045a89b6, 0xe6bb05ec}},
-  .one = {{0x5447aa703f6abc5f, 0x1358, 0x0}},
-  .two = {{0xa88f54e07ed578be, 0x26b0, 0x0}},
-  .p_minus_2 = {{0x5177412aca899cf3, 0x62ce, 0x0}},
-  .sqrt = {{0xca2ee8255951339e, 0xc59, 0x0}},
-  .r = {{0x5447aa703f6abc5f, 0x1358, 0x0}},
-  .r2 = {{0x7b0baef57de52417, 0xe79, 0x0}},
-  .bits = 79,
-  .words = 2,
-  .name = "ecp79",
-},
-
-{
-  .p = {{0x903f1643908ba955, 0x158685c, 0x0}},
-  .a = {{0xb1ec24706b2573c1, 0x593048, 0x0}},
-  .b = {{0x37717b7e1c0a25af, 0xc58c6, 0x0}},
-  .n = {{0x903ef906d7f58d47, 0x158685c, 0x0}},
-  .gx = {{0x2c11310d3564b72b, 0xd96524, 0x0}},
-  .gy = {{0x43b68c253c4f8f18, 0xc94f03, 0x0}},
-  .qx = {{0x78b7d9810a131af2, 0x35deeb, 0x0}},
-  .qy = {{0x60bcf87a21747143, 0x24daba, 0x0}},
-  .k = {{0x40a0dbc30d18f403, 0x5ed01b73e78a4d11, 0xf15c3823}},
-  .one = {{0x9e896dc839826cf6, 0x78c8ca, 0x0}},
-  .two = {{0x3d12db907304d9ec, 0xf19195, 0x0}},
-  .p_minus_2 = {{0x903f1643908ba953, 0x158685c, 0x0}},
-  //(p - 5) // 8
-  .sqrt = {{0x9207e2c87211752a, 0x2b0d0b, 0x0}},
-  .r = {{0x9e896dc839826cf6, 0x78c8ca, 0x0}},
-  .r2 = {{0xd96623186da369dd, 0x13e5217, 0x0}},
-  .bits = 89,
-  .words = 2,
-  .name = "ecp89",
-}
-};
+    {
+        .p = {{0x903f1643908ba955, 0x158685c, 0x0}},
+        .a = {{0xb1ec24706b2573c1, 0x593048, 0x0}},
+        .b = {{0x37717b7e1c0a25af, 0xc58c6, 0x0}},
+        .n = {{0x903ef906d7f58d47, 0x158685c, 0x0}},
+        .gx = {{0x2c11310d3564b72b, 0xd96524, 0x0}},
+        .gy = {{0x43b68c253c4f8f18, 0xc94f03, 0x0}},
+        .qx = {{0x78b7d9810a131af2, 0x35deeb, 0x0}},
+        .qy = {{0x60bcf87a21747143, 0x24daba, 0x0}},
+        .k = {{0x40a0dbc30d18f403, 0x5ed01b73e78a4d11, 0xf15c3823}},
+        .one = {{0x9e896dc839826cf6, 0x78c8ca, 0x0}},
+        .two = {{0x3d12db907304d9ec, 0xf19195, 0x0}},
+        .p_minus_2 = {{0x903f1643908ba953, 0x158685c, 0x0}},
+        //(p - 5) // 8
+        .sqrt = {{0x9207e2c87211752a, 0x2b0d0b, 0x0}},
+        .r = {{0x9e896dc839826cf6, 0x78c8ca, 0x0}},
+        .r2 = {{0xd96623186da369dd, 0x13e5217, 0x0}},
+        .bits = 89,
+        .words = 2,
+        .name = "ecp89",
+    }};
 
 CurveParameters _params;
 
 namespace ecc {
-void set_curve(const std::string& curve_name)
+void set_curve(const std::string &curve_name)
 {
-  for(auto& curve : _curves) {
+  for(auto &curve : _curves) {
     if(curve_name == curve.name) {
       _params = curve;
       return;
@@ -90,7 +87,7 @@ void set_curve(const std::string& curve_name)
 std::vector<std::string> get_curves()
 {
   std::vector<std::string> curves;
-  for(auto& curve : _curves) {
+  for(auto &curve : _curves) {
     curves.push_back(curve.name);
   }
 
@@ -99,7 +96,7 @@ std::vector<std::string> get_curves()
 
 std::string get_curve_by_strength(int strength)
 {
-  for(auto& curve : _curves) {
+  for(auto &curve : _curves) {
     if(curve.bits == strength) {
       return curve.name;
     }
@@ -108,7 +105,7 @@ std::string get_curve_by_strength(int strength)
   throw std::runtime_error("Invalid curve strength");
 }
 
-}
+} // namespace ecc
 
 namespace {
 
@@ -126,41 +123,31 @@ private:
   std::uniform_int_distribution<uint64_t> _d;
 
 public:
-  IntRNG()
-  {
-    _gen = std::mt19937(_rd());
-  }
+  IntRNG() { _gen = std::mt19937(_rd()); }
 
-  virtual uint64_t next()
-  {
-    return _d(_gen);
-  }
+  virtual uint64_t next() { return _d(_gen); }
 };
 
 // Internal RNG
 IntRNG _rng;
 
-
 class DeterministicRNG : public RNG {
 
 private:
-    uint64_t _state;
+  uint64_t _state;
 
 public:
-    DeterministicRNG(int seed)
-    {
-        _state = seed;
-    }
+  DeterministicRNG(int seed) { _state = seed; }
 
-    virtual uint64_t next()
-    {
-        _state = _state * 6364136223846793005 + 1442695040888963407;
+  virtual uint64_t next()
+  {
+    _state = _state * 6364136223846793005 + 1442695040888963407;
 
-        return _state;
-    }
+    return _state;
+  }
 };
 
-uint131_t sub_raw(const uint131_t& x, const uint131_t& y)
+uint131_t sub_raw(const uint131_t &x, const uint131_t &y)
 {
   uint131_t z;
   int borrow = 0;
@@ -168,7 +155,7 @@ uint131_t sub_raw(const uint131_t& x, const uint131_t& y)
   uint128_t diff = (uint128_t)x.w.v0 - y.w.v0 - borrow;
   z.w.v0 = (uint64_t)diff;
   borrow = (int)(diff >> 64) & 1;
-  
+
   diff = (uint128_t)x.w.v1 - y.w.v1 - borrow;
   z.w.v1 = (uint64_t)diff;
   borrow = (int)(diff >> 64) & 1;
@@ -178,29 +165,28 @@ uint131_t sub_raw(const uint131_t& x, const uint131_t& y)
   return z;
 }
 
-uint131_t add_raw(const uint131_t& x, const uint131_t& y)
+uint131_t add_raw(const uint131_t &x, const uint131_t &y)
 {
 
   uint131_t z;
   int carry = 0;
-  
+
   uint128_t sum = (uint128_t)x.w.v0 + y.w.v0 + carry;
   z.w.v0 = (uint64_t)sum;
   carry = (uint64_t)(sum >> 64);
-  
+
   sum = (uint128_t)x.w.v1 + y.w.v1 + carry;
   z.w.v1 = (uint64_t)sum;
   carry = (uint64_t)(sum >> 64);
- 
+
   z.w.v2 = x.w.v2 + y.w.v2 + carry;
 
   return z;
 }
 
-}
+} // namespace
 
 namespace ecc {
-
 
 ecpoint_t make_infinity()
 {
@@ -212,18 +198,15 @@ ecpoint_t make_infinity()
   return p;
 }
 
-bool is_infinity(const ecpoint_t& p)
+bool is_infinity(const ecpoint_t &p)
 {
   // If the high bits of x are all 1, then its a point-at-infinity
   return p.x.w.v2 == (uint32_t)-1;
 }
 
-bool is_equal(const ecpoint_t& p, const ecpoint_t& q)
-{
-  return p.x == q.x && p.y == q.y;
-}
+bool is_equal(const ecpoint_t &p, const ecpoint_t &q) { return p.x == q.x && p.y == q.y; }
 
-bool is_neg(const ecpoint_t& p, const ecpoint_t& q)
+bool is_neg(const ecpoint_t &p, const ecpoint_t &q)
 {
   // P == -Q when Px == Qx and Py == -Qy
   if(p.x != q.x) {
@@ -233,7 +216,7 @@ bool is_neg(const ecpoint_t& p, const ecpoint_t& q)
   return p.y == mont::neg(q.y);
 }
 
-bool exists(const ecpoint_t& p)
+bool exists(const ecpoint_t &p)
 {
   uint131_t y2 = mont::square(p.y);
   uint131_t x3 = mont::mul(p.x, mont::square(p.x));
@@ -244,7 +227,7 @@ bool exists(const ecpoint_t& p)
   return y2 == rs;
 }
 
-ecpoint_t dbl(const ecpoint_t& p)
+ecpoint_t dbl(const ecpoint_t &p)
 {
   if(is_infinity(p)) {
     return p;
@@ -268,10 +251,9 @@ ecpoint_t dbl(const ecpoint_t& p)
   uint131_t y = mont::sub(tmp3, p.y);
 
   return ecc::ecpoint_t(x, y);
-
 }
 
-ecpoint_t add(const ecpoint_t& p, const ecpoint_t& q)
+ecpoint_t add(const ecpoint_t &p, const ecpoint_t &q)
 {
   if(is_infinity(p)) {
     return q;
@@ -280,11 +262,11 @@ ecpoint_t add(const ecpoint_t& p, const ecpoint_t& q)
   if(is_infinity(q)) {
     return p;
   }
-  
+
   if(is_equal(p, q)) {
     return dbl(p);
   }
-  
+
   if(is_neg(p, q)) {
     return make_infinity();
   }
@@ -308,7 +290,7 @@ ecpoint_t add(const ecpoint_t& p, const ecpoint_t& q)
   return ecc::ecpoint_t(x, y);
 }
 
-uint131_t genkey(RNG& rng)
+uint131_t genkey(RNG &rng)
 {
   uint131_t r;
   do {
@@ -335,15 +317,12 @@ uint131_t genkey(RNG& rng)
         r.v[i] ^= _params.n.v[i];
       }
     }
-  }while(!mont::less_than(r, _params.n));
+  } while(!mont::less_than(r, _params.n));
 
   return r;
 }
 
-uint131_t genkey()
-{
-  return genkey(_rng);
-}
+uint131_t genkey() { return genkey(_rng); }
 
 // Use this when you need to generate keys in a deterministic way i.e. the same seed will
 // always generate the same keys
@@ -363,7 +342,7 @@ std::vector<uint131_t> genkeys(int count, int seed)
   return keys;
 }
 
-ecpoint_t mul(const uint131_t& k, const ecpoint_t& p)
+ecpoint_t mul(const uint131_t &k, const ecpoint_t &p)
 {
   ecc::ecpoint_t sum;
 
@@ -372,35 +351,35 @@ ecpoint_t mul(const uint131_t& k, const ecpoint_t& p)
   // v0
   uint64_t mask = 0x01;
   for(int i = 0; i < 64; i++) {
-      if(k.w.v0 & mask) {
-        sum = ecc::add(sum, adder);
-      }
+    if(k.w.v0 & mask) {
+      sum = ecc::add(sum, adder);
+    }
 
-      mask <<= 1;
-      adder = ecc::dbl(adder);
+    mask <<= 1;
+    adder = ecc::dbl(adder);
   }
 
   // v1
   mask = 0x01;
   for(int i = 0; i < 64; i++) {
-      if(k.w.v1 & mask) {
-        sum = ecc::add(sum, adder);
-      }
+    if(k.w.v1 & mask) {
+      sum = ecc::add(sum, adder);
+    }
 
-      mask <<= 1;
-      adder = ecc::dbl(adder);
-  } 
+    mask <<= 1;
+    adder = ecc::dbl(adder);
+  }
 
   // v2
   uint32_t mask32 = 0x01;
   for(int i = 0; i < 32; i++) {
-      if(k.w.v2 & mask32) {
-        sum = ecc::add(sum, adder);
-      }
+    if(k.w.v2 & mask32) {
+      sum = ecc::add(sum, adder);
+    }
 
-      mask32 <<= 1;
-      adder = ecc::dbl(adder);
-  } 
+    mask32 <<= 1;
+    adder = ecc::dbl(adder);
+  }
 
   return sum;
 }
@@ -416,7 +395,7 @@ int get_bit(uint131_t x, int bit)
   }
 }
 
-std::vector<ecpoint_t> mul(const std::vector<uint131_t>& k, const ecpoint_t& q)
+std::vector<ecpoint_t> mul(const std::vector<uint131_t> &k, const ecpoint_t &q)
 {
   // Create lookup table for Q, 2Q, 4Q... 2^131Q
   std::vector<ecpoint_t> qmul(_params.bits + 1);
@@ -488,7 +467,7 @@ std::vector<ecpoint_t> mul(const std::vector<uint131_t>& k, const ecpoint_t& q)
         // Cancel out from the inverse
         // e.g. abcde * e^-1 = abcd
         uint131_t diff = mont::sub(qmul[b].x, p[i].x);
-        
+
         inverse = mont::mul(inverse, diff);
       } else {
         s = inverse;
@@ -511,7 +490,6 @@ std::vector<ecpoint_t> mul(const std::vector<uint131_t>& k, const ecpoint_t& q)
 
       p[i].x = x;
       p[i].y = y;
-
     }
   }
 
@@ -519,7 +497,7 @@ std::vector<ecpoint_t> mul(const std::vector<uint131_t>& k, const ecpoint_t& q)
 }
 
 // Calculate y from x and sign
-uint131_t calc_y(const uint131_t& x, int sign)
+uint131_t calc_y(const uint131_t &x, int sign)
 {
   // y^2 = x^3 + ax + b
   // y = sqrt(x^3 + ax + b)
@@ -534,50 +512,25 @@ uint131_t calc_y(const uint131_t& x, int sign)
   if(get_bit(y, 0) == sign) {
     return y;
   }
-  
+
   return mont::sub(ecc::p(), y);
 }
 
-ecpoint_t g()
-{
-  return ecpoint_t(_params.gx, _params.gy);
-}
+ecpoint_t g() { return ecpoint_t(_params.gx, _params.gy); }
 
-ecpoint_t q()
-{
-  return ecpoint_t(_params.qx, _params.qy);
-}
+ecpoint_t q() { return ecpoint_t(_params.qx, _params.qy); }
 
-uint131_t p()
-{
-  return _params.p;
-}
+uint131_t p() { return _params.p; }
 
-uint131_t a()
-{
-  return _params.a;
-}
+uint131_t a() { return _params.a; }
 
-uint131_t b()
-{
-  return _params.b;
-}
+uint131_t b() { return _params.b; }
 
-uint131_t n()
-{
-  return _params.n;
-}
+uint131_t n() { return _params.n; }
 
-std::string curve_name()
-{
-  return _params.name;
-}
+std::string curve_name() { return _params.name; }
 
-int curve_strength()
-{
-  return _params.bits;
-}
-
+int curve_strength() { return _params.bits; }
 
 uint131_t add_priv_keys(uint131_t k1, uint131_t k2)
 {
@@ -586,8 +539,8 @@ uint131_t add_priv_keys(uint131_t k1, uint131_t k2)
   if(!mont::less_than(sum, _params.n)) {
     sum = sub_raw(sum, _params.n);
   }
-  
+
   return sum;
 }
 
-}
+} // namespace ecc
