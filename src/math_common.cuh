@@ -1,7 +1,9 @@
 #ifndef _MATH_COMMON_CUH
 #define _MATH_COMMON_CUH
 
-#include "uint131.cuh"
+#include "shared_types.h"
+
+template<int CURVE> struct Curve {};
 
 // Memory layout for array of 131-bit integers
 //

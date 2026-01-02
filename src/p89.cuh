@@ -1,8 +1,6 @@
 #ifndef _P89_CUH
 #define _P89_CUH
 
-#include "uint131.cuh"
-
 __constant__ uint131_t _p89_p = {{0x903f1643908ba955, 0x158685c, 0x0}};
 __constant__ uint131_t _p89_k = {{0x40a0dbc30d18f403, 0x5ed01b73e78a4d11, 0xf15c3823}};
 __constant__ uint131_t _p89_r2 = {{0xd96623186da369dd, 0x13e5217, 0x0}};
