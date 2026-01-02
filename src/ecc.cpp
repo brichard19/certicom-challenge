@@ -73,9 +73,9 @@ std::vector<CurveParameters> _curves = {
 CurveParameters _params;
 
 namespace ecc {
-void set_curve(const std::string &curve_name)
+void set_curve(const std::string& curve_name)
 {
-  for(auto &curve : _curves) {
+  for(auto& curve : _curves) {
     if(curve_name == curve.name) {
       _params = curve;
       return;
@@ -87,7 +87,7 @@ void set_curve(const std::string &curve_name)
 std::vector<std::string> get_curves()
 {
   std::vector<std::string> curves;
-  for(auto &curve : _curves) {
+  for(auto& curve : _curves) {
     curves.push_back(curve.name);
   }
 
@@ -96,7 +96,7 @@ std::vector<std::string> get_curves()
 
 std::string get_curve_by_strength(int strength)
 {
-  for(auto &curve : _curves) {
+  for(auto& curve : _curves) {
     if(curve.bits == strength) {
       return curve.name;
     }
@@ -147,7 +147,7 @@ public:
   }
 };
 
-uint131_t sub_raw(const uint131_t &x, const uint131_t &y)
+uint131_t sub_raw(const uint131_t& x, const uint131_t& y)
 {
   uint131_t z;
   int borrow = 0;
@@ -165,7 +165,7 @@ uint131_t sub_raw(const uint131_t &x, const uint131_t &y)
   return z;
 }
 
-uint131_t add_raw(const uint131_t &x, const uint131_t &y)
+uint131_t add_raw(const uint131_t& x, const uint131_t& y)
 {
 
   uint131_t z;
@@ -198,15 +198,15 @@ ecpoint_t make_infinity()
   return p;
 }
 
-bool is_infinity(const ecpoint_t &p)
+bool is_infinity(const ecpoint_t& p)
 {
   // If the high bits of x are all 1, then its a point-at-infinity
   return p.x.w.v2 == (uint32_t)-1;
 }
 
-bool is_equal(const ecpoint_t &p, const ecpoint_t &q) { return p.x == q.x && p.y == q.y; }
+bool is_equal(const ecpoint_t& p, const ecpoint_t& q) { return p.x == q.x && p.y == q.y; }
 
-bool is_neg(const ecpoint_t &p, const ecpoint_t &q)
+bool is_neg(const ecpoint_t& p, const ecpoint_t& q)
 {
   // P == -Q when Px == Qx and Py == -Qy
   if(p.x != q.x) {
@@ -216,7 +216,7 @@ bool is_neg(const ecpoint_t &p, const ecpoint_t &q)
   return p.y == mont::neg(q.y);
 }
 
-bool exists(const ecpoint_t &p)
+bool exists(const ecpoint_t& p)
 {
   uint131_t y2 = mont::square(p.y);
   uint131_t x3 = mont::mul(p.x, mont::square(p.x));
@@ -227,7 +227,7 @@ bool exists(const ecpoint_t &p)
   return y2 == rs;
 }
 
-ecpoint_t dbl(const ecpoint_t &p)
+ecpoint_t dbl(const ecpoint_t& p)
 {
   if(is_infinity(p)) {
     return p;
@@ -253,7 +253,7 @@ ecpoint_t dbl(const ecpoint_t &p)
   return ecc::ecpoint_t(x, y);
 }
 
-ecpoint_t add(const ecpoint_t &p, const ecpoint_t &q)
+ecpoint_t add(const ecpoint_t& p, const ecpoint_t& q)
 {
   if(is_infinity(p)) {
     return q;
@@ -290,7 +290,7 @@ ecpoint_t add(const ecpoint_t &p, const ecpoint_t &q)
   return ecc::ecpoint_t(x, y);
 }
 
-uint131_t genkey(RNG &rng)
+uint131_t genkey(RNG& rng)
 {
   uint131_t r;
   do {
@@ -342,7 +342,7 @@ std::vector<uint131_t> genkeys(int count, int seed)
   return keys;
 }
 
-ecpoint_t mul(const uint131_t &k, const ecpoint_t &p)
+ecpoint_t mul(const uint131_t& k, const ecpoint_t& p)
 {
   ecc::ecpoint_t sum;
 
@@ -395,7 +395,7 @@ int get_bit(uint131_t x, int bit)
   }
 }
 
-std::vector<ecpoint_t> mul(const std::vector<uint131_t> &k, const ecpoint_t &q)
+std::vector<ecpoint_t> mul(const std::vector<uint131_t>& k, const ecpoint_t& q)
 {
   // Create lookup table for Q, 2Q, 4Q... 2^131Q
   std::vector<ecpoint_t> qmul(_params.bits + 1);
@@ -497,7 +497,7 @@ std::vector<ecpoint_t> mul(const std::vector<uint131_t> &k, const ecpoint_t &q)
 }
 
 // Calculate y from x and sign
-uint131_t calc_y(const uint131_t &x, int sign)
+uint131_t calc_y(const uint131_t& x, int sign)
 {
   // y^2 = x^3 + ax + b
   // y = sqrt(x^3 + ax + b)

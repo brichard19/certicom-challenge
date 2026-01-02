@@ -16,14 +16,14 @@ double get_time()
   return (double)ms / 1000.0;
 }
 
-__device__ void print_uint131(const uint131_t &x)
+__device__ void print_uint131(const uint131_t& x)
 {
   int gid = blockDim.x * blockIdx.x + threadIdx.x;
 
   printf("%d %.8x %.16lx %.16lx\n", gid, x.w.v2, x.w.v1, x.w.v0);
 }
 
-template <int CURVE> __global__ void montgomery_perf_test(uint131_t *a, uint131_t *c, int n)
+template <int CURVE> __global__ void montgomery_perf_test(uint131_t* a, uint131_t* c, int n)
 {
   int gid = blockIdx.x * blockDim.x + threadIdx.x;
   int grid_size = blockDim.x * gridDim.x;
@@ -39,7 +39,7 @@ template <int CURVE> __global__ void montgomery_perf_test(uint131_t *a, uint131_
 }
 
 template <int CURVE>
-__device__ void kernel_sub_test_impl(const uint131_t *x, const uint131_t *y, int n)
+__device__ void kernel_sub_test_impl(const uint131_t* x, const uint131_t* y, int n)
 {
   int gid = blockDim.x * blockIdx.x + threadIdx.x;
   int grid_size = blockDim.x * gridDim.x;
@@ -65,13 +65,13 @@ __device__ void kernel_sub_test_impl(const uint131_t *x, const uint131_t *y, int
   }
 }
 
-template <int CURVE> __global__ void kernel_sub_test(const uint131_t *x, const uint131_t *y, int n)
+template <int CURVE> __global__ void kernel_sub_test(const uint131_t* x, const uint131_t* y, int n)
 {
   kernel_sub_test_impl<CURVE>(x, y, n);
 }
 
 template <int CURVE>
-__device__ void kernel_mul_test_impl(const uint131_t *x, const uint131_t *y, uint131_t *z, int n)
+__device__ void kernel_mul_test_impl(const uint131_t* x, const uint131_t* y, uint131_t* z, int n)
 {
   int gid = blockDim.x * blockIdx.x + threadIdx.x;
   int grid_size = blockDim.x * gridDim.x;
@@ -98,14 +98,14 @@ __device__ void kernel_mul_test_impl(const uint131_t *x, const uint131_t *y, uin
 }
 
 template <int CURVE>
-__global__ void kernel_mul_test(const uint131_t *x, const uint131_t *y, uint131_t *z, int n)
+__global__ void kernel_mul_test(const uint131_t* x, const uint131_t* y, uint131_t* z, int n)
 {
   kernel_mul_test_impl<CURVE>(x, y, z, n);
 }
 
 // Test algebraic property (a - b)(a + b) = a^2 - b^2
 template <int CURVE>
-__device__ void kernel_square_test_impl(const uint131_t *x, const uint131_t *y, int n)
+__device__ void kernel_square_test_impl(const uint131_t* x, const uint131_t* y, int n)
 {
   int gid = blockDim.x * blockIdx.x + threadIdx.x;
   int grid_size = blockDim.x * gridDim.x;
@@ -119,12 +119,12 @@ __device__ void kernel_square_test_impl(const uint131_t *x, const uint131_t *y, 
 }
 
 template <int CURVE>
-__global__ void kernel_square_test(const uint131_t *x, const uint131_t *y, int n)
+__global__ void kernel_square_test(const uint131_t* x, const uint131_t* y, int n)
 {
   kernel_square_test_impl<CURVE>(x, y, n);
 }
 
-template <int CURVE> __device__ void kernel_inv_test_impl(const uint131_t *x, int n)
+template <int CURVE> __device__ void kernel_inv_test_impl(const uint131_t* x, int n)
 {
   int gid = blockDim.x * blockIdx.x + threadIdx.x;
   int grid_size = blockDim.x * gridDim.x;
@@ -143,7 +143,7 @@ template <int CURVE> __device__ void kernel_inv_test_impl(const uint131_t *x, in
   }
 }
 
-template <int CURVE> __global__ void kernel_inv_test(const uint131_t *x, int n)
+template <int CURVE> __global__ void kernel_inv_test(const uint131_t* x, int n)
 {
   kernel_inv_test_impl<CURVE>(x, n);
 }
@@ -187,9 +187,9 @@ template <int CURVE> uint131_t gen_key()
 template <int C> bool mul_test()
 {
   int n = TEST_SIZE;
-  uint131_t *x_dev = nullptr;
-  uint131_t *y_dev = nullptr;
-  uint131_t *z_dev = nullptr;
+  uint131_t* x_dev = nullptr;
+  uint131_t* y_dev = nullptr;
+  uint131_t* z_dev = nullptr;
 
   std::vector<uint131_t> z_host(n);
 
@@ -217,7 +217,7 @@ template <int C> bool mul_test()
 template <int C> bool inv_test()
 {
   int n = TEST_SIZE;
-  uint131_t *x_dev = nullptr;
+  uint131_t* x_dev = nullptr;
 
   HIP_CALL(hipMallocManaged(&x_dev, sizeof(uint131_t) * n));
 
@@ -237,8 +237,8 @@ template <int C> bool inv_test()
 template <int C> bool square_test()
 {
   int n = TEST_SIZE;
-  uint131_t *x_dev = nullptr;
-  uint131_t *y_dev = nullptr;
+  uint131_t* x_dev = nullptr;
+  uint131_t* y_dev = nullptr;
 
   std::vector<uint131_t> z_host(n);
 
@@ -263,8 +263,8 @@ template <int C> bool square_test()
 template <int C> bool sub_test()
 {
   int n = TEST_SIZE;
-  uint131_t *x_dev = nullptr;
-  uint131_t *y_dev = nullptr;
+  uint131_t* x_dev = nullptr;
+  uint131_t* y_dev = nullptr;
 
   std::vector<uint131_t> z_host(n);
 
@@ -289,8 +289,8 @@ template <int C> bool sub_test()
 template <int C> bool mul_perf_test()
 {
   int n = 64 * 1024 * 1024;
-  uint131_t *dev_a = nullptr;
-  uint131_t *dev_c = nullptr;
+  uint131_t* dev_a = nullptr;
+  uint131_t* dev_c = nullptr;
 
   HIP_CALL(hipMalloc(&dev_a, sizeof(uint131_t) * n));
   HIP_CALL(hipMalloc(&dev_c, sizeof(uint131_t) * n));
@@ -315,7 +315,7 @@ template <int C> bool mul_perf_test()
   return true;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
   bool pass = true;
 

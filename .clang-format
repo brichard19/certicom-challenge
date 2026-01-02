@@ -8,3 +8,6 @@ SpaceAfterControlStatementKeyword: false
 BreakBeforeBraces: Custom
 BraceWrapping:
   AfterFunction: true
+PointerAlignment: Left
+ReferenceAlignment: Left
+

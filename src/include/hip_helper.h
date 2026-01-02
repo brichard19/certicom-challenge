@@ -29,9 +29,9 @@ using HIPDeviceMap = std::vector<HIPDeviceID>;
 #define HIP_IGNORE(func) (void)func
 
 template <class... T>
-hipError_t hipLaunchKernel(void *kernel, dim3 gridDim, dim3 blockDim, size_t sharedMem, T... args)
+hipError_t hipLaunchKernel(void* kernel, dim3 gridDim, dim3 blockDim, size_t sharedMem, T... args)
 {
-  std::vector<void *> ptr = {&args...};
+  std::vector<void*> ptr = {&args...};
 
   return hipLaunchKernel(kernel, gridDim, blockDim, ptr.data(), sharedMem, 0);
 }

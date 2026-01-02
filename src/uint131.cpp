@@ -21,7 +21,7 @@ uint8_t from_hex(char hex)
   return '0';
 }
 
-std::vector<uint64_t> parse_hex_uint64(const std::string &s)
+std::vector<uint64_t> parse_hex_uint64(const std::string& s)
 {
   std::string hex = s;
 
@@ -60,7 +60,7 @@ uint131_t make_uint131(uint32_t x)
   return val;
 }
 
-uint131_t make_uint131(const std::string &hex)
+uint131_t make_uint131(const std::string& hex)
 {
 
   assert(hex.length() <= 33);
@@ -83,16 +83,16 @@ uint131_t make_uint131(const std::string &hex)
   return val;
 }
 
-bool operator==(const uint131_t &a, const uint131_t &b)
+bool operator==(const uint131_t& a, const uint131_t& b)
 {
   return a.w.v0 == b.w.v0 && a.w.v1 == b.w.v1 && a.w.v2 == b.w.v2;
 }
 
-bool operator!=(const uint131_t &a, const uint131_t &b) { return !(a == b); }
+bool operator!=(const uint131_t& a, const uint131_t& b) { return !(a == b); }
 
-bool is_odd(const uint131_t &x) { return x.w.v0 & 0x01; }
+bool is_odd(const uint131_t& x) { return x.w.v0 & 0x01; }
 
-std::string to_str(const uint131_t &x)
+std::string to_str(const uint131_t& x)
 {
   char buf[256] = "";
 

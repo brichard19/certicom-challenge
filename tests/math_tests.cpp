@@ -242,7 +242,7 @@ bool test12()
   return true;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
   std::vector<std::string> curves = ecc::get_curves();
 

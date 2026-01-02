@@ -9,8 +9,8 @@
 
 // Struct that can be passed to kernel
 template <typename T> struct ManagedStack {
-  T *ptr = nullptr;
-  int *size = nullptr;
+  T* ptr = nullptr;
+  int* size = nullptr;
 };
 
 template <typename T> ManagedStack<T> stack_create(int max_size)
@@ -24,13 +24,13 @@ template <typename T> ManagedStack<T> stack_create(int max_size)
   return stack;
 }
 
-template <typename T> void stack_destroy(ManagedStack<T> &stack)
+template <typename T> void stack_destroy(ManagedStack<T>& stack)
 {
   HIP_IGNORE(hipFree(stack.size));
   HIP_IGNORE(hipFree(stack.ptr));
 }
 
-template <typename T> void stack_fill(ManagedStack<T> &stack, T *data, int count)
+template <typename T> void stack_fill(ManagedStack<T>& stack, T* data, int count)
 {
   memcpy(stack.ptr + *stack.size, data, sizeof(T) * count);
   *stack.size += count;
@@ -40,13 +40,13 @@ template <typename T> void stack_fill(ManagedStack<T> &stack, T *data, int count
 
 #if defined(__HIPCC__)
 
-template <typename T> __device__ T stack_pop(ManagedStack<T> &stack)
+template <typename T> __device__ T stack_pop(ManagedStack<T>& stack)
 {
   int idx = atomicSub(stack.size, 1) - 1;
   return stack.ptr[idx];
 }
 
-template <typename T> __device__ void stack_push(ManagedStack<T> &stack, T val)
+template <typename T> __device__ void stack_push(ManagedStack<T>& stack, T val)
 {
   int idx = atomicAdd(stack.size, 1);
   stack.ptr[idx] = val;

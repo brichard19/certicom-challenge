@@ -17,7 +17,7 @@
 
 #define IFSTREAM_CALL(condition)                                                                   \
   {                                                                                                \
-    auto &ref = condition;                                                                         \
+    auto& ref = condition;                                                                         \
     if(!ref) {                                                                                     \
       std::stringstream ss;                                                                        \
       ss << "FILE error " << " " << __FILE__ << ":" << __LINE__ << ": ";                           \
@@ -57,7 +57,7 @@ private:
     uint8_t key[(131 - DP_BITS + 7) / 8];
     DPData data;
 
-    bool operator<(const DBRecordImpl &other) { return memcmp(key, other.key, sizeof(key)) < 0; }
+    bool operator<(const DBRecordImpl& other) { return memcmp(key, other.key, sizeof(key)) < 0; }
   };
 
   using DBRecord = DBRecordImpl<NUM_DP_BITS>;
@@ -72,7 +72,7 @@ private:
   std::thread _coll_check_thread;
   bool _running = true;
 
-  int get_bucket(const DBRecord &rec)
+  int get_bucket(const DBRecord& rec)
   {
     unsigned int x;
     memcpy(&x, rec.key, sizeof(x));
@@ -86,7 +86,7 @@ private:
 
     std::ofstream f(fname, std::ios::app);
 
-    f.write((const char *)_cache[bucket].data(), sizeof(DBRecord) * _cache[bucket].size());
+    f.write((const char*)_cache[bucket].data(), sizeof(DBRecord) * _cache[bucket].size());
     f.close();
 
     _cache[bucket].clear();
@@ -104,7 +104,7 @@ private:
     }
   }
 
-  EncodedDP reconstruct_encoded_dp(DBRecord &rec, const DPData &data, int dpbits)
+  EncodedDP reconstruct_encoded_dp(DBRecord& rec, const DPData& data, int dpbits)
   {
     EncodedDP encoded;
 
@@ -138,7 +138,7 @@ private:
     f.seekg(0);
 
     std::vector<DBRecord> recs(count);
-    f.read((char *)recs.data(), count * sizeof(DBRecord));
+    f.read((char*)recs.data(), count * sizeof(DBRecord));
 
     f.close();
 
@@ -219,7 +219,7 @@ public:
     std::vector<DBRecord> buckets[NUM_BUCKETS];
 
     // Sort the points into different buckets
-    for(auto &dp : dps) {
+    for(auto& dp : dps) {
       DBRecord rec;
 
       memcpy(rec.key, dp.tx, sizeof(rec.key));
@@ -251,7 +251,7 @@ bool load_stats()
   if(std::filesystem::exists(_db_dir + "/" + "stats.bin")) {
     std::ifstream f(_db_dir + "/" + "stats.bin", std::ios::binary);
 
-    f.read((char *)&_stats, sizeof(_stats));
+    f.read((char*)&_stats, sizeof(_stats));
     f.close();
 
     std::string curve_name(_stats.curve);
@@ -271,11 +271,11 @@ void save_stats()
   std::string curve_name = ecc::curve_name();
   sprintf(_stats.curve, "%s", curve_name.c_str());
 
-  f.write((char *)&_stats, sizeof(_stats));
+  f.write((char*)&_stats, sizeof(_stats));
   f.close();
 }
 
-uint64_t extract_length(EncodedDP &encoded)
+uint64_t extract_length(EncodedDP& encoded)
 {
   uint64_t len = 0;
 
@@ -326,7 +326,7 @@ void collision_callback(DistinguishedPoint p1, DistinguishedPoint p2)
             << std::endl;
 }
 
-RhoDb *get_db(int dp_bits, std::string db_path,
+RhoDb* get_db(int dp_bits, std::string db_path,
               std::function<void(DistinguishedPoint, DistinguishedPoint)> callback)
 {
 #define CASE(N)                                                                                    \
@@ -352,7 +352,7 @@ void main_loop()
 {
   std::cout << "Monitoring " << _data_dir << " for files..." << std::endl;
 
-  RhoDb *coll_db = get_db(_dp_bits, _db_dir, collision_callback);
+  RhoDb* coll_db = get_db(_dp_bits, _db_dir, collision_callback);
 
   memset(&_stats, 0, sizeof(_stats));
 
@@ -370,7 +370,7 @@ void main_loop()
     // Get list of files
     std::vector<std::string> files;
 
-    for(const auto &entry : std::filesystem::directory_iterator(_data_dir)) {
+    for(const auto& entry : std::filesystem::directory_iterator(_data_dir)) {
       if(entry.is_regular_file() && entry.path().extension() == ".dat") {
         files.push_back(entry.path().filename());
       }
@@ -386,7 +386,7 @@ void main_loop()
               << std::endl;
 
     // Process each file
-    for(const auto &file_path : files) {
+    for(const auto& file_path : files) {
 
       std::ifstream f(_data_dir + "/" + file_path, std::ios::in | std::ios::binary);
 
@@ -396,7 +396,7 @@ void main_loop()
 
       // Read the header
       DPHeader header;
-      IFSTREAM_CALL(f.read((char *)&header, sizeof(header)));
+      IFSTREAM_CALL(f.read((char*)&header, sizeof(header)));
 
       try {
         std::string name = ecc::get_curve_by_strength(header.curve);
@@ -409,7 +409,7 @@ void main_loop()
       // Read the data
       std::vector<EncodedDP> dps(header.count);
 
-      IFSTREAM_CALL(f.read((char *)dps.data(), header.count * sizeof(EncodedDP)));
+      IFSTREAM_CALL(f.read((char*)dps.data(), header.count * sizeof(EncodedDP)));
       f.close();
 
       // Get number of DP bits from the header
@@ -458,7 +458,7 @@ void signal_handler(int signal)
   _running = false;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
 
   while(true) {

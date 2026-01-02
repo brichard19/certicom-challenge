@@ -7,7 +7,7 @@
 
 namespace ecc {
 
-void set_curve(const std::string &curve_name);
+void set_curve(const std::string& curve_name);
 std::vector<std::string> get_curves();
 std::string get_curve_by_strength(int strength);
 
@@ -23,25 +23,25 @@ struct ecpoint_t {
     this->y = make_uint131((uint32_t)0);
   }
 
-  ecpoint_t(const uint131_t &x, const uint131_t &y)
+  ecpoint_t(const uint131_t& x, const uint131_t& y)
   {
     this->x = x;
     this->y = y;
   }
 };
 
-bool is_infinity(const ecpoint_t &p);
-bool is_equal(const ecpoint_t &p, const ecpoint_t &q);
-bool is_neg(const ecpoint_t &p, const ecpoint_t &q);
-bool exists(const ecpoint_t &p);
+bool is_infinity(const ecpoint_t& p);
+bool is_equal(const ecpoint_t& p, const ecpoint_t& q);
+bool is_neg(const ecpoint_t& p, const ecpoint_t& q);
+bool exists(const ecpoint_t& p);
 
-ecpoint_t dbl(const ecpoint_t &p);
-ecpoint_t add(const ecpoint_t &p, const ecpoint_t &q);
+ecpoint_t dbl(const ecpoint_t& p);
+ecpoint_t add(const ecpoint_t& p, const ecpoint_t& q);
 uint131_t add_priv_keys(uint131_t k1, uint131_t k2);
-ecpoint_t mul(const uint131_t &k, const ecpoint_t &p);
-uint131_t calc_y(const uint131_t &x, int sign);
+ecpoint_t mul(const uint131_t& k, const ecpoint_t& p);
+uint131_t calc_y(const uint131_t& x, int sign);
 
-std::vector<ecpoint_t> mul(const std::vector<uint131_t> &k, const ecpoint_t &p);
+std::vector<ecpoint_t> mul(const std::vector<uint131_t>& k, const ecpoint_t& p);
 
 ecpoint_t g();
 ecpoint_t q();

@@ -9,13 +9,13 @@ class BinaryEncoder {
 private:
   static const size_t DEFAULT_INITIAL_SIZE = 4096;
 
-  uint8_t *_buf = nullptr;
+  uint8_t* _buf = nullptr;
   size_t _count = 0;
   size_t _size = 0;
 
   void resize(size_t new_size)
   {
-    uint8_t *tmp = new uint8_t[new_size];
+    uint8_t* tmp = new uint8_t[new_size];
 
     std::memcpy(tmp, _buf, _count);
 
@@ -36,11 +36,11 @@ public:
 
   size_t get_size() { return _count; }
 
-  void *get_ptr() { return _buf; }
+  void* get_ptr() { return _buf; }
 
-  template <typename T> void encode(T value) { encode((const void *)&value, sizeof(T)); }
+  template <typename T> void encode(T value) { encode((const void*)&value, sizeof(T)); }
 
-  void encode(const void *ptr, size_t data_size)
+  void encode(const void* ptr, size_t data_size)
   {
     if(_size - _count < data_size) {
       size_t new_size = _size;
@@ -58,14 +58,14 @@ public:
 class BinaryDecoder {
 
 private:
-  const uint8_t *_buf;
+  const uint8_t* _buf;
   size_t _size;
   size_t _idx;
 
 public:
-  BinaryDecoder(const void *buf, size_t size)
+  BinaryDecoder(const void* buf, size_t size)
   {
-    _buf = (uint8_t *)buf;
+    _buf = (uint8_t*)buf;
     _size = size;
     _idx = 0;
   }
@@ -83,7 +83,7 @@ public:
     return value;
   }
 
-  void decode(void *buf, size_t size)
+  void decode(void* buf, size_t size)
   {
     if(_idx + size > _size) {
       throw std::exception();

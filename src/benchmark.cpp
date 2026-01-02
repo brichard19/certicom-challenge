@@ -13,7 +13,7 @@ double _benchmark_run_time = 10.0;
 
 void benchmark(int hip_device)
 {
-  DistinguishedPointFinder *pf = new GPUPointFinder(hip_device, 63, true);
+  DistinguishedPointFinder* pf = new GPUPointFinder(hip_device, 63, true);
 
   pf->init();
 
@@ -71,7 +71,7 @@ void benchmark(int hip_device)
   delete pf;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
   std::string curve_name;
   int device = 0;

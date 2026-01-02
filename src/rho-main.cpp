@@ -53,7 +53,7 @@ std::string _curve_name;
 } // namespace
 
 // Saves distingusihed points to disk
-void save_to_disk(const std::vector<DistinguishedPoint> &dps)
+void save_to_disk(const std::vector<DistinguishedPoint>& dps)
 {
   // Use a temp file when writing since another thread periodically picks up all the
   // .dat files
@@ -63,13 +63,13 @@ void save_to_disk(const std::vector<DistinguishedPoint> &dps)
   auto encoded = encode_dps(dps, ecc::curve_strength(), _dpbits);
   std::ofstream of(tmp_name, std::ios::binary);
 
-  of.write((const char *)encoded.data(), encoded.size());
+  of.write((const char*)encoded.data(), encoded.size());
   of.close();
 
   std::filesystem::rename(tmp_name, file_name);
 }
 
-void dp_callback(const std::vector<DistinguishedPoint> &dps)
+void dp_callback(const std::vector<DistinguishedPoint>& dps)
 {
   uint64_t dpmask = ((uint64_t)1 << _dpbits) - 1;
 
@@ -137,7 +137,7 @@ void main_loop()
 
   std::string data_file_path = _data_dir + "/" + _hostname + "/" + _data_file;
 
-  DistinguishedPointFinder *pf = new GPUPointFinder(_hip_device, _dpbits);
+  DistinguishedPointFinder* pf = new GPUPointFinder(_hip_device, _dpbits);
 
   pf->init(data_file_path);
 
@@ -223,7 +223,7 @@ bool init_directories()
   return true;
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
 
   _hostname = util::get_hostname();

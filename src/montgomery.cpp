@@ -5,7 +5,7 @@
 
 namespace {
 
-uint131_t sub_raw(const uint131_t &x, const uint131_t &y)
+uint131_t sub_raw(const uint131_t& x, const uint131_t& y)
 {
   uint131_t z;
   int borrow = 0;
@@ -24,14 +24,14 @@ uint131_t sub_raw(const uint131_t &x, const uint131_t &y)
 }
 
 // if x is less than y
-int is_less_than(uint131_t &x, uint131_t &y)
+int is_less_than(uint131_t& x, uint131_t& y)
 {
   uint131_t diff = sub_raw(x, y);
 
   return (diff.w.v2 >> 31) & 1;
 }
 
-uint131_t add_raw(const uint131_t &x, const uint131_t &y, int carry_in = 0)
+uint131_t add_raw(const uint131_t& x, const uint131_t& y, int carry_in = 0)
 {
 
   uint131_t z;
@@ -51,7 +51,7 @@ uint131_t add_raw(const uint131_t &x, const uint131_t &y, int carry_in = 0)
 }
 
 // 131 x 131 -> 262 multiplication
-uint262_t mul_131(const uint131_t &a, const uint131_t &b)
+uint262_t mul_131(const uint131_t& a, const uint131_t& b)
 {
   uint262_t tmp;
   uint64_t high = 0;
@@ -109,7 +109,7 @@ uint262_t mul_131(const uint131_t &a, const uint131_t &b)
 }
 
 // 131 x 131 -> 262 multiplication
-uint262_t square_131(const uint131_t &a)
+uint262_t square_131(const uint131_t& a)
 {
   uint262_t tmp;
   uint64_t high = 0;
@@ -168,7 +168,7 @@ uint262_t square_131(const uint131_t &a)
 
 // One in put is 131 bits, the other is 160 bits
 // Output is 131 bits
-uint131_t mul_shift_160(const uint160_t &a, const uint131_t &b)
+uint131_t mul_shift_160(const uint160_t& a, const uint131_t& b)
 {
   uint64_t tmp[5];
   uint64_t high = 0;
@@ -231,7 +231,7 @@ uint131_t mul_shift_160(const uint160_t &a, const uint131_t &b)
 }
 
 // void mul_mod_160(const uint64_t* a, const uint64_t* b, uint64_t* product)
-uint160_t mul_mod_160(const uint160_t &a, const uint131_t &b)
+uint160_t mul_mod_160(const uint160_t& a, const uint131_t& b)
 {
   uint160_t tmp;
   uint64_t high = 0;
@@ -269,7 +269,7 @@ uint160_t mul_mod_160(const uint160_t &a, const uint131_t &b)
 }
 
 // void mont_reduce(const uint64_t* t, uint64_t* y)
-uint131_t mont_reduce(const uint262_t &t)
+uint131_t mont_reduce(const uint262_t& t)
 {
   // m1 = t_lo * k mod R
   // m2 = m1 * p / r

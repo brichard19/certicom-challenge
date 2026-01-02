@@ -6,7 +6,7 @@
 
 #define get_global_size() (blockDim.x * gridDim.x)
 
-__device__ void print_big_int(uint131_t &x) { printf("%.8X%.16lX%.16lX", x.w.v2, x.w.v1, x.w.v0); }
+__device__ void print_big_int(uint131_t& x) { printf("%.8X%.16lX%.16lX", x.w.v2, x.w.v1, x.w.v0); }
 
 __device__ int get_bit(uint131_t x, int bit)
 {
@@ -21,10 +21,10 @@ __device__ int get_bit(uint131_t x, int bit)
 
 // If the private key bit for P is 1, then add Q to P
 template <int CURVE, int N>
-__device__ void do_step_impl(uint131_t *global_px, uint131_t *global_py, uint131_t *global_rx,
-                             uint131_t *global_ry, uint131_t *mbuf, DPResult *result,
-                             int *result_count, ManagedStack<StagingPoint> staging,
-                             uint131_t *priv_key_a, uint64_t counter, uint64_t *start_pos,
+__device__ void do_step_impl(uint131_t* global_px, uint131_t* global_py, uint131_t* global_rx,
+                             uint131_t* global_ry, uint131_t* mbuf, DPResult* result,
+                             int* result_count, ManagedStack<StagingPoint> staging,
+                             uint131_t* priv_key_a, uint64_t counter, uint64_t* start_pos,
                              uint32_t dpmask)
 {
   const int rmask = 0x1f;
@@ -139,9 +139,9 @@ __device__ void do_step_impl(uint131_t *global_px, uint131_t *global_py, uint131
 
 // If the private key bit for P is 1, then add Q to P
 template <int CURVE>
-__device__ void batch_multiply_step(uint131_t *global_px, uint131_t *global_py,
-                                    uint131_t *private_keys, uint131_t *global_qx,
-                                    uint131_t *global_qy, uint131_t *mbuf, int priv_key_bit,
+__device__ void batch_multiply_step(uint131_t* global_px, uint131_t* global_py,
+                                    uint131_t* private_keys, uint131_t* global_qx,
+                                    uint131_t* global_qy, uint131_t* mbuf, int priv_key_bit,
                                     int count)
 {
 
@@ -243,8 +243,8 @@ __device__ void batch_multiply_step(uint131_t *global_px, uint131_t *global_py,
 }
 
 template <int CURVE>
-__device__ void sanity_check_impl(uint131_t *global_px, uint131_t *global_py, int count,
-                                  int *errors)
+__device__ void sanity_check_impl(uint131_t* global_px, uint131_t* global_py, int count,
+                                  int* errors)
 {
   int gid = get_global_id();
   int dim = get_global_size();
@@ -259,7 +259,7 @@ __device__ void sanity_check_impl(uint131_t *global_px, uint131_t *global_py, in
   }
 }
 
-__device__ void clear_public_keys_impl(uint131_t *x_ptr, uint131_t *y_ptr, int count)
+__device__ void clear_public_keys_impl(uint131_t* x_ptr, uint131_t* y_ptr, int count)
 {
   int idx = get_global_id();
   int dim = get_global_size();
@@ -272,7 +272,7 @@ __device__ void clear_public_keys_impl(uint131_t *x_ptr, uint131_t *y_ptr, int c
   }
 }
 
-__device__ void reset_counters_impl(uint64_t *start_pos, uint64_t value, int count)
+__device__ void reset_counters_impl(uint64_t* start_pos, uint64_t value, int count)
 {
   int idx = get_global_id();
   int dim = get_global_size();
@@ -283,87 +283,87 @@ __device__ void reset_counters_impl(uint64_t *start_pos, uint64_t value, int cou
 }
 
 // Set all public keys to point-at-infinity
-extern "C" __global__ void clear_public_keys(uint131_t *x, uint131_t *y, int count)
+extern "C" __global__ void clear_public_keys(uint131_t* x, uint131_t* y, int count)
 {
   clear_public_keys_impl(x, y, count);
 }
 
-extern "C" __global__ void reset_counters(uint64_t *start_pos, uint64_t value, int count)
+extern "C" __global__ void reset_counters(uint64_t* start_pos, uint64_t value, int count)
 {
   reset_counters_impl(start_pos, value, count);
 }
 
-extern "C" __global__ void sanity_check_p131(uint131_t *global_px, uint131_t *global_py, int count,
-                                             int *errors)
+extern "C" __global__ void sanity_check_p131(uint131_t* global_px, uint131_t* global_py, int count,
+                                             int* errors)
 {
   sanity_check_impl<131>(global_px, global_py, count, errors);
 }
 
-extern "C" __global__ void sanity_check_p79(uint131_t *global_px, uint131_t *global_py, int count,
-                                            int *errors)
+extern "C" __global__ void sanity_check_p79(uint131_t* global_px, uint131_t* global_py, int count,
+                                            int* errors)
 {
   sanity_check_impl<79>(global_px, global_py, count, errors);
 }
 
-extern "C" __global__ void sanity_check_p89(uint131_t *global_px, uint131_t *global_py, int count,
-                                            int *errors)
+extern "C" __global__ void sanity_check_p89(uint131_t* global_px, uint131_t* global_py, int count,
+                                            int* errors)
 {
   sanity_check_impl<89>(global_px, global_py, count, errors);
 }
 
-extern "C" __global__ void batch_multiply_p79(uint131_t *global_px, uint131_t *global_py,
-                                              uint131_t *private_keys, uint131_t *mbuf,
-                                              uint131_t *gx, uint131_t *gy, int priv_key_bit,
+extern "C" __global__ void batch_multiply_p79(uint131_t* global_px, uint131_t* global_py,
+                                              uint131_t* private_keys, uint131_t* mbuf,
+                                              uint131_t* gx, uint131_t* gy, int priv_key_bit,
                                               int count)
 {
   batch_multiply_step<79>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
 }
 
-extern "C" __global__ void do_step_p79(uint131_t *global_px, uint131_t *global_py,
-                                       uint131_t *global_rx, uint131_t *global_ry, uint131_t *mbuf,
-                                       DPResult *result, int *result_count,
-                                       ManagedStack<StagingPoint> staging, uint131_t *priv_key_a,
-                                       uint64_t counter, uint64_t *start_pos, uint32_t dpmask)
+extern "C" __global__ void do_step_p79(uint131_t* global_px, uint131_t* global_py,
+                                       uint131_t* global_rx, uint131_t* global_ry, uint131_t* mbuf,
+                                       DPResult* result, int* result_count,
+                                       ManagedStack<StagingPoint> staging, uint131_t* priv_key_a,
+                                       uint64_t counter, uint64_t* start_pos, uint32_t dpmask)
 {
-  do_step_impl<79, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf,
-                                      result, result_count, staging, priv_key_a, counter, start_pos,
+  do_step_impl<79, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, result,
+                                      result_count, staging, priv_key_a, counter, start_pos,
                                       dpmask);
 }
 
-extern "C" __global__ void batch_multiply_p131(uint131_t *global_px, uint131_t *global_py,
-                                               uint131_t *private_keys, uint131_t *mbuf,
-                                               uint131_t *gx, uint131_t *gy, int priv_key_bit,
+extern "C" __global__ void batch_multiply_p131(uint131_t* global_px, uint131_t* global_py,
+                                               uint131_t* private_keys, uint131_t* mbuf,
+                                               uint131_t* gx, uint131_t* gy, int priv_key_bit,
                                                int count)
 {
   batch_multiply_step<131>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
 }
 
-extern "C" __global__ void do_step_p131(uint131_t *global_px, uint131_t *global_py,
-                                        uint131_t *global_rx, uint131_t *global_ry, uint131_t *mbuf,
-                                        DPResult *result, int *result_count,
-                                        ManagedStack<StagingPoint> staging, uint131_t *priv_key_a,
-                                        uint64_t counter, uint64_t *start_pos, uint32_t dpmask)
+extern "C" __global__ void do_step_p131(uint131_t* global_px, uint131_t* global_py,
+                                        uint131_t* global_rx, uint131_t* global_ry, uint131_t* mbuf,
+                                        DPResult* result, int* result_count,
+                                        ManagedStack<StagingPoint> staging, uint131_t* priv_key_a,
+                                        uint64_t counter, uint64_t* start_pos, uint32_t dpmask)
 {
-  do_step_impl<131, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf,
-                                       result, result_count, staging, priv_key_a, counter,
-                                       start_pos, dpmask);
+  do_step_impl<131, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, result,
+                                       result_count, staging, priv_key_a, counter, start_pos,
+                                       dpmask);
 }
 
-extern "C" __global__ void batch_multiply_p89(uint131_t *global_px, uint131_t *global_py,
-                                              uint131_t *private_keys, uint131_t *mbuf,
-                                              uint131_t *gx, uint131_t *gy, int priv_key_bit,
+extern "C" __global__ void batch_multiply_p89(uint131_t* global_px, uint131_t* global_py,
+                                              uint131_t* private_keys, uint131_t* mbuf,
+                                              uint131_t* gx, uint131_t* gy, int priv_key_bit,
                                               int count)
 {
   batch_multiply_step<89>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
 }
 
-extern "C" __global__ void do_step_p89(uint131_t *global_px, uint131_t *global_py,
-                                       uint131_t *global_rx, uint131_t *global_ry, uint131_t *mbuf,
-                                       DPResult *result, int *result_count,
-                                       ManagedStack<StagingPoint> staging, uint131_t *priv_key_a,
-                                       uint64_t counter, uint64_t *start_pos, uint32_t dpmask)
+extern "C" __global__ void do_step_p89(uint131_t* global_px, uint131_t* global_py,
+                                       uint131_t* global_rx, uint131_t* global_ry, uint131_t* mbuf,
+                                       DPResult* result, int* result_count,
+                                       ManagedStack<StagingPoint> staging, uint131_t* priv_key_a,
+                                       uint64_t counter, uint64_t* start_pos, uint32_t dpmask)
 {
-  do_step_impl<89, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf,
-                                      result, result_count, staging, priv_key_a, counter, start_pos,
+  do_step_impl<89, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, result,
+                                      result_count, staging, priv_key_a, counter, start_pos,
                                       dpmask);
 }

@@ -186,10 +186,10 @@ std::string _p131_y_str[] = {
 };
 
 struct RWInfo {
-  std::string *a;
-  std::string *b;
-  std::string *x;
-  std::string *y;
+  std::string* a;
+  std::string* b;
+  std::string* x;
+  std::string* y;
 };
 
 std::map<std::string, RWInfo> _rw_info = {
@@ -231,7 +231,7 @@ std::vector<RWPoint> get_rw_points()
   return rw_vec;
 }
 
-EncodedDP encode_dp(const DistinguishedPoint &dp)
+EncodedDP encode_dp(const DistinguishedPoint& dp)
 {
   EncodedDP encoded;
 
@@ -253,7 +253,7 @@ EncodedDP encode_dp(const DistinguishedPoint &dp)
   return encoded;
 }
 
-std::vector<uint8_t> encode_dps(const std::vector<DistinguishedPoint> &dps, int curve, int dpbits)
+std::vector<uint8_t> encode_dps(const std::vector<DistinguishedPoint>& dps, int curve, int dpbits)
 {
 
   assert(curve == 79 || curve == 131 || curve == 89);
@@ -282,7 +282,7 @@ std::vector<uint8_t> encode_dps(const std::vector<DistinguishedPoint> &dps, int 
   return vec;
 }
 
-DistinguishedPoint decode_dp(const EncodedDP &dp, int dpbits, bool verify)
+DistinguishedPoint decode_dp(const EncodedDP& dp, int dpbits, bool verify)
 {
   ecc::ecpoint_t p;
   memset(&p, 0, sizeof(p));
@@ -312,7 +312,7 @@ DistinguishedPoint decode_dp(const EncodedDP &dp, int dpbits, bool verify)
   return DistinguishedPoint(a, p, dpbits, length);
 }
 
-std::vector<DistinguishedPoint> decode_dps(const uint8_t *bytes, size_t size, bool verify)
+std::vector<DistinguishedPoint> decode_dps(const uint8_t* bytes, size_t size, bool verify)
 {
   BinaryDecoder decoder(bytes, size);
   DPHeader header = decoder.decode<DPHeader>();
@@ -336,7 +336,7 @@ std::vector<DistinguishedPoint> decode_dps(const uint8_t *bytes, size_t size, bo
   return dps;
 }
 
-bool verify_dp(const DistinguishedPoint &dp)
+bool verify_dp(const DistinguishedPoint& dp)
 {
   auto r_points = get_rw_points();
 

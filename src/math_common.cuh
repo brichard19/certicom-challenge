@@ -22,10 +22,10 @@ template <int CURVE> struct Curve {};
 // n * 16 + idx
 //
 
-__device__ uint131_t load_uint131(const void *p, int idx, int n)
+__device__ uint131_t load_uint131(const void* p, int idx, int n)
 {
-  const uint128_t *p128 = (const uint128_t *)p;
-  const uint8_t *p8 = (const uint8_t *)p;
+  const uint128_t* p128 = (const uint128_t*)p;
+  const uint8_t* p8 = (const uint8_t*)p;
 
   uint128_t u128 = p128[idx];
 
@@ -37,10 +37,10 @@ __device__ uint131_t load_uint131(const void *p, int idx, int n)
   return x;
 }
 
-__device__ void store_uint131(void *p, int idx, int n, uint131_t x)
+__device__ void store_uint131(void* p, int idx, int n, uint131_t x)
 {
-  uint128_t *p128 = (uint128_t *)p;
-  uint8_t *p8 = (uint8_t *)p;
+  uint128_t* p128 = (uint128_t*)p;
+  uint8_t* p8 = (uint8_t*)p;
 
   uint128_t u128 = ((uint128_t)x.w.v1 << 64) | x.w.v0;
   p128[idx] = u128;
@@ -48,7 +48,7 @@ __device__ void store_uint131(void *p, int idx, int n, uint131_t x)
   p8[n * sizeof(uint128_t) + idx] = (uint8_t)x.w.v2;
 }
 
-__device__ uint131_t sub_raw(const uint131_t &x, const uint131_t &y)
+__device__ uint131_t sub_raw(const uint131_t& x, const uint131_t& y)
 {
   uint131_t z;
   int borrow = 0;
@@ -66,7 +66,7 @@ __device__ uint131_t sub_raw(const uint131_t &x, const uint131_t &y)
   return z;
 }
 
-__device__ uint131_t add_raw(const uint131_t &x, const uint131_t &y, int carry_in = 0)
+__device__ uint131_t add_raw(const uint131_t& x, const uint131_t& y, int carry_in = 0)
 {
 
   uint131_t z;
@@ -92,12 +92,12 @@ __device__ int is_less_than(uint131_t x, uint131_t y)
   return (diff.w.v2 >> 31) & 1;
 }
 
-__device__ bool equal(const uint131_t &x, const uint131_t &y)
+__device__ bool equal(const uint131_t& x, const uint131_t& y)
 {
   return x.w.v0 == y.w.v0 && x.w.v1 == y.w.v1 && x.w.v2 == y.w.v2;
 }
 
-__device__ uint160_t mul_mod_160(const uint160_t &a, const uint131_t &b)
+__device__ uint160_t mul_mod_160(const uint160_t& a, const uint131_t& b)
 {
   uint160_t tmp;
   uint64_t high64 = 0;

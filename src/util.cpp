@@ -31,21 +31,21 @@ std::string get_date_time()
   return std::string(buf);
 }
 
-std::string to_hex(const void *bytes, size_t count)
+std::string to_hex(const void* bytes, size_t count)
 {
   std::string hex = "";
 
   for(int i = 0; i < count; i++) {
     char tmp[3] = {0};
 
-    sprintf(tmp, "%.2x", ((uint8_t *)bytes)[i]);
+    sprintf(tmp, "%.2x", ((uint8_t*)bytes)[i]);
     hex += std::string(tmp);
   }
 
   return hex;
 }
 
-bool file_exists(const std::string &path)
+bool file_exists(const std::string& path)
 {
   std::ifstream f(path.c_str());
 

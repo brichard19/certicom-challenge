@@ -12,12 +12,12 @@ template <int CURVE> __device__ uint131_t sub(uint131_t x, uint131_t y)
   return Curve<CURVE>::sub(x, y);
 }
 
-template <int CURVE> __device__ uint131_t add(const uint131_t &x, const uint131_t &y)
+template <int CURVE> __device__ uint131_t add(const uint131_t& x, const uint131_t& y)
 {
   return Curve<CURVE>::add(x, y);
 }
 
-template <int CURVE> __device__ uint131_t mont_reduce(const uint262_t &t)
+template <int CURVE> __device__ uint131_t mont_reduce(const uint262_t& t)
 {
   // m1 = t_lo * k mod R
   // m2 = m1 * p / r
@@ -76,7 +76,7 @@ template <int CURVE> __device__ uint131_t square(uint131_t x, int n)
 }
 
 // Modular inverse using Fermat's method
-__device__ uint131_t inv_p131(uint131_t &x)
+__device__ uint131_t inv_p131(uint131_t& x)
 {
   uint131_t z, t0, t1, t2, t3, t4, t5;
 
@@ -141,7 +141,7 @@ __device__ uint131_t inv_p131(uint131_t &x)
   return z;
 }
 
-__device__ uint131_t inv_p79(uint131_t &x)
+__device__ uint131_t inv_p79(uint131_t& x)
 {
   uint131_t z, t0, t1, t2, t3, t4, t5, t6, t7;
 
@@ -186,7 +186,7 @@ __device__ uint131_t inv_p79(uint131_t &x)
 }
 
 // TODO: Optimize
-__device__ uint131_t inv_p89(uint131_t &x)
+__device__ uint131_t inv_p89(uint131_t& x)
 {
   uint131_t prod = _p89_one;
   uint131_t y = x;
@@ -234,9 +234,9 @@ template <int CURVE> __device__ uint131_t inv(uint131_t x)
 // Check for point-at-infinity using the x coordinate
 __device__ bool is_infinity(uint131_t x) { return (x.w.v2 & 0xff) == 0xff; }
 
-__device__ void set_point_at_infinity(uint131_t &x) { x.w.v2 = (uint32_t)-1; }
+__device__ void set_point_at_infinity(uint131_t& x) { x.w.v2 = (uint32_t)-1; }
 
-template <int CURVE> __device__ bool point_exists(uint131_t &x, uint131_t &y)
+template <int CURVE> __device__ bool point_exists(uint131_t& x, uint131_t& y)
 {
   uint131_t a = Curve<CURVE>::a();
   uint131_t b = Curve<CURVE>::b();
