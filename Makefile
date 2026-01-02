@@ -160,3 +160,4 @@ clean:
 	rm -v -f benchmark-nvidia
 	rm -v -f tests/math_tests
 	rm -v -f rho-db
+	rm -v -rf lib
