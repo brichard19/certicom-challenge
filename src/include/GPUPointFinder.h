@@ -28,6 +28,7 @@ private:
   int _iters_per_step = 10;
   int _result_buf_size;
   int _report_count = 16;
+  int _staging_buf_size = 1024;
 
   int _dpbits = 16;
   uint32_t _dpmask;

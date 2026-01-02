@@ -11,14 +11,12 @@
 template <typename T> struct ManagedStack {
   T *ptr = nullptr;
   int *size = nullptr;
-  int max_size = 0;
 };
 
 template <typename T> ManagedStack<T> stack_create(int max_size)
 {
   ManagedStack<T> stack;
 
-  stack.max_size = max_size;
   HIP_CALL(hipMallocManaged(&stack.ptr, sizeof(T) * max_size));
   HIP_CALL(hipMallocManaged(&stack.size, sizeof(int)));
   *stack.size = 0;

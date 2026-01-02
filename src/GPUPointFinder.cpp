@@ -130,9 +130,9 @@ GPUPointFinder::GPUPointFinder(int device, int dpbits, bool benchmark)
   _report_count = (int)((double)_result_buf_size * 0.85);
 
   // Calculate an appropriate size for the staging buffer
-  int staging_buf_size = (int)(((double)_num_points * prob + 1.0) * iters);
+  _staging_buf_size = (int)(((double)_num_points * prob + 1.0) * iters);
 
-  _staging = stack_create<StagingPoint>(staging_buf_size);
+  _staging = stack_create<StagingPoint>(_staging_buf_size);
 }
 
 GPUPointFinder::~GPUPointFinder()
@@ -176,7 +176,7 @@ void GPUPointFinder::refill_staging()
 {
   LOG("Refilling staging buffer");
 
-  int n = _staging.max_size - *_staging.size;
+  int n = _staging_buf_size - *_staging.size;
 
   // Create lookup table for G, 2G, 4G ... nG
   uint131_t *dev_gx = nullptr;
@@ -494,7 +494,7 @@ double GPUPointFinder::step()
   if(_benchmark == false) {
 
     // Refill at 10% capacity
-    if(*_staging.size <= (int)(_staging.max_size * 0.1)) {
+    if(*_staging.size <= (int)(_staging_buf_size * 0.1)) {
       refill_staging();
     }
 
