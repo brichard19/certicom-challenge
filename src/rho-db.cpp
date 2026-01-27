@@ -15,6 +15,8 @@
 #include "signal_handler.h"
 #include "util.h"
 
+typedef unsigned __int128 uint128_t;
+
 #define IFSTREAM_CALL(condition)                                                                   \
   {                                                                                                \
     auto& ref = condition;                                                                         \
@@ -35,7 +37,7 @@
 
 struct JobInfo {
   uint64_t num_dps = 0;
-  uint64_t total_points = 0;
+  uint128_t total_points = 0;
   uint8_t curve_id = 0;
   int dp_bits = 0;
 };
@@ -300,7 +302,7 @@ void process_collision(const DistinguishedPoint p1, const DistinguishedPoint p2)
      << std::endl;
 }
 
-double calc_probability(uint64_t n)
+double calc_probability(uint128_t n)
 {
   double exponent = (double)n * n / (2 * pow(2, (double)ecc::curve_strength()));
 
