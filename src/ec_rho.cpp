@@ -264,7 +264,7 @@ std::vector<uint8_t> encode_dps(const std::vector<DistinguishedPoint>& dps, int 
   DPHeader header;
   header.version = 1;
   header.count = dps.size();
-  header.curve = curve;
+  header.curve_id = curve;
   header.dp_bits = dpbits;
 
   encoder.encode(header);
@@ -317,7 +317,7 @@ std::vector<DistinguishedPoint> decode_dps(const uint8_t* bytes, size_t size, bo
   BinaryDecoder decoder(bytes, size);
   DPHeader header = decoder.decode<DPHeader>();
 
-  assert(header.curve == 79 || header.curve == 131);
+  assert(header.curve_id == 79 || header.curve_id == 131);
 
   std::vector<DistinguishedPoint> dps;
 

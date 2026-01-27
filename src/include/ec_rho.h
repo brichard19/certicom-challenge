@@ -42,7 +42,7 @@ struct EncodedDP {
 struct DPHeader {
   uint8_t version;
   uint32_t count;
-  uint8_t curve;
+  uint8_t curve_id;
   int dp_bits;
 };
 

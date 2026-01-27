@@ -33,11 +33,11 @@
     }                                                                                              \
   }
 
-struct JobStats {
-  uint64_t num_dps;
-  uint64_t total_points;
-  char curve[16];
-  int dp_bits;
+struct JobInfo {
+  uint64_t num_dps = 0;
+  uint64_t total_points = 0;
+  uint8_t curve_id = 0;
+  int dp_bits = 0;
 };
 
 class RhoDb {
@@ -82,7 +82,7 @@ private:
 
   void flush_cache(int bucket)
   {
-    std::string fname = fmt::format("{}/bucket{}.dat", _db_path, bucket);
+    std::string fname = fmt::format("{}/data/bucket{}.dat", _db_path, bucket);
 
     std::ofstream f(fname, std::ios::app);
 
@@ -117,7 +117,7 @@ private:
 
   void check_for_collision(int bucket)
   {
-    std::string fname = fmt::format("{}/bucket{}.dat", _db_path, bucket);
+    std::string fname = fmt::format("{}/data/bucket{}.dat", _db_path, bucket);
 
     _cache_locks[bucket].lock();
 
@@ -204,6 +204,7 @@ public:
   {
     std::filesystem::path p = _db_path;
     std::filesystem::create_directories(_db_path);
+    std::filesystem::create_directories(_db_path + "/data");
 
     _coll_check_thread = std::thread(&RhoDbImpl::thread_function, this);
   }
@@ -242,36 +243,33 @@ namespace {
 bool _running = true;
 std::string _data_dir = "";
 std::string _db_dir = "";
-int _dp_bits = 0;
-JobStats _stats;
+JobInfo _info;
 }; // namespace
 
-bool load_stats()
+bool load_info()
 {
-  if(std::filesystem::exists(_db_dir + "/" + "stats.bin")) {
-    std::ifstream f(_db_dir + "/" + "stats.bin", std::ios::binary);
+  if(std::filesystem::exists(_db_dir + "/" + "info.bin")) {
 
-    f.read((char*)&_stats, sizeof(_stats));
+    std::ifstream f(_db_dir + "/" + "info.bin", std::ios::binary);
+
+    f.read((char*)&_info, sizeof(_info));
     f.close();
 
-    std::string curve_name(_stats.curve);
+
+    std::string curve_name = ecc::get_curve_by_strength(_info.curve_id);
     ecc::set_curve(curve_name);
-    _dp_bits = _stats.dp_bits;
 
     return true;
   }
   return false;
 }
 
-void save_stats()
+void save_info()
 {
   std::ofstream f(_db_dir + "/" + "stats.bin", std::ios::binary);
 
   // Save curve name
-  std::string curve_name = ecc::curve_name();
-  sprintf(_stats.curve, "%s", curve_name.c_str());
-
-  f.write((char*)&_stats, sizeof(_stats));
+  f.write((char*)&_info, sizeof(_info));
   f.close();
 }
 
@@ -311,9 +309,9 @@ double calc_probability(uint64_t n)
 
 void display_status()
 {
-  double prob = calc_probability(_stats.total_points);
+  double prob = calc_probability(_info.total_points);
   std::string status = fmt::format("DPs: {:>9}  |  Ps: {:>15}  |  Collision: {:>7.4f}% ({:.2e})",
-                                   _stats.num_dps, _stats.total_points, prob * 100.0, prob);
+                                   _info.num_dps, _info.total_points, prob * 100.0, prob);
   std::cout << status << std::endl;
 }
 
@@ -352,13 +350,11 @@ void main_loop()
 {
   std::cout << "Monitoring " << _data_dir << " for files..." << std::endl;
 
-  RhoDb* coll_db = get_db(_dp_bits, _db_dir, collision_callback);
-
-  memset(&_stats, 0, sizeof(_stats));
+  RhoDb* coll_db = nullptr;
 
   // To create the DB we need the number of distinguished bits.
-  if(load_stats()) {
-    coll_db = get_db(_stats.dp_bits, _db_dir, collision_callback);
+  if(load_info()) {
+    coll_db = get_db(_info.dp_bits, _db_dir, collision_callback);
   }
 
   std::filesystem::create_directories(_data_dir);
@@ -398,11 +394,19 @@ void main_loop()
       DPHeader header;
       IFSTREAM_CALL(f.read((char*)&header, sizeof(header)));
 
+      // If we don't know the curve yet, use the one from the header.
+      if(_info.curve_id == 0) {
+        _info.curve_id = header.curve_id;
+      } else if(_info.curve_id != header.curve_id) {
+          std::cout << fmt::format("Error: Expected {} got {}", _info.curve_id, header.curve_id) << std::endl;
+          break;
+      }
+
       try {
-        std::string name = ecc::get_curve_by_strength(header.curve);
-        ecc::set_curve(name);
+        std::string curve_name = ecc::get_curve_by_strength(header.curve_id);
+        ecc::set_curve(curve_name);
       } catch(...) {
-        _running = false;
+        std::cout << fmt::format("Error: expected curve {} got {}", _info.curve_id, header.curve_id) << std::endl;
         break;
       }
 
@@ -414,8 +418,14 @@ void main_loop()
 
       // Get number of DP bits from the header
       if(coll_db == nullptr) {
-        _stats.dp_bits = header.dp_bits;
-        coll_db = get_db(_stats.dp_bits, _db_dir, collision_callback);
+        if(_info.dp_bits == 0) {
+          _info.dp_bits = header.dp_bits;
+        } else if(_info.dp_bits != header.dp_bits) {
+          std::cout << fmt::format("Error: expected {} bits got {}", _info.dp_bits, header.dp_bits) << std::endl;
+          continue;
+        }
+
+        coll_db = get_db(_info.dp_bits, _db_dir, collision_callback);
       }
 
       // Count the length of all the walks
@@ -423,14 +433,14 @@ void main_loop()
       for(auto dp : dps) {
 
         // Validation
-        decode_dp(dp, _stats.dp_bits, true);
+        decode_dp(dp, _info.dp_bits, true);
 
         count += extract_length(dp);
       }
 
       // Keep count of total points and distinguished points
-      _stats.total_points += count;
-      _stats.num_dps += dps.size();
+      _info.total_points += count;
+      _info.num_dps += dps.size();
 
       util::Timer timer;
       coll_db->insert(dps);
@@ -445,7 +455,7 @@ void main_loop()
     }
     std::cout << "========================================================================="
               << std::endl;
-    save_stats();
+    save_info();
     display_status();
   }
 
