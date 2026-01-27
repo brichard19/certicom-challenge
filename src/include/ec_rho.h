@@ -11,6 +11,8 @@ struct DistinguishedPoint {
   uint64_t length = 0;
   int dp_bits = 0;
 
+  DistinguishedPoint(){}
+
   DistinguishedPoint(uint131_t a, ecc::ecpoint_t p, int dp_bits, uint64_t length)
       : a(a), p(p), dp_bits(dp_bits)
   {
