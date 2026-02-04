@@ -2,6 +2,7 @@
 #define _MANAGED_STACK_H
 
 #include <hip/hip_runtime.h>
+#include "hip_helper.h"
 
 #if !defined(__HIPCC__)
 #include "hip_helper.h"
