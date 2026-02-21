@@ -87,7 +87,7 @@ __device__ void do_step_impl(uint131_t* global_px, uint131_t* global_py, uint131
   inverse = inv<CURVE>(inverse);
 
   // Complete addition
-  i = gid + 63 * dim;
+  i = gid + (N - 1) * dim;
   for(int n = 0; n < N; n++) {
     uint131_t px = load_uint131(global_px, i, count);
     uint131_t py = load_uint131(global_py, i, count);
@@ -99,7 +99,7 @@ __device__ void do_step_impl(uint131_t* global_px, uint131_t* global_py, uint131
 
     uint131_t s;
 
-    if(n < 63) {
+    if(n < N - 1) {
 
       // Get the 2nd-last element (product of all factors up to that number)
       // e.g. abcd
