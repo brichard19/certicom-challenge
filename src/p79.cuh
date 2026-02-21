@@ -107,7 +107,7 @@ __device__ uint262_t Curve<79>::mul(uint131_t a, uint131_t b)
   t = (uint128_t)a.w.v1 * b.w.v1 + tmp.v[2] + high;
   tmp.v[2] = (uint64_t)t;
 
-  tmp.v[4] = 0;
+  tmp.v4 = 0;
 
   return tmp;
 }
@@ -139,7 +139,7 @@ __device__ uint262_t Curve<79>::square(uint131_t a)
   t = (uint128_t)a.w.v1 * a.w.v1 + tmp.v[2] + high;
   tmp.v[2] = (uint64_t)t;
 
-  tmp.v[4] = 0;
+  tmp.v4 = 0;
 
   return tmp;
 }

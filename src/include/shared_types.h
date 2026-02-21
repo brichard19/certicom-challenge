@@ -23,7 +23,8 @@ union uint160_t {
 };
 
 struct uint262_t {
-  uint64_t v[5];
+  uint64_t v[4];
+  uint32_t v4;
 };
 
 typedef unsigned __int128 uint128_t;

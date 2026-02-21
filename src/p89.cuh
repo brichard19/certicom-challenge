@@ -123,7 +123,7 @@ __device__ uint262_t Curve<89>::mul(uint131_t a, uint131_t b)
   tmp.v[3] = (uint64_t)t;
   uint32_t high32 = (uint32_t)(t >> 64);
 
-  tmp.v[4] = high32;
+  tmp.v4 = high32;
 
   // a2 * b0
   t = (uint128_t)a.w.v2 * b.w.v0 + tmp.v[2];
@@ -137,8 +137,8 @@ __device__ uint262_t Curve<89>::mul(uint131_t a, uint131_t b)
 
   // a2 * b2
   // The final word is only at most 6 bits, so no 128-bit mul needed
-  uint32_t t32 = (uint32_t)a.w.v2 * b.w.v2 + tmp.v[4] + high32;
-  tmp.v[4] = t32;
+  uint32_t t32 = (uint32_t)a.w.v2 * b.w.v2 + tmp.v4 + high32;
+  tmp.v4 = t32;
 
   return tmp;
 }
@@ -181,7 +181,7 @@ __device__ uint262_t Curve<89>::square(uint131_t a)
   tmp.v[3] = (uint64_t)t;
   uint32_t high32 = (uint32_t)(t >> 64);
 
-  tmp.v[4] = high32;
+  tmp.v4 = high32;
 
   // a2 * a0
   t = (uint128_t)a.w.v2 * a.w.v0 + tmp.v[2];
@@ -195,8 +195,8 @@ __device__ uint262_t Curve<89>::square(uint131_t a)
 
   // a2 * a2
   // The final word is only at most 6 bits, so no 128-bit mul needed
-  uint32_t t32 = (uint32_t)a.w.v2 * a.w.v2 + tmp.v[4] + high32;
-  tmp.v[4] = t32;
+  uint32_t t32 = (uint32_t)a.w.v2 * a.w.v2 + tmp.v4 + high32;
+  tmp.v4 = t32;
 
   return tmp;
 }
