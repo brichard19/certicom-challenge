@@ -1,8 +1,8 @@
 #ifndef _MANAGED_STACK_H
 #define _MANAGED_STACK_H
 
-#include <hip/hip_runtime.h>
 #include "hip_helper.h"
+#include <hip/hip_runtime.h>
 
 #if !defined(__HIPCC__)
 #include "hip_helper.h"

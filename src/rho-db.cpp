@@ -257,7 +257,6 @@ bool load_info()
     f.read((char*)&_info, sizeof(_info));
     f.close();
 
-
     std::string curve_name = ecc::get_curve_by_strength(_info.curve_id);
     ecc::set_curve(curve_name);
 
@@ -400,15 +399,17 @@ void main_loop()
       if(_info.curve_id == 0) {
         _info.curve_id = header.curve_id;
       } else if(_info.curve_id != header.curve_id) {
-          std::cout << fmt::format("Error: Expected {} got {}", _info.curve_id, header.curve_id) << std::endl;
-          break;
+        std::cout << fmt::format("Error: Expected {} got {}", _info.curve_id, header.curve_id)
+                  << std::endl;
+        break;
       }
 
       try {
         std::string curve_name = ecc::get_curve_by_strength(header.curve_id);
         ecc::set_curve(curve_name);
       } catch(...) {
-        std::cout << fmt::format("Error: expected curve {} got {}", _info.curve_id, header.curve_id) << std::endl;
+        std::cout << fmt::format("Error: expected curve {} got {}", _info.curve_id, header.curve_id)
+                  << std::endl;
         break;
       }
 
@@ -423,7 +424,8 @@ void main_loop()
         if(_info.dp_bits == 0) {
           _info.dp_bits = header.dp_bits;
         } else if(_info.dp_bits != header.dp_bits) {
-          std::cout << fmt::format("Error: expected {} bits got {}", _info.dp_bits, header.dp_bits) << std::endl;
+          std::cout << fmt::format("Error: expected {} bits got {}", _info.dp_bits, header.dp_bits)
+                    << std::endl;
           continue;
         }
 
