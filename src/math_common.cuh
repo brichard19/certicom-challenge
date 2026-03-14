@@ -87,9 +87,11 @@ __device__ uint131_t add_raw(const uint131_t& x, const uint131_t& y, int carry_i
 
 __device__ int is_less_than(uint131_t x, uint131_t y)
 {
-  uint131_t diff = sub_raw(x, y);
-
-  return (diff.w.v2 >> 31) & 1;
+  if(x.w.v2 != y.w.v2)
+    return x.w.v2 < y.w.v2;
+  if(x.w.v1 != y.w.v1)
+    return x.w.v1 < y.w.v1;
+  return x.w.v0 < y.w.v0;
 }
 
 __device__ bool equal(const uint131_t& x, const uint131_t& y)

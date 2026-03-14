@@ -21,13 +21,7 @@ template <> struct Curve<131> {
 
   __device__ static uint131_t sub(uint131_t x, uint131_t y);
   __device__ static uint131_t add(uint131_t x, uint131_t y);
-
-  __device__ static uint262_t mul(uint131_t x, uint131_t y);
-  __device__ static uint262_t square(uint131_t x);
-
-  __device__ static uint131_t mul_shift_160(uint160_t a, uint131_t b);
-
-  __device__ static uint131_t high_bits(uint262_t x);
+  __device__ static uint131_t fused_mul(uint131_t x, uint131_t y);
 };
 
 __device__ uint131_t Curve<131>::sub(uint131_t x, uint131_t y)
@@ -66,17 +60,6 @@ __device__ uint131_t Curve<131>::sub(uint131_t x, uint131_t y)
   return z;
 }
 
-__device__ uint131_t Curve<131>::high_bits(uint262_t x)
-{
-  uint131_t hi;
-
-  hi.w.v0 = (x.v[2] >> 32) | (x.v[3] << 32);
-  hi.w.v1 = (x.v[3] >> 32) | ((uint64_t)x.v4 << 32);
-  hi.w.v2 = 0;
-
-  return hi;
-}
-
 __device__ uint131_t Curve<131>::add(uint131_t x, uint131_t y)
 {
   uint131_t z = add_raw(x, y);
@@ -88,182 +71,72 @@ __device__ uint131_t Curve<131>::add(uint131_t x, uint131_t y)
   return z;
 }
 
-// 131 x 131 -> 262 multiplication
-__device__ uint262_t Curve<131>::mul(uint131_t a, uint131_t b)
+// CIOS Montgomery multiplication for P131
+// n=5 limbs of 32 bits, R=2^160, mp = -p^{-1} mod 2^32
+// p.v[4] = 4 is hardcoded as a left-shift to save one multiply per iteration.
+__device__ uint131_t Curve<131>::fused_mul(uint131_t a, uint131_t b)
 {
-  uint262_t tmp;
-  uint64_t high = 0;
+  const uint32_t mp = _p131_k.v[0]; // = 0x985b105d, -p^{-1} mod 2^32
+  const uint32_t p0 = _p131_p.v[0];
+  const uint32_t p1 = _p131_p.v[1];
+  const uint32_t p2 = _p131_p.v[2];
+  const uint32_t p3 = _p131_p.v[3];
+  // p.v[4] = 4, use shift instead of multiply
 
-  // a0 * b0
-  uint128_t t = (uint128_t)a.w.v0 * b.w.v0;
-  tmp.v[0] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
+  uint64_t t0 = 0, t1 = 0, t2 = 0, t3 = 0, t4 = 0;
 
-  // a0 * b1
-  t = (uint128_t)a.w.v0 * b.w.v1 + high;
-  tmp.v[1] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
+  for(int i = 0; i < 5; i++) {
+    const uint32_t bi = b.v[i];
+    uint64_t C, prod;
 
-  // a0 * b2
-  t = (uint128_t)a.w.v0 * b.w.v2 + high;
-  tmp.v[2] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
+    // Multiply-accumulate: t += a * b[i]
+    prod = (uint64_t)a.v[0] * bi + t0;
+    t0 = prod & 0xffffffffULL;
+    C = prod >> 32;
+    prod = (uint64_t)a.v[1] * bi + t1 + C;
+    t1 = prod & 0xffffffffULL;
+    C = prod >> 32;
+    prod = (uint64_t)a.v[2] * bi + t2 + C;
+    t2 = prod & 0xffffffffULL;
+    C = prod >> 32;
+    prod = (uint64_t)a.v[3] * bi + t3 + C;
+    t3 = prod & 0xffffffffULL;
+    C = prod >> 32;
+    // a.v[4] <= 7 (3 bits), so t4 stays well within uint64_t
+    t4 = (uint64_t)a.v[4] * bi + t4 + C;
 
-  tmp.v[3] = high;
+    // Montgomery reduction: m = t0 * mp mod 2^32, then t += m*p, shift right 32
+    const uint32_t m = (uint32_t)t0 * mp;
 
-  // a1 * b0
-  t = (uint128_t)a.w.v1 * b.w.v0 + tmp.v[1];
-  tmp.v[1] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
+    prod = (uint64_t)m * p0 + t0;
+    C = prod >> 32;
+    prod = (uint64_t)m * p1 + t1 + C;
+    t0 = prod & 0xffffffffULL;
+    C = prod >> 32;
+    prod = (uint64_t)m * p2 + t2 + C;
+    t1 = prod & 0xffffffffULL;
+    C = prod >> 32;
+    prod = (uint64_t)m * p3 + t3 + C;
+    t2 = prod & 0xffffffffULL;
+    C = prod >> 32;
+    // p.v[4] = 4, so m * p.v[4] = m << 2
+    prod = ((uint64_t)m << 2) + t4 + C;
+    t3 = prod & 0xffffffffULL;
+    t4 = prod >> 32;
+  }
 
-  // a1 * b1
-  t = (uint128_t)a.w.v1 * b.w.v1 + tmp.v[2] + high;
-  tmp.v[2] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
+  uint131_t result;
+  result.v[0] = (uint32_t)t0;
+  result.v[1] = (uint32_t)t1;
+  result.v[2] = (uint32_t)t2;
+  result.v[3] = (uint32_t)t3;
+  result.v[4] = (uint32_t)t4;
 
-  // a1 * b2
-  t = (uint128_t)a.w.v1 * b.w.v2 + tmp.v[3] + high;
-  tmp.v[3] = (uint64_t)t;
-  uint32_t high32 = (uint32_t)(t >> 64);
+  if(is_less_than(_p131_p, result)) {
+    result = sub_raw(result, _p131_p);
+  }
 
-  tmp.v4 = high32;
-
-  // a2 * b0
-  t = (uint128_t)a.w.v2 * b.w.v0 + tmp.v[2];
-  tmp.v[2] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
-
-  // a2 * b1
-  t = (uint128_t)a.w.v2 * b.w.v1 + tmp.v[3] + high;
-  tmp.v[3] = (uint64_t)t;
-  high32 = (uint32_t)(t >> 64);
-
-  // a2 * b2
-  // The final word is only at most 6 bits, so no 128-bit mul needed
-  uint32_t t32 = (uint32_t)a.w.v2 * b.w.v2 + tmp.v4 + high32;
-  tmp.v4 = t32;
-
-  return tmp;
-}
-
-// 131 x 131 -> 262 multiplication
-__device__ uint262_t Curve<131>::square(uint131_t a)
-{
-  uint262_t tmp;
-  uint64_t high = 0;
-
-  // a0 * a0
-  uint128_t t = (uint128_t)a.w.v0 * a.w.v0;
-  tmp.v[0] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
-
-  // a0 * a1
-  t = (uint128_t)a.w.v0 * a.w.v1 + high;
-  tmp.v[1] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
-
-  // a0 * a2
-  t = (uint128_t)a.w.v0 * a.w.v2 + high;
-  tmp.v[2] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
-
-  tmp.v[3] = high;
-
-  // a1 * a0
-  t = (uint128_t)a.w.v1 * a.w.v0 + tmp.v[1];
-  tmp.v[1] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
-
-  // a1 * a1
-  t = (uint128_t)a.w.v1 * a.w.v1 + tmp.v[2] + high;
-  tmp.v[2] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
-
-  // a1 * a2
-  t = (uint128_t)a.w.v1 * a.w.v2 + tmp.v[3] + high;
-  tmp.v[3] = (uint64_t)t;
-  uint32_t high32 = (uint32_t)(t >> 64);
-
-  tmp.v4 = high32;
-
-  // a2 * a0
-  t = (uint128_t)a.w.v2 * a.w.v0 + tmp.v[2];
-  tmp.v[2] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
-
-  // a2 * a1
-  t = (uint128_t)a.w.v2 * a.w.v1 + tmp.v[3] + high;
-  tmp.v[3] = (uint64_t)t;
-  high32 = (uint32_t)(t >> 64);
-
-  // a2 * a2
-  // The final word is only at most 6 bits, so no 128-bit mul needed
-  uint32_t t32 = (uint32_t)a.w.v2 * a.w.v2 + tmp.v4 + high32;
-  tmp.v4 = t32;
-
-  return tmp;
-}
-
-__device__ uint131_t Curve<131>::mul_shift_160(uint160_t a, uint131_t b)
-{
-  uint64_t tmp[5];
-  uint64_t high = 0;
-
-  // a0 * b0
-  uint128_t t = (uint128_t)a.w.v0 * b.w.v0;
-  high = (uint64_t)(t >> 64);
-
-  // a0 * b1
-  t = (uint128_t)a.w.v0 * b.w.v1 + high;
-  tmp[1] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
-
-  // a0 * b2
-  t = (uint128_t)a.w.v0 * b.w.v2 + high;
-  tmp[2] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
-
-  tmp[3] = high;
-
-  // a1 * b0
-  t = (uint128_t)a.w.v1 * b.w.v0 + tmp[1];
-  tmp[1] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
-
-  // a1 * b1
-  t = (uint128_t)a.w.v1 * b.w.v1 + tmp[2] + high;
-  tmp[2] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
-
-  // a1 * b2
-  t = (uint128_t)a.w.v1 * b.w.v2 + tmp[3] + high;
-  tmp[3] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
-
-  tmp[4] = high;
-
-  // a2 * b0
-  t = (uint128_t)a.w.v2 * b.w.v0 + tmp[2];
-  tmp[2] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
-
-  // a2 * b1
-  t = (uint128_t)a.w.v2 * b.w.v1 + tmp[3] + high;
-  tmp[3] = (uint64_t)t;
-  high = (uint64_t)(t >> 64);
-
-  // a2 * b2
-  // The final word is only at most 35 bits, so no 128-bit mul needed
-  uint64_t t64 = (uint64_t)a.w.v2 * b.w.v2 + tmp[4] + high;
-  tmp[4] = t64;
-
-  uint131_t product;
-  // Divide by 2^160
-  product.w.v0 = (tmp[2] >> 32) | (tmp[3] << 32);
-  product.w.v1 = (tmp[3] >> 32) | (tmp[4] << 32);
-  product.w.v2 = (tmp[4] >> 32);
-
-  return product;
+  return result;
 }
 
 #endif

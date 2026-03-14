@@ -59,12 +59,33 @@ template <int CURVE> __device__ uint131_t mul(uint131_t x, uint131_t y)
   return mont_reduce<CURVE>(product);
 }
 
+template <> __device__ uint131_t mul<131>(uint131_t x, uint131_t y)
+{
+  return Curve<131>::fused_mul(x, y);
+}
+
 template <int CURVE> __device__ uint131_t square(uint131_t x)
 {
   uint262_t product = Curve<CURVE>::square(x);
 
   return mont_reduce<CURVE>(product);
 }
+
+template <> __device__ uint131_t square<131>(uint131_t x) { return Curve<131>::fused_mul(x, x); }
+
+template <> __device__ uint131_t mul<79>(uint131_t x, uint131_t y)
+{
+  return Curve<79>::fused_mul(x, y);
+}
+
+template <> __device__ uint131_t square<79>(uint131_t x) { return Curve<79>::fused_mul(x, x); }
+
+template <> __device__ uint131_t mul<89>(uint131_t x, uint131_t y)
+{
+  return Curve<89>::fused_mul(x, y);
+}
+
+template <> __device__ uint131_t square<89>(uint131_t x) { return Curve<89>::fused_mul(x, x); }
 
 template <int CURVE> __device__ uint131_t square(uint131_t x, int n)
 {
