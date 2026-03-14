@@ -6,22 +6,19 @@
 
 __constant__ uint131_t _p131_p = {{0x194c43186b3abc0b, 0x8e1d43f293469e33, 0x4}};
 __constant__ uint131_t _p131_k = {{0xe0587d72985b105d, 0xf1fd54b0309e1ab9, 0x7cfd70cf}};
-__constant__ uint131_t _p131_r2 = {{0xf95d709f92600513, 0xf3d6fa1fb65ef639, 0x3}};
 __constant__ uint131_t _p131_one = {{0x6e7743da32b6d0c7, 0x88c614d64c1a8f0b, 0x0}};
 __constant__ uint131_t _p131_a = {{0xe7f7f250cee8709a, 0xacd15fe1a8ec1522, 0x0}};
 __constant__ uint131_t _p131_b = {{0xc85087e5ab4eca9e, 0xde124657d7ba5851, 0x2}};
 
 template <> struct Curve<131> {
   __device__ static uint131_t p() { return _p131_p; };
-  __device__ static uint131_t k() { return _p131_k; };
-  __device__ static uint131_t r2() { return _p131_r2; };
   __device__ static uint131_t one() { return _p131_one; };
   __device__ static uint131_t a() { return _p131_a; };
   __device__ static uint131_t b() { return _p131_b; };
 
   __device__ static uint131_t sub(uint131_t x, uint131_t y);
   __device__ static uint131_t add(uint131_t x, uint131_t y);
-  __device__ static uint131_t fused_mul(uint131_t x, uint131_t y);
+  __device__ static uint131_t mul(uint131_t x, uint131_t y);
 };
 
 __device__ uint131_t Curve<131>::sub(uint131_t x, uint131_t y)
@@ -74,7 +71,7 @@ __device__ uint131_t Curve<131>::add(uint131_t x, uint131_t y)
 // CIOS Montgomery multiplication for P131
 // n=5 limbs of 32 bits, R=2^160, mp = -p^{-1} mod 2^32
 // p.v[4] = 4 is hardcoded as a left-shift to save one multiply per iteration.
-__device__ uint131_t Curve<131>::fused_mul(uint131_t a, uint131_t b)
+__device__ uint131_t Curve<131>::mul(uint131_t a, uint131_t b)
 {
   const uint32_t mp = _p131_k.v[0]; // = 0x985b105d, -p^{-1} mod 2^32
   const uint32_t p0 = _p131_p.v[0];

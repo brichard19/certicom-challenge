@@ -6,22 +6,19 @@
 
 __constant__ uint131_t _p79_p = {{0x5177412aca899cf5, 0x62ce, 0x0}};
 __constant__ uint131_t _p79_k = {{0x6e3655426732d0a3, 0xcafea9fd045a89b6, 0xe6bb05ec}};
-__constant__ uint131_t _p79_r2 = {{0x7b0baef57de52417, 0xe79, 0x0}};
 __constant__ uint131_t _p79_one = {{0x5447aa703f6abc5f, 0x1358, 0x0}};
 __constant__ uint131_t _p79_a = {{0x732c9b460e3c3d, 0x1bb7, 0x0}};
 __constant__ uint131_t _p79_b = {{0xc88edfd7d5b44610, 0x250c, 0x0}};
 
 template <> struct Curve<79> {
   __device__ static uint131_t p() { return _p79_p; };
-  __device__ static uint131_t k() { return _p79_k; };
-  __device__ static uint131_t r2() { return _p79_r2; };
   __device__ static uint131_t one() { return _p79_one; };
   __device__ static uint131_t a() { return _p79_a; };
   __device__ static uint131_t b() { return _p79_b; };
 
   __device__ static uint131_t sub(uint131_t x, uint131_t y);
   __device__ static uint131_t add(uint131_t x, uint131_t y);
-  __device__ static uint131_t fused_mul(uint131_t x, uint131_t y);
+  __device__ static uint131_t mul(uint131_t x, uint131_t y);
 };
 
 __device__ uint131_t Curve<79>::sub(uint131_t x, uint131_t y)
@@ -69,7 +66,7 @@ __device__ uint131_t Curve<79>::add(uint131_t x, uint131_t y)
 // p has only 3 significant limbs: p.v[3]=p.v[4]=0
 // b has only 3 significant limbs: b.v[3]=b.v[4]=0 (values < 2^79)
 // Outer loop i=3,4: multiply step is zero; still need reduction passes.
-__device__ uint131_t Curve<79>::fused_mul(uint131_t a, uint131_t b)
+__device__ uint131_t Curve<79>::mul(uint131_t a, uint131_t b)
 {
   const uint32_t mp = _p79_k.v[0]; // = 0x6732d0a3, -p^{-1} mod 2^32
   const uint32_t p0 = _p79_p.v[0]; // = 0xca899cf5

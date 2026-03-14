@@ -17,75 +17,12 @@ template <int CURVE> __device__ uint131_t add(const uint131_t& x, const uint131_
   return Curve<CURVE>::add(x, y);
 }
 
-template <int CURVE> __device__ uint131_t mont_reduce(const uint262_t& t)
-{
-  // m1 = t_lo * k mod R
-  // m2 = m1 * p / r
-  // m3 = m2 + t_hi + 1
-
-  uint160_t t_lo;
-  t_lo.w.v0 = t.v[0];
-  t_lo.w.v1 = t.v[1];
-  t_lo.w.v2 = (uint32_t)t.v[2];
-
-  // Remaining high bits (102 bits)
-  uint131_t t_hi = Curve<CURVE>::high_bits(t);
-
-  uint160_t m1;
-  uint131_t m2;
-  uint131_t m3;
-
-  uint131_t p = Curve<CURVE>::p();
-  uint131_t k = Curve<CURVE>::k();
-
-  m1 = mul_mod_160(t_lo, k);
-
-  m2 = Curve<CURVE>::mul_shift_160(m1, p);
-
-  // Not sure if this is correct, but carry always seems to be 1.
-  m3 = add_raw(t_hi, m2, 1);
-
-  if(is_less_than(p, m3)) {
-    m3 = sub_raw(m3, p);
-  }
-
-  return m3;
-}
-
 template <int CURVE> __device__ uint131_t mul(uint131_t x, uint131_t y)
 {
-  uint262_t product = Curve<CURVE>::mul(x, y);
-
-  return mont_reduce<CURVE>(product);
+  return Curve<CURVE>::mul(x, y);
 }
 
-template <> __device__ uint131_t mul<131>(uint131_t x, uint131_t y)
-{
-  return Curve<131>::fused_mul(x, y);
-}
-
-template <int CURVE> __device__ uint131_t square(uint131_t x)
-{
-  uint262_t product = Curve<CURVE>::square(x);
-
-  return mont_reduce<CURVE>(product);
-}
-
-template <> __device__ uint131_t square<131>(uint131_t x) { return Curve<131>::fused_mul(x, x); }
-
-template <> __device__ uint131_t mul<79>(uint131_t x, uint131_t y)
-{
-  return Curve<79>::fused_mul(x, y);
-}
-
-template <> __device__ uint131_t square<79>(uint131_t x) { return Curve<79>::fused_mul(x, x); }
-
-template <> __device__ uint131_t mul<89>(uint131_t x, uint131_t y)
-{
-  return Curve<89>::fused_mul(x, y);
-}
-
-template <> __device__ uint131_t square<89>(uint131_t x) { return Curve<89>::fused_mul(x, x); }
+template <int CURVE> __device__ uint131_t square(uint131_t x) { return Curve<CURVE>::mul(x, x); }
 
 template <int CURVE> __device__ uint131_t square(uint131_t x, int n)
 {

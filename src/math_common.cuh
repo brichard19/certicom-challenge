@@ -99,40 +99,4 @@ __device__ bool equal(const uint131_t& x, const uint131_t& y)
   return x.w.v0 == y.w.v0 && x.w.v1 == y.w.v1 && x.w.v2 == y.w.v2;
 }
 
-__device__ uint160_t mul_mod_160(const uint160_t& a, const uint131_t& b)
-{
-  uint160_t tmp;
-  uint64_t high64 = 0;
-  uint32_t high32 = 0;
-
-  // a0 * b0
-  uint128_t t = (uint128_t)a.w.v0 * b.w.v0;
-  tmp.w.v0 = (uint64_t)t;
-  high64 = (uint64_t)(t >> 64);
-
-  // a0 * b1
-  t = (uint128_t)a.w.v0 * b.w.v1 + high64;
-  tmp.w.v1 = (uint64_t)t;
-  high32 = (uint32_t)(t >> 64);
-
-  // a0 * b2
-  uint32_t t32 = (uint32_t)a.w.v0 * b.w.v2 + high32;
-  tmp.w.v2 = (uint32_t)t32;
-
-  // a1 * b0
-  t = (uint128_t)a.w.v1 * b.w.v0 + tmp.w.v1;
-  tmp.w.v1 = (uint64_t)t;
-  high32 = (uint32_t)(t >> 64);
-
-  // a0 * b1
-  t32 = (uint32_t)a.w.v1 * b.w.v1 + tmp.w.v2 + high32;
-  tmp.w.v2 = t32;
-
-  // a2 * b0
-  t32 = (uint32_t)a.w.v2 * b.w.v0 + tmp.w.v2;
-  tmp.w.v2 = t32;
-
-  return tmp;
-}
-
 #endif
