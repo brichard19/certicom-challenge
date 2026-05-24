@@ -46,7 +46,7 @@ std::string _hostname = "";
 bool _use_mpi = false;
 int _world_size = -1;
 int _world_rank = -1;
-volatile bool _mpi_thread_running = true;
+//volatile bool _mpi_thread_running = true;
 
 int _dpbits = 0;
 std::string _curve_name;
@@ -81,56 +81,56 @@ void dp_callback(const std::vector<DistinguishedPoint>& dps)
     assert((dp.p.x.w.v0 & dpmask) == 0);
   }
 
-  if(_use_mpi == false || (_use_mpi == true && _world_rank == 0)) {
+  //if(_use_mpi == false || (_use_mpi == true && _world_rank == 0)) {
     save_to_disk(dps);
-  } else {
-#ifdef BUILD_MPI
-    LOG("Rank {} reporting {} points", _world_rank, dps.size());
-    MPI_CALL(MPI_Send(dps.data(), dps.size() * sizeof(dps[0]), MPI_BYTE, 0, 0, MPI_COMM_WORLD));
-#endif
-  }
+//   } else {
+// #ifdef BUILD_MPI
+//     LOG("Rank {} reporting {} points", _world_rank, dps.size());
+//     MPI_CALL(MPI_Send(dps.data(), dps.size() * sizeof(dps[0]), MPI_BYTE, 0, 0, MPI_COMM_WORLD));
+// #endif
+  //}
 }
 
-#ifdef BUILD_MPI
-void mpi_recv_thread_function()
-{
-  int buf_size = 1024 * 1024 * sizeof(DistinguishedPoint);
-  std::vector<char> buf(buf_size);
+// #ifdef BUILD_MPI
+// void mpi_recv_thread_function()
+// {
+//   int buf_size = 1024 * 1024 * sizeof(DistinguishedPoint);
+//   std::vector<char> buf(buf_size);
 
-  LOG("MPI thread started");
+//   LOG("MPI thread started");
 
-  MPI_Request request;
+//   MPI_Request request;
 
-  // Async request
-  MPI_CALL(MPI_Irecv(buf.data(), buf_size, MPI_BYTE, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &request));
+//   // Async request
+//   MPI_CALL(MPI_Irecv(buf.data(), buf_size, MPI_BYTE, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &request));
 
-  while(_mpi_thread_running == true) {
-    int flag = 0;
-    MPI_Status status;
-    MPI_CALL(MPI_Test(&request, &flag, &status));
-    if(flag) {
-      int num_bytes;
-      MPI_CALL(MPI_Get_count(&status, MPI_BYTE, &num_bytes));
+//   while(_mpi_thread_running == true) {
+//     int flag = 0;
+//     MPI_Status status;
+//     MPI_CALL(MPI_Test(&request, &flag, &status));
+//     if(flag) {
+//       int num_bytes;
+//       MPI_CALL(MPI_Get_count(&status, MPI_BYTE, &num_bytes));
 
-      printf("MPI: Received %d bytes\n", num_bytes);
+//       printf("MPI: Received %d bytes\n", num_bytes);
 
-      assert(num_bytes % sizeof(DistinguishedPoint) == 0);
+//       assert(num_bytes % sizeof(DistinguishedPoint) == 0);
 
-      int num_points = num_bytes / sizeof(DistinguishedPoint);
-      std::vector<DistinguishedPoint> dps(num_points);
+//       int num_points = num_bytes / sizeof(DistinguishedPoint);
+//       std::vector<DistinguishedPoint> dps(num_points);
 
-      memcpy(dps.data(), buf.data(), num_bytes);
+//       memcpy(dps.data(), buf.data(), num_bytes);
 
-      save_to_disk(dps);
+//       save_to_disk(dps);
 
-      // New async request
-      MPI_CALL(
-          MPI_Irecv(buf.data(), buf_size, MPI_BYTE, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &request));
-    }
-    std::this_thread::sleep_for(std::chrono::seconds(3));
-  }
-}
-#endif
+//       // New async request
+//       MPI_CALL(
+//           MPI_Irecv(buf.data(), buf_size, MPI_BYTE, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &request));
+//     }
+//     std::this_thread::sleep_for(std::chrono::seconds(3));
+//   }
+// }
+// #endif
 
 void main_loop()
 {
@@ -376,31 +376,31 @@ int main(int argc, char** argv)
   set_signal_handler(signal_handler);
 
 #ifdef BUILD_MPI
-  // Thread for receiving MPI messages
-  std::thread mpi_thread;
-  if(_use_mpi == true && _world_rank == 0) {
-    mpi_thread = std::thread(mpi_recv_thread_function);
-  }
+  // // Thread for receiving MPI messages
+  // std::thread mpi_thread;
+  // if(_use_mpi == true && _world_rank == 0) {
+  //   mpi_thread = std::thread(mpi_recv_thread_function);
+  // }
 #endif
 
   // Run main loop
   main_loop();
 
-#ifdef BUILD_MPI
-  if(_use_mpi == true) {
-    // Wait for all MPI processes to finish
-    // TODO: This will wait for ALL MPI processes. If any died, this will block forever
-    std::cout << "Waiting for MPI processes to finish..." << std::endl;
-    MPI_Barrier(MPI_COMM_WORLD);
-    // Stop msg receive thread
-    _mpi_thread_running = false;
-  }
-#endif
+// #ifdef BUILD_MPI
+//   if(_use_mpi == true) {
+//     // Wait for all MPI processes to finish
+//     // TODO: This will wait for ALL MPI processes. If any died, this will block forever
+//     std::cout << "Waiting for MPI processes to finish..." << std::endl;
+//     MPI_Barrier(MPI_COMM_WORLD);
+//     // Stop msg receive thread
+//     _mpi_thread_running = false;
+//   }
+// #endif
 
 #ifdef BUILD_MPI
-  if(_use_mpi == true && _world_rank == 0) {
-    mpi_thread.join();
-  }
+  // if(_use_mpi == true && _world_rank == 0) {
+  //   mpi_thread.join();
+  // }
 
   // Cleanup MPI
   if(_use_mpi) {
