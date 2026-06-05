@@ -293,31 +293,31 @@ ecpoint_t add(const ecpoint_t& p, const ecpoint_t& q)
 uint131_t genkey(RNG& rng)
 {
   uint131_t r;
-  do {
-    uint64_t k[3];
 
-    k[0] = rng.next();
-    k[1] = rng.next();
-    k[2] = rng.next();
+  uint64_t k[3];
 
-    int words = _params.bits / 64;
-    int high_bits = _params.bits % 64;
+  // Generate random bits
+  k[0] = rng.next();
+  k[1] = rng.next();
+  k[2] = rng.next();
 
-    k[words] >>= (64 - high_bits);
-    for(int i = words + 1; i < 3; i++) {
-      k[i] = 0;
-    }
+  const int words = _params.bits / 64;
+  const int high_bits = _params.bits % 64;
 
-    r.w.v0 = k[0];
-    r.w.v1 = k[1];
-    r.w.v2 = (uint32_t)k[2];
+  // Zero out the high bits
+  k[words] >>= (64 - high_bits);
+  for(int i = words + 1; i < 3; i++) {
+    k[i] = 0;
+  }
 
-    if(!mont::less_than(r, _params.n)) {
-      for(int i = 0; i < 5; i++) {
-        r.v[i] ^= _params.n.v[i];
-      }
-    }
-  } while(!mont::less_than(r, _params.n));
+  r.w.v0 = k[0];
+  r.w.v1 = k[1];
+  r.w.v2 = (uint32_t)k[2];
+
+  // mod N
+  if(!mont::less_than(r, _params.n)) {
+    r = mont::sub(r, _params.n);
+  }
 
   return r;
 }
