@@ -23,7 +23,6 @@ std::vector<CurveParameters> _curves = {
         .r = {{0x6e7743da32b6d0c7, 0x88c614d64c1a8f0b, 0x0}},
         .r2 = {{0xf95d709f92600513, 0xf3d6fa1fb65ef639, 0x3}},
         .bits = 131,
-        .words = 3,
         .name = "ecp131",
     },
 
@@ -44,7 +43,6 @@ std::vector<CurveParameters> _curves = {
         .r = {{0x5447aa703f6abc5f, 0x1358, 0x0}},
         .r2 = {{0x7b0baef57de52417, 0xe79, 0x0}},
         .bits = 79,
-        .words = 2,
         .name = "ecp79",
     },
 
@@ -66,7 +64,6 @@ std::vector<CurveParameters> _curves = {
         .r = {{0x9e896dc839826cf6, 0x78c8ca, 0x0}},
         .r2 = {{0xd96623186da369dd, 0x13e5217, 0x0}},
         .bits = 89,
-        .words = 2,
         .name = "ecp89",
     }};
 

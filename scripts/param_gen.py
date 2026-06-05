@@ -121,8 +121,7 @@ def main():
     print(f"  .r2 = {to_hex(to_montgomery(2**160, params.p))},")
     
     print(f"  .bits = {params.p.bit_length()},")
-    
-    print(f"  .words = {(params.p.bit_length() + 63) // 64},")
+
 
     print(f"  .name = \"{curve_name}\",")
 
