@@ -23,7 +23,6 @@ struct CurveParameters {
   uint131_t r;
   uint131_t r2;
   int bits;
-  int words;
   std::string name;
 };
 

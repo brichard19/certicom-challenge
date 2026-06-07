@@ -2,100 +2,112 @@
 #include "ecc_internal.h"
 #include "montgomery.h"
 #include "util.h"
-#include <random>
 #include <stdexcept>
 
-std::vector<CurveParameters> _curves = {
-    {
-        .p = {{0x194c43186b3abc0b, 0x8e1d43f293469e33, 0x4}},
-        .a = {{0xe7f7f250cee8709a, 0xacd15fe1a8ec1522, 0x0}},
-        .b = {{0xc85087e5ab4eca9e, 0xde124657d7ba5851, 0x2}},
-        .n = {{0x7f7ed728f6b8e6f1, 0x8e1d43f293469e31, 0x4}},
-        .gx = {{0xb137748018df6458, 0xb188ba8cd2a386d9, 0x0}},
-        .gy = {{0x4b5a2a8f9b90cbef, 0x7dabb39a1bb0a5fa, 0x2}},
-        .qx = {{0xc83af1fe332475e3, 0xe38a3357a4b0bb01, 0x2}},
-        .qy = {{0xfe97756ed241b570, 0xb167247624e73021, 0x3}},
-        .k = {{0xe0587d72985b105d, 0xf1fd54b0309e1ab9, 0x7cfd70cf}},
-        .one = {{0x6e7743da32b6d0c7, 0x88c614d64c1a8f0b, 0x0}},
-        .two = {{0xdcee87b4656da18e, 0x118c29ac98351e16, 0x1}},
-        .p_minus_2 = {{0x194c43186b3abc09, 0x8e1d43f293469e33, 0x4}},
-        .sqrt = {{0xc65310c61aceaf03, 0x238750fca4d1a78c, 0x1}},
-        .r = {{0x6e7743da32b6d0c7, 0x88c614d64c1a8f0b, 0x0}},
-        .r2 = {{0xf95d709f92600513, 0xf3d6fa1fb65ef639, 0x3}},
-        .bits = 131,
-        .name = "ecp131",
-    },
+#include <map>
 
-    {
-        .p = {{0x5177412aca899cf5, 0x62ce, 0x0}},
-        .a = {{0x732c9b460e3c3d, 0x1bb7, 0x0}},
-        .b = {{0xc88edfd7d5b44610, 0x250c, 0x0}},
-        .n = {{0x5177407b7258dc31, 0x62ce, 0x0}},
-        .gx = {{0x8fa818f2b62053c8, 0x3e37, 0x0}},
-        .gy = {{0xddab9a8daa5aa60b, 0x21a9, 0x0}},
-        .qx = {{0x96642c5fb8dbd341, 0x7a7, 0x0}},
-        .qy = {{0xbf3614d658e2931c, 0x426c, 0x0}},
-        .k = {{0x6e3655426732d0a3, 0xcafea9fd045a89b6, 0xe6bb05ec}},
-        .one = {{0x5447aa703f6abc5f, 0x1358, 0x0}},
-        .two = {{0xa88f54e07ed578be, 0x26b0, 0x0}},
-        .p_minus_2 = {{0x5177412aca899cf3, 0x62ce, 0x0}},
-        .sqrt = {{0xca2ee8255951339e, 0xc59, 0x0}},
-        .r = {{0x5447aa703f6abc5f, 0x1358, 0x0}},
-        .r2 = {{0x7b0baef57de52417, 0xe79, 0x0}},
-        .bits = 79,
-        .name = "ecp79",
-    },
+std::map<std::string, CurveParameters> _curves = {
 
-    {
-        .p = {{0x903f1643908ba955, 0x158685c, 0x0}},
-        .a = {{0xb1ec24706b2573c1, 0x593048, 0x0}},
-        .b = {{0x37717b7e1c0a25af, 0xc58c6, 0x0}},
-        .n = {{0x903ef906d7f58d47, 0x158685c, 0x0}},
-        .gx = {{0x2c11310d3564b72b, 0xd96524, 0x0}},
-        .gy = {{0x43b68c253c4f8f18, 0xc94f03, 0x0}},
-        .qx = {{0x78b7d9810a131af2, 0x35deeb, 0x0}},
-        .qy = {{0x60bcf87a21747143, 0x24daba, 0x0}},
-        .k = {{0x40a0dbc30d18f403, 0x5ed01b73e78a4d11, 0xf15c3823}},
-        .one = {{0x9e896dc839826cf6, 0x78c8ca, 0x0}},
-        .two = {{0x3d12db907304d9ec, 0xf19195, 0x0}},
-        .p_minus_2 = {{0x903f1643908ba953, 0x158685c, 0x0}},
-        //(p - 5) // 8
-        .sqrt = {{0x9207e2c87211752a, 0x2b0d0b, 0x0}},
-        .r = {{0x9e896dc839826cf6, 0x78c8ca, 0x0}},
-        .r2 = {{0xd96623186da369dd, 0x13e5217, 0x0}},
-        .bits = 89,
-        .name = "ecp89",
-    }};
+    {"ecp131",
+     {
+         .p = {{0x194c43186b3abc0b, 0x8e1d43f293469e33, 0x4}},
+         .a = {{0xe7f7f250cee8709a, 0xacd15fe1a8ec1522, 0x0}},
+         .b = {{0xc85087e5ab4eca9e, 0xde124657d7ba5851, 0x2}},
+         .n = {{0x7f7ed728f6b8e6f1, 0x8e1d43f293469e31, 0x4}},
+         .gx = {{0xb137748018df6458, 0xb188ba8cd2a386d9, 0x0}},
+         .gy = {{0x4b5a2a8f9b90cbef, 0x7dabb39a1bb0a5fa, 0x2}},
+         .qx = {{0xc83af1fe332475e3, 0xe38a3357a4b0bb01, 0x2}},
+         .qy = {{0xfe97756ed241b570, 0xb167247624e73021, 0x3}},
+         .k = {{0xe0587d72985b105d, 0xf1fd54b0309e1ab9, 0x7cfd70cf}},
+         .one = {{0x6e7743da32b6d0c7, 0x88c614d64c1a8f0b, 0x0}},
+         .two = {{0xdcee87b4656da18e, 0x118c29ac98351e16, 0x1}},
+         .p_minus_2 = {{0x194c43186b3abc09, 0x8e1d43f293469e33, 0x4}},
+         .sqrt = {{0xc65310c61aceaf03, 0x238750fca4d1a78c, 0x1}},
+         .r = {{0x6e7743da32b6d0c7, 0x88c614d64c1a8f0b, 0x0}},
+         .r2 = {{0xf95d709f92600513, 0xf3d6fa1fb65ef639, 0x3}},
+         .bits = 131,
+         .name = "ecp131",
+     }},
+
+    {"ecp79",
+     {
+         .p = {{0x5177412aca899cf5, 0x62ce, 0x0}},
+         .a = {{0x732c9b460e3c3d, 0x1bb7, 0x0}},
+         .b = {{0xc88edfd7d5b44610, 0x250c, 0x0}},
+         .n = {{0x5177407b7258dc31, 0x62ce, 0x0}},
+         .gx = {{0x8fa818f2b62053c8, 0x3e37, 0x0}},
+         .gy = {{0xddab9a8daa5aa60b, 0x21a9, 0x0}},
+         .qx = {{0x96642c5fb8dbd341, 0x7a7, 0x0}},
+         .qy = {{0xbf3614d658e2931c, 0x426c, 0x0}},
+         .k = {{0x6e3655426732d0a3, 0xcafea9fd045a89b6, 0xe6bb05ec}},
+         .one = {{0x5447aa703f6abc5f, 0x1358, 0x0}},
+         .two = {{0xa88f54e07ed578be, 0x26b0, 0x0}},
+         .p_minus_2 = {{0x5177412aca899cf3, 0x62ce, 0x0}},
+         .sqrt = {{0xca2ee8255951339e, 0xc59, 0x0}},
+         .r = {{0x5447aa703f6abc5f, 0x1358, 0x0}},
+         .r2 = {{0x7b0baef57de52417, 0xe79, 0x0}},
+         .bits = 79,
+         .name = "ecp79",
+     }},
+
+    {"ecp89",
+
+     {
+         .p = {{0x903f1643908ba955, 0x158685c, 0x0}},
+         .a = {{0xb1ec24706b2573c1, 0x593048, 0x0}},
+         .b = {{0x37717b7e1c0a25af, 0xc58c6, 0x0}},
+         .n = {{0x903ef906d7f58d47, 0x158685c, 0x0}},
+         .gx = {{0x2c11310d3564b72b, 0xd96524, 0x0}},
+         .gy = {{0x43b68c253c4f8f18, 0xc94f03, 0x0}},
+         .qx = {{0x78b7d9810a131af2, 0x35deeb, 0x0}},
+         .qy = {{0x60bcf87a21747143, 0x24daba, 0x0}},
+         .k = {{0x40a0dbc30d18f403, 0x5ed01b73e78a4d11, 0xf15c3823}},
+         .one = {{0x9e896dc839826cf6, 0x78c8ca, 0x0}},
+         .two = {{0x3d12db907304d9ec, 0xf19195, 0x0}},
+         .p_minus_2 = {{0x903f1643908ba953, 0x158685c, 0x0}},
+         //(p - 5) // 8
+         .sqrt = {{0x9207e2c87211752a, 0x2b0d0b, 0x0}},
+         .r = {{0x9e896dc839826cf6, 0x78c8ca, 0x0}},
+         .r2 = {{0xd96623186da369dd, 0x13e5217, 0x0}},
+         .bits = 89,
+         .name = "ecp89",
+     }}};
 
 CurveParameters _params;
+
+namespace {
+// Internal RNG
+IntRNG _rng;
+
+}; // namespace
 
 namespace ecc {
 void set_curve(const std::string& curve_name)
 {
-  for(auto& curve : _curves) {
-    if(curve_name == curve.name) {
-      _params = curve;
-      return;
-    }
+
+  if(_curves.find(curve_name) == _curves.end()) {
+    throw std::runtime_error("Invalid curve name");
   }
-  throw std::runtime_error("Invalid curve name");
+
+  _params = _curves[curve_name];
 }
 
 std::vector<std::string> get_curves()
 {
-  std::vector<std::string> curves;
+  std::vector<std::string> curve_names;
+
   for(auto& curve : _curves) {
-    curves.push_back(curve.name);
+    curve_names.push_back(curve.first);
   }
 
-  return curves;
+  return curve_names;
 }
 
 std::string get_curve_by_strength(int strength)
 {
   for(auto& curve : _curves) {
-    if(curve.bits == strength) {
-      return curve.name;
+    if(curve.second.bits == strength) {
+      return curve.second.name;
     }
   }
 
@@ -105,44 +117,6 @@ std::string get_curve_by_strength(int strength)
 } // namespace ecc
 
 namespace {
-
-class RNG {
-
-public:
-  virtual uint64_t next() = 0;
-};
-
-class IntRNG : public RNG {
-
-private:
-  std::random_device _rd;
-  std::mt19937 _gen;
-  std::uniform_int_distribution<uint64_t> _d;
-
-public:
-  IntRNG() { _gen = std::mt19937(_rd()); }
-
-  virtual uint64_t next() { return _d(_gen); }
-};
-
-// Internal RNG
-IntRNG _rng;
-
-class DeterministicRNG : public RNG {
-
-private:
-  uint64_t _state;
-
-public:
-  DeterministicRNG(int seed) { _state = seed; }
-
-  virtual uint64_t next()
-  {
-    _state = _state * 6364136223846793005 + 1442695040888963407;
-
-    return _state;
-  }
-};
 
 uint131_t sub_raw(const uint131_t& x, const uint131_t& y)
 {

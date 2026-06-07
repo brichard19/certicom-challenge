@@ -1,9 +1,9 @@
 #ifndef _ECC_H
 #define _ECC_H
 
-#include <vector>
-
+#include "rng.h"
 #include "uint131.h"
+#include <vector>
 
 namespace ecc {
 
@@ -53,6 +53,7 @@ std::string curve_name();
 int curve_strength();
 
 uint131_t genkey();
+uint131_t genkey(RNG& rng);
 std::vector<uint131_t> genkeys(int count, int seed);
 
 } // namespace ecc

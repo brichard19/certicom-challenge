@@ -138,53 +138,6 @@ def main():
     print(f"__constant__ uint131_t _{alt_name}_b = {to_hex(to_montgomery(params.b, params.p))};")
     print()
 
-    exponents = []
-    r_points = []
-
-    random.seed(1)
-
-    p = curve.bp
-    q = ecc.ECPoint(qx, qy)
-    for _ in range(32):
-        a = randint(params.n)
-        b = randint(params.n)
-        exponents.append((a, b))
-
-        rp = curve.add(curve.multiply(a, p), curve.multiply(b, q))
-        r_points.append(rp)
-
-    print()
-    print(f"_a_str = [")
-    for e in exponents:
-        print(f"\"{e[0]:x}\",")
-    print("]")
-    print()
-    print(f"_b_str = [")
-    for e in exponents:
-        print(f"\"{e[1]:x}\",")
-    print("]")
-    print()
-    print()
-
-    print(f"std::string _{alt_name}_a_str[] = {{")
-    for e in exponents:
-        print(f"\"{e[0]:x}\",")
-    print("};")
-    print()
-    print(f"std::string _{alt_name}_b_str[] = {{")
-    for e in exponents:
-        print(f"\"{e[1]:x}\",")
-    print("};")
-    print()
-    print(f"std::string _{alt_name}_x_str[] = {{")
-    for r in r_points:
-        print(f"\"{to_montgomery(r.x, curve.p):x}\",")
-    print("};")
-    print() 
-    print(f"std::string _{alt_name}_y_str[] = {{")
-    for r in r_points:
-        print(f"\"{to_montgomery(r.y, curve.p):x}\",")
-    print("};")
 
 if __name__ == "__main__":
     main()
