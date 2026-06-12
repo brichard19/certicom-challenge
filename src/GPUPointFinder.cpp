@@ -469,21 +469,16 @@ double GPUPointFinder::step()
       HIP_CALL(hipMemcpy(x.data(), _dev_x, x.size(), hipMemcpyDeviceToHost));
       HIP_CALL(hipMemcpy(y.data(), _dev_y, y.size(), hipMemcpyDeviceToHost));
 
-      int count = 0;
       for(int i = 0; i < _num_points; i++) {
         uint131_t xval = load_uint131(x.data(), i, _num_points);
         uint131_t yval = load_uint131(y.data(), i, _num_points);
         ecc::ecpoint_t p(xval, yval);
 
         if(!ecc::exists(p)) {
-          count++;
           LOG("{} {}", to_str(p.x), to_str(p.y));
+          throw std::runtime_error("Error verifying points");
         }
       }
-
-      LOG("Host detected {} errors", count);
-
-      throw std::runtime_error("Error verifying points");
     }
 
     // Only verify on the first iteration
