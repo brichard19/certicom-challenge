@@ -5,6 +5,19 @@
 
 namespace {
 
+struct uint262_t {
+  uint64_t v[4];
+  uint32_t v4;
+};
+
+union uint160_t {
+  struct {
+    uint64_t v0;
+    uint64_t v1;
+    uint32_t v2;
+  } w;
+};
+
 uint131_t sub_raw(const uint131_t& x, const uint131_t& y)
 {
   uint131_t z;
