@@ -95,6 +95,9 @@ CPP_BENCH := $(addprefix src/, $(CPP_BENCH))
 CPP_DATABASE := rho-db.cpp ec_rho.cpp  ecc.cpp montgomery.cpp uint131.cpp  util.cpp
 CPP_DATABASE := $(addprefix src/, $(CPP_DATABASE))
 
+CPP_SOLVE := rho-solve.cpp ec_rho.cpp  ecc.cpp montgomery.cpp uint131.cpp  util.cpp
+CPP_SOLVE := $(addprefix src/, $(CPP_SOLVE))
+
 export BUILD_DIR
 export BIN_PREFIX=certicom-
 export LIB_DIR
@@ -114,7 +117,7 @@ ifeq ($(filter amd,$(TARGET_PLATFORMS)),amd)
 TARGETS += benchmark_amd rho_amd
 endif
 
-all:	$(TARGETS) rho_db
+all:	$(TARGETS) rho_db rho_solve
 
 .PHONY: third_party
 third_party:
@@ -146,6 +149,10 @@ rho_amd:	third_party gpu_amd
 
 rho_db:	third_party
 	$(CXX) $(CFLAGS) $(CPP_DATABASE) -o rho-db $(INCLUDE) -L$(LIB_DIR) -Isrc -Isrc/include -lfmt
+
+rho_solve:	third_party
+	$(CXX) $(CFLAGS) $(CPP_SOLVE) -o rho-solve $(INCLUDE) -L$(LIB_DIR) -Isrc -Isrc/include -lfmt
+
 
 .PHONY: tests
 tests:

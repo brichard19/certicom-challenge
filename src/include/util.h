@@ -31,6 +31,8 @@ public:
   double elapsed();
 };
 
+unsigned __int128 parse_uint128(const std::string& s);
+std::string to_string(unsigned __int128 x);
 }; // namespace util
 
 #endif

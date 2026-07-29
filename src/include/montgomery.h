@@ -8,6 +8,10 @@ namespace mont {
 uint131_t to(uint131_t a);
 uint131_t from(uint131_t a);
 uint131_t add(uint131_t a, uint131_t b);
+uint131_t add_mod_n(uint131_t a, uint131_t b, uint131_t n);
+uint131_t sub_mod_n(uint131_t a, uint131_t b, uint131_t n);
+uint131_t mul_mod_n(uint131_t a, uint131_t b, uint131_t n);
+uint131_t inv_mod_n(uint131_t x, uint131_t n);
 uint131_t neg(uint131_t a);
 uint131_t sub(uint131_t a, uint131_t b);
 uint131_t mul(uint131_t a, uint131_t b);

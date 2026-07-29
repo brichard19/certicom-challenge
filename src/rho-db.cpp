@@ -1,19 +1,24 @@
 
+#include "ec_rho.h"
+#include "fmt/format.h"
+#include "signal_handler.h"
+#include "util.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <getopt.h>
 #include <iostream>
+#include <mutex>
+#include <queue>
 #include <sstream>
 #include <string.h>
 #include <thread>
 #include <unistd.h>
 
-#include "ec_rho.h"
-#include "fmt/format.h"
-#include "signal_handler.h"
-#include "util.h"
+// rho-db --create  --db-dir <db-dir>
+// rho-db --db-dir <db-dir> --input <input-dir>
 
 typedef unsigned __int128 uint128_t;
 
@@ -38,10 +43,14 @@ typedef unsigned __int128 uint128_t;
 struct JobInfo {
   uint64_t num_dps = 0;
   uint128_t total_points = 0;
-  uint8_t curve_id = 0;
+  std::string curve;
   int dp_bits = 0;
 };
 
+std::mutex _coll_lock;
+std::queue<std::pair<DistinguishedPoint, DistinguishedPoint>> _collisions;
+
+// Database interface
 class RhoDb {
 
 public:
@@ -49,6 +58,7 @@ public:
   virtual void insert(const std::vector<EncodedDP> dps) = 0;
 };
 
+// Database implementation
 template <int NUM_DP_BITS> class RhoDbImpl : public RhoDb {
 
 private:
@@ -135,7 +145,7 @@ private:
 
     util::Timer timer;
 
-    f.seekg(0, std::ios::end);
+    IFSTREAM_CALL(f.seekg(0, std::ios::end));
     size_t count = f.tellg() / sizeof(DBRecord);
     f.seekg(0);
 
@@ -240,6 +250,28 @@ public:
   }
 };
 
+RhoDb* get_db(int dp_bits, std::string db_path,
+              std::function<void(DistinguishedPoint, DistinguishedPoint)> callback)
+{
+#define CASE(N)                                                                                    \
+  case N:                                                                                          \
+    return new RhoDbImpl<N>(db_path, callback)
+#define CASE_4X(N)                                                                                 \
+  CASE(N);                                                                                         \
+  CASE(N + 1);                                                                                     \
+  CASE(N + 2);                                                                                     \
+  CASE(N + 3);
+
+  switch(dp_bits) {
+    CASE_4X(16)
+    CASE_4X(20)
+    CASE_4X(24)
+    CASE_4X(28)
+  default:
+    return nullptr;
+  }
+}
+
 namespace {
 
 bool _running = true;
@@ -250,28 +282,64 @@ JobInfo _info;
 
 bool load_info()
 {
-  if(std::filesystem::exists(_db_dir + "/" + "info.bin")) {
+  if(std::filesystem::exists(_db_dir + "/" + "info.txt")) {
 
-    std::ifstream f(_db_dir + "/" + "info.bin", std::ios::binary);
+    std::ifstream f(_db_dir + "/" + "info.txt");
+    if(!f.is_open()) {
+      return false;
+    }
 
-    f.read((char*)&_info, sizeof(_info));
+    std::string line;
+
+    std::getline(f, line);
+    _info.num_dps = std::stoull(line);
+
+    std::getline(f, line);
+    _info.total_points = util::parse_uint128(line);
+
+    std::getline(f, line);
+    _info.curve = line;
+
+    std::getline(f, line);
+    _info.dp_bits = std::stoi(line);
+
     f.close();
-
-    std::string curve_name = ecc::get_curve_by_strength(_info.curve_id);
-    ecc::set_curve(curve_name);
 
     return true;
   }
   return false;
 }
 
-void save_info()
+void save_info(const std::string& db_dir, const JobInfo& info)
 {
-  std::ofstream f(_db_dir + "/" + "stats.bin", std::ios::binary);
+  std::ofstream f(db_dir + "/" + "info.txt");
+  if(!f) {
+    return;
+  }
 
-  // Save curve name
-  f.write((char*)&_info, sizeof(_info));
+  f << info.num_dps << '\n';
+  f << util::to_string(info.total_points) << '\n';
+  f << info.curve << '\n';
+  f << info.dp_bits << '\n';
+
   f.close();
+}
+
+void save_info() { save_info(_db_dir, _info); }
+
+void create_db(std::string db_dir, std::string curve, int dp_bits)
+{
+  auto* db = get_db(dp_bits, db_dir, nullptr);
+
+  JobInfo info;
+  info.dp_bits = 0;
+  info.total_points = 0;
+  info.curve = curve;
+  info.dp_bits = dp_bits;
+
+  save_info(db_dir, info);
+
+  delete db;
 }
 
 uint64_t extract_length(EncodedDP& encoded)
@@ -299,6 +367,8 @@ void process_collision(const DistinguishedPoint p1, const DistinguishedPoint p2)
   of << ecc::curve_name() << std::endl;
   of << to_str(p1.p.x) << " " << to_str(p1.p.y) << " " << to_str(p1.a) << " " << to_str(p2.a)
      << std::endl;
+
+  _collisions.push(std::pair(p1, p2));
 }
 
 double calc_probability(uint128_t n)
@@ -325,25 +395,23 @@ void collision_callback(DistinguishedPoint p1, DistinguishedPoint p2)
             << std::endl;
 }
 
-RhoDb* get_db(int dp_bits, std::string db_path,
-              std::function<void(DistinguishedPoint, DistinguishedPoint)> callback)
+void collisin_thread()
 {
-#define CASE(N)                                                                                    \
-  case N:                                                                                          \
-    return new RhoDbImpl<N>(db_path, callback)
-#define CASE_4X(N)                                                                                 \
-  CASE(N);                                                                                         \
-  CASE(N + 1);                                                                                     \
-  CASE(N + 2);                                                                                     \
-  CASE(N + 3);
+  while(_running) {
+    sleep(3);
 
-  switch(dp_bits) {
-    CASE_4X(16)
-    CASE_4X(20)
-    CASE_4X(24)
-    CASE_4X(28)
-  default:
-    return nullptr;
+    std::pair<DistinguishedPoint, DistinguishedPoint> coll;
+
+    if(_collisions.size() == 0) {
+      continue;
+    }
+
+    coll = _collisions.front();
+    _collisions.pop();
+
+    RhoSolver solver(coll.first.p, coll.first.a, coll.second.a);
+
+    solver.solve();
   }
 }
 
@@ -354,9 +422,10 @@ void main_loop()
   RhoDb* coll_db = nullptr;
 
   // To create the DB we need the number of distinguished bits.
-  if(load_info()) {
-    coll_db = get_db(_info.dp_bits, _db_dir, collision_callback);
-  }
+  load_info();
+  std::cout << "Curve: " << _info.curve << std::endl;
+  ecc::set_curve(_info.curve);
+  coll_db = get_db(_info.dp_bits, _db_dir, collision_callback);
 
   std::filesystem::create_directories(_data_dir);
 
@@ -395,42 +464,11 @@ void main_loop()
       DPHeader header;
       IFSTREAM_CALL(f.read((char*)&header, sizeof(header)));
 
-      // If we don't know the curve yet, use the one from the header.
-      if(_info.curve_id == 0) {
-        _info.curve_id = header.curve_id;
-      } else if(_info.curve_id != header.curve_id) {
-        std::cout << fmt::format("Error: Expected {} got {}", _info.curve_id, header.curve_id)
-                  << std::endl;
-        break;
-      }
-
-      try {
-        std::string curve_name = ecc::get_curve_by_strength(header.curve_id);
-        ecc::set_curve(curve_name);
-      } catch(...) {
-        std::cout << fmt::format("Error: expected curve {} got {}", _info.curve_id, header.curve_id)
-                  << std::endl;
-        break;
-      }
-
       // Read the data
       std::vector<EncodedDP> dps(header.count);
 
       IFSTREAM_CALL(f.read((char*)dps.data(), header.count * sizeof(EncodedDP)));
       f.close();
-
-      // Get number of DP bits from the header
-      if(coll_db == nullptr) {
-        if(_info.dp_bits == 0) {
-          _info.dp_bits = header.dp_bits;
-        } else if(_info.dp_bits != header.dp_bits) {
-          std::cout << fmt::format("Error: expected {} bits got {}", _info.dp_bits, header.dp_bits)
-                    << std::endl;
-          continue;
-        }
-
-        coll_db = get_db(_info.dp_bits, _db_dir, collision_callback);
-      }
 
       // Count the length of all the walks
       uint64_t count = 0;
@@ -472,12 +510,32 @@ void signal_handler(int signal)
   _running = false;
 }
 
+void usage()
+{
+  std::cout << "USAGE:" << std::endl;
+  std::cout << "rho-db --create --db-dir <DIR> --curve <CURVE> --bits <BITS" << std::endl;
+  std::cout << "rho-db --input-dir <DIR> --db-dir <DIR> --curve <CURVE> --bits <BITS" << std::endl;
+}
+
 int main(int argc, char** argv)
 {
+
+  bool create = false;
+  std::string curve;
+  int dp_bits = 0;
+
+  if(argc == 1) {
+    usage();
+    return 1;
+  }
 
   while(true) {
     static struct option long_options[] = {{"input-dir", required_argument, 0, 'i'},
                                            {"db-dir", required_argument, 0, 'd'},
+                                           {"create", no_argument, 0, 'c'},
+                                           {"curve", required_argument, 0, 'u'},
+                                           {"bits", required_argument, 0, 'b'},
+
                                            {NULL, 0, NULL, 0}};
 
     int opt_idx = 0;
@@ -496,12 +554,33 @@ int main(int argc, char** argv)
       _db_dir = std::string(optarg);
       break;
 
+    case 'c':
+      create = true;
+      break;
+
+    case 'u':
+      curve = std::string(optarg);
+      break;
+    case 'b':
+      dp_bits = atoi(optarg);
+      break;
     case '?':
       return 1;
 
     default:
+      usage();
       return 1;
     }
+  }
+
+  if(create) {
+    if(curve.empty() || _db_dir.empty() || dp_bits == 0) {
+      std::cout << "--curve and --bits and --db-dir required" << std::endl;
+      return 1;
+    }
+
+    create_db(_db_dir, curve, dp_bits);
+    return 0;
   }
 
   if(_data_dir.empty() || _db_dir.empty()) {

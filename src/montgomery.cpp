@@ -340,6 +340,70 @@ uint131_t add(uint131_t x, uint131_t y)
   return z;
 }
 
+uint131_t add_mod_n(uint131_t x, uint131_t y, uint131_t n)
+{
+  uint131_t z = add_raw(x, y);
+
+  // Reduce mod P
+  if(is_less_than(n, z)) {
+    z = sub_raw(z, n);
+  }
+  return z;
+}
+
+uint131_t sub_mod_n(uint131_t x, uint131_t y, uint131_t n)
+{
+  uint131_t z = sub_raw(x, y);
+  int borrow = z.w.v2 >> 31;
+
+  // Went below zero. Need to add P.
+  if(borrow) {
+    z = add_raw(z, n);
+  }
+
+  return z;
+}
+
+uint131_t mul_mod_n(uint131_t x, uint131_t y, uint131_t n)
+{
+  uint131_t product = make_uint131(0);
+
+  for(int i = 0; i < 131; i++) {
+    int word = i / 32;
+    int bit = i % 32;
+
+    if(x.v[word] & (1 << bit)) {
+      product = add_raw(product, y);
+    }
+    if(is_less_than(n, product)) {
+      product = sub_raw(product, n);
+    }
+
+    y = lshift(y, 1);
+    if(is_less_than(n, y)) {
+      y = sub_raw(y, n);
+    }
+  }
+
+  return product;
+}
+
+uint131_t inv_mod_n(uint131_t x, uint131_t n)
+{
+  uint131_t m = sub_raw(n, make_uint131(2));
+  uint131_t product = make_uint131(1);
+
+  for(int i = 0; i < 131; i++) {
+    if(m.v[0] & 1) {
+      product = mul_mod_n(product, x, n);
+    }
+    m = rshift(m, 1);
+    x = mul_mod_n(x, x, n);
+  }
+
+  return product;
+}
+
 uint131_t neg(uint131_t x)
 {
   // To get -x mod P, subtract x from P

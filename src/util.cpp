@@ -1,3 +1,5 @@
+#include "util.h"
+#include <algorithm>
 #include <chrono>
 #include <cstdarg>
 #include <fstream>
@@ -5,8 +7,6 @@
 #include <stdexcept>
 #include <thread>
 #include <unistd.h>
-
-#include "util.h"
 
 namespace util {
 
@@ -86,4 +86,36 @@ std::string get_hostname()
 
   return std::string(buf);
 }
+
+unsigned __int128 parse_uint128(const std::string& s)
+{
+  unsigned __int128 value = 0;
+
+  for(char c : s) {
+    value *= 10;
+    int digit = c - '0';
+    value += digit;
+  }
+
+  return value;
+}
+
+std::string to_string(unsigned __int128 x)
+{
+  std::string result;
+
+  if(x == 0) {
+    return std::string("0");
+  }
+
+  while(x > 0) {
+    result.push_back('0' + x % 10);
+    x /= 10;
+  }
+
+  std::reverse(result.begin(), result.end());
+
+  return result;
+}
+
 }; // namespace util

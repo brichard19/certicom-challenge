@@ -242,6 +242,59 @@ bool test12()
   return true;
 }
 
+bool test13()
+{
+  // Test algebraic property (a + b) * c = ac + bc
+  for(int i = 0; i < 1000; i++) {
+    uint131_t a = ecc::genkey();
+    uint131_t b = ecc::genkey();
+    uint131_t c = ecc::genkey();
+
+    uint131_t n = ecc::n();
+
+    uint131_t left = mont::mul_mod_n(mont::add_mod_n(a, b, n), c, n);
+    uint131_t right = mont::add_mod_n(mont::mul_mod_n(a, c, n), mont::mul_mod_n(b, c, n), n);
+
+    if(_verbose) {
+      std::cout << to_str(a) << std::endl;
+      std::cout << to_str(b) << std::endl;
+      std::cout << to_str(c) << std::endl;
+
+      std::cout << to_str(left) << " " << to_str(right) << std::endl;
+    }
+
+    if(left != right) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool test14()
+{
+  uint131_t n = ecc::n();
+
+  // Test inverse  inv(a) * a = 1;
+  for(int i = 0; i < 1000; i++) {
+    uint131_t a = ecc::genkey();
+
+    uint131_t inverse = mont::inv_mod_n(a, n);
+
+    uint131_t one = mont::mul_mod_n(a, inverse, n);
+
+    if(_verbose) {
+      std::cout << to_str(a) << " " << to_str(inverse) << std::endl;
+    }
+
+    if(mont::mul_mod_n(one, a, n) != a) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 int main(int argc, char** argv)
 {
   std::vector<std::string> curves = ecc::get_curves();
@@ -265,6 +318,8 @@ int main(int argc, char** argv)
     test_functions.push_back(test10);
     test_functions.push_back(test11);
     test_functions.push_back(test12);
+    test_functions.push_back(test13);
+    test_functions.push_back(test14);
 
     for(int i = 0; i < test_functions.size(); i++) {
       std::cout << "Test " << (i + 1) << "/" << test_functions.size() << std::endl;

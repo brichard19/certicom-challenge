@@ -1,10 +1,10 @@
+#include "uint131.h"
 #include <cassert>
 #include <random>
+#include <stdexcept>
 #include <stdio.h>
 #include <string>
 #include <vector>
-
-#include "uint131.h"
 
 namespace {
 
@@ -16,6 +16,8 @@ uint8_t from_hex(char hex)
     return hex - 'A' + 10;
   } else if(hex >= '0' && hex <= '9') {
     return hex - '0';
+  } else {
+    throw std::invalid_argument("Expected a hex character");
   }
 
   return '0';
