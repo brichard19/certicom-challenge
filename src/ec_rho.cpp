@@ -72,7 +72,7 @@ EncodedDP encode_dp(const DistinguishedPoint& dp)
 
   // Remove distinguished bits by shifting right then
   // copy into array
-  uint131_t x2 = mont::rshift(dp.p.x, dp.dp_bits);
+  uint131_t x2 = rshift(dp.p.x, dp.dp_bits);
 
   memcpy(encoded.tx, &x2, sizeof(encoded.tx));
 
@@ -124,7 +124,7 @@ DistinguishedPoint decode_dp(const EncodedDP& dp, int dpbits, bool verify)
 
   // extract x
   memcpy(&p.x, dp.tx, sizeof(dp.tx));
-  p.x = mont::lshift(p.x, dpbits);
+  p.x = lshift(p.x, dpbits);
 
   // sign
   uint8_t sign = dp.data.sign;

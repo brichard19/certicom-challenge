@@ -252,8 +252,8 @@ bool test13()
 
     uint131_t n = ecc::n();
 
-    uint131_t left = mont::mul_mod_n(mont::add_mod_n(a, b, n), c, n);
-    uint131_t right = mont::add_mod_n(mont::mul_mod_n(a, c, n), mont::mul_mod_n(b, c, n), n);
+    uint131_t left = mul_mod_n(add_mod_n(a, b, n), c, n);
+    uint131_t right = add_mod_n(mul_mod_n(a, c, n), mul_mod_n(b, c, n), n);
 
     if(_verbose) {
       std::cout << to_str(a) << std::endl;
@@ -279,15 +279,15 @@ bool test14()
   for(int i = 0; i < 1000; i++) {
     uint131_t a = ecc::genkey();
 
-    uint131_t inverse = mont::inv_mod_n(a, n);
+    uint131_t inverse = inv_mod_n(a, n);
 
-    uint131_t one = mont::mul_mod_n(a, inverse, n);
+    uint131_t one = mul_mod_n(a, inverse, n);
 
     if(_verbose) {
       std::cout << to_str(a) << " " << to_str(inverse) << std::endl;
     }
 
-    if(mont::mul_mod_n(one, a, n) != a) {
+    if(mul_mod_n(one, a, n) != a) {
       return false;
     }
   }

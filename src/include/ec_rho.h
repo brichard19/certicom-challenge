@@ -94,8 +94,8 @@ public:
   {
     int idx = p.p.x.v[0] & 0x1f;
 
-    p.a = mont::add_mod_n(p.a, _rwpoints[idx].a, ecc::n());
-    p.b = mont::add_mod_n(p.b, _rwpoints[idx].b, ecc::n());
+    p.a = add_mod_n(p.a, _rwpoints[idx].a, ecc::n());
+    p.b = add_mod_n(p.b, _rwpoints[idx].b, ecc::n());
 
     p.p = ecc::add(p.p, _rwpoints[idx].p);
 
@@ -183,9 +183,9 @@ public:
     // (a1 - a2)G = (b2 - b1)kG
     // (a1 - a2) = (b2 - b1)k
     // (a1 - a2) / (b2 - b1) = k
-    uint131_t d1 = mont::sub_mod_n(rw1.a, rw2.a, ecc::n());
-    uint131_t d2 = mont::sub_mod_n(rw2.b, rw1.b, ecc::n());
-    uint131_t k = mont::mul_mod_n(d1, mont::inv_mod_n(d2, ecc::n()), ecc::n());
+    uint131_t d1 = sub_mod_n(rw1.a, rw2.a, ecc::n());
+    uint131_t d2 = sub_mod_n(rw2.b, rw1.b, ecc::n());
+    uint131_t k = mul_mod_n(d1, inv_mod_n(d2, ecc::n()), ecc::n());
 
     // Validate
     ecc::ecpoint_t result_q = ecc::mul(k, ecc::g());

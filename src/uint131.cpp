@@ -85,15 +85,6 @@ uint131_t make_uint131(const std::string& hex)
   return val;
 }
 
-bool operator==(const uint131_t& a, const uint131_t& b)
-{
-  return a.w.v0 == b.w.v0 && a.w.v1 == b.w.v1 && a.w.v2 == b.w.v2;
-}
-
-bool operator!=(const uint131_t& a, const uint131_t& b) { return !(a == b); }
-
-bool is_odd(const uint131_t& x) { return x.w.v0 & 0x01; }
-
 std::string to_str(const uint131_t& x)
 {
   char buf[256] = "";
