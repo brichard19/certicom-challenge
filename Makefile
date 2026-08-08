@@ -72,7 +72,7 @@ BIN_DIR=$(CUR_DIR)/bin
 ROCM_LIB=$(ROCM_HOME)/lib
 OBJDIR=$(CUR_DIR)/obj
 
-INCLUDE+=-I$(CUR_DIR) -I$(CUR_DIR)/src/include -I$(CUR_DIR)/gpu -I$(CUR_DIR)/third_party/fmt/include
+INCLUDE+=-I$(CUR_DIR) -I$(CUR_DIR)/src/include -I$(CUR_DIR)/src/gpu -I$(CUR_DIR)/third_party/fmt/include
 
 ifeq ($(BUILD_MPI),1)
 MPI_LIBS+=-lmpi -lmpi_cxx
@@ -125,11 +125,11 @@ third_party:
 
 gpu_nvidia:
 	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=nvidia $(HIPCC) -c src/ecc.cu -o $(OBJDIR)/ecc_nvidia.co $(HIPCC_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -I/usr/local/cuda/include -Isrc/include
+	HIP_PLATFORM=nvidia $(HIPCC) -c src/gpu/ecc.cu -o $(OBJDIR)/ecc_nvidia.co $(HIPCC_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -Isrc/gpu -I/usr/local/cuda/include -Isrc/include
 
 gpu_amd:
 	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=amd $(HIPCC) -c src/ecc.cu -o $(OBJDIR)/ecc_amd.co $(HIPCC_CFLAGS_AMD) -D__HIP_PLATFORM_AMD__ -Isrc -Isrc/include
+	HIP_PLATFORM=amd $(HIPCC) -c src/gpu/ecc.cu -o $(OBJDIR)/ecc_amd.co $(HIPCC_CFLAGS_AMD) -D__HIP_PLATFORM_AMD__ -Isrc -Isrc/gpu -Isrc/include
 
 benchmark_nvidia:	third_party gpu_nvidia
 	mkdir -p $(OBJDIR)
