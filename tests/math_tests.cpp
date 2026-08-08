@@ -358,6 +358,33 @@ bool test20()
   return gf2::inv(make_uint131(0), modulus) == make_uint131(0);
 }
 
+bool test21()
+{
+  ecc::ecpoint_t g = ecc::g();
+  ecc::ecpoint_t q = ecc::q();
+
+  if(!ecc::exists(g) || !ecc::exists(q)) {
+    return false;
+  }
+
+  ecc::ecpoint_t doubled = ecc::dbl(g);
+  if(!ecc::exists(doubled) || !ecc::is_equal(doubled, ecc::add(g, g))) {
+    return false;
+  }
+
+  ecc::ecpoint_t sum = ecc::add(g, q);
+  if(!ecc::exists(sum) || !ecc::is_equal(sum, ecc::add(q, g))) {
+    return false;
+  }
+
+  ecc::ecpoint_t neg_g(g.x, gf2::add(g.x, g.y));
+  if(!ecc::is_neg(g, neg_g) || !ecc::is_infinity(ecc::add(g, neg_g))) {
+    return false;
+  }
+
+  return ecc::is_infinity(ecc::mul(ecc::n(), g));
+}
+
 int main(int argc, char** argv)
 {
   std::vector<std::string> curves = ecc::get_curves();
@@ -368,21 +395,26 @@ int main(int argc, char** argv)
     std::cout << "Testing curve " << curve << std::endl;
     std::vector<std::function<bool(void)>> test_functions;
 
-    test_functions.push_back(test0);
-    test_functions.push_back(test1);
-    test_functions.push_back(test2);
-    test_functions.push_back(test3);
-    test_functions.push_back(test4);
-    test_functions.push_back(test5);
-    test_functions.push_back(test6);
-    test_functions.push_back(test7);
-    test_functions.push_back(test8);
-    test_functions.push_back(test9);
-    test_functions.push_back(test10);
-    test_functions.push_back(test11);
-    test_functions.push_back(test12);
-    test_functions.push_back(test13);
-    test_functions.push_back(test14);
+    if(curve.rfind("ec2n", 0) == 0) {
+      test_functions.push_back(test21);
+    } else {
+      test_functions.push_back(test0);
+      test_functions.push_back(test1);
+      test_functions.push_back(test2);
+      test_functions.push_back(test3);
+      test_functions.push_back(test4);
+      test_functions.push_back(test5);
+      test_functions.push_back(test6);
+      test_functions.push_back(test7);
+      test_functions.push_back(test8);
+      test_functions.push_back(test9);
+      test_functions.push_back(test10);
+      test_functions.push_back(test11);
+      test_functions.push_back(test12);
+      test_functions.push_back(test13);
+      test_functions.push_back(test14);
+    }
+
     test_functions.push_back(test15);
     test_functions.push_back(test16);
     test_functions.push_back(test17);

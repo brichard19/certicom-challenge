@@ -5,8 +5,15 @@
 
 #include "uint131.h"
 
+enum class CurveType {
+  PRIME,
+  BINARY,
+};
+
 struct CurveParameters {
+  CurveType type;
   uint131_t p;
+  uint131_t f;
   uint131_t a;
   uint131_t b;
   uint131_t n;

@@ -1,5 +1,6 @@
 #include "ecc.h"
 #include "ecc_internal.h"
+#include "gf2.h"
 #include "montgomery.h"
 #include "util.h"
 #include <stdexcept>
@@ -8,9 +9,80 @@
 
 std::map<std::string, CurveParameters> _curves = {
 
+    {"ec2n79",
+     {
+         .type = CurveType::BINARY,
+         .p = {},
+         .f = {{0x0000000000000201, 0x0000000000008000, 0x00000000}},
+         .a = {{0x38a8f66d7f4c385f, 0x0000000000004a2e, 0x00000000}},
+         .b = {{0xb31c6becc03d68a7, 0x0000000000002c0b, 0x00000000}},
+         .n = {{0x0000004531a2562b, 0x0000000000004000, 0x00000000}},
+         .gx = {{0x127b63e42792f10f, 0x00000000000030cb, 0x00000000}},
+         .gy = {{0x2c88266bb04f713b, 0x000000000000547b, 0x00000000}},
+         .qx = {{0x2a9f035014497325, 0x0000000000000020, 0x00000000}},
+         .qy = {{0xa64859552f97c129, 0x0000000000005175, 0x00000000}},
+         .k = {},
+         .one = {},
+         .two = {},
+         .p_minus_2 = {},
+         .sqrt = {},
+         .r = {},
+         .r2 = {},
+         .bits = 79,
+         .name = "ec2n79",
+     }},
+
+    {"ec2n89",
+     {
+         .type = CurveType::BINARY,
+         .p = {},
+         .f = {{0x0000004000000001, 0x0000000002000000, 0x00000000}},
+         .a = {{0x660b75e77315e94e, 0x000000000095aa3e, 0x00000000}},
+         .b = {{0xc6c54021d1bf0a72, 0x0000000001ac2701, 0x00000000}},
+         .n = {{0x00000b41c8c9d8fd, 0x0000000001000000, 0x00000000}},
+         .gx = {{0xc9bd234852e8123c, 0x0000000001675c1b, 0x00000000}},
+         .gy = {{0x7619b0e93561c6a3, 0x0000000000426b72, 0x00000000}},
+         .qx = {{0x8e3b6dbee40dce98, 0x0000000001be721f, 0x00000000}},
+         .qy = {{0x4bdad73e0b32ebb3, 0x00000000004dd88a, 0x00000000}},
+         .k = {},
+         .one = {},
+         .two = {},
+         .p_minus_2 = {},
+         .sqrt = {},
+         .r = {},
+         .r2 = {},
+         .bits = 89,
+         .name = "ec2n89",
+     }},
+
+    {"ec2n131",
+     {
+         .type = CurveType::BINARY,
+         .p = {},
+         .f = {{0x0000000000002007, 0x0000000000000000, 0x00000008}},
+         .a = {{0xa1a14f2c9e44352e, 0xebcb7eecc296a1c4, 0x00000007}},
+         .b = {{0x0093bdd622a61d81, 0x610b0a57c73649ad, 0x00000000}},
+         .n = {{0x6abb991fe311fe83, 0x0000000000000002, 0x00000004}},
+         .gx = {{0x030d5bc57b331663, 0x439cbc8dc73aa981, 0x00000000}},
+         .gy = {{0x2de036d60b762bd4, 0x4904c07d4f25a16c, 0x00000001}},
+         .qx = {{0xac8908528c51c440, 0x02339c5db0e9c694, 0x00000006}},
+         .qy = {{0x37813742b1588cb8, 0xf7b99169fa1a0f27, 0x00000004}},
+         .k = {},
+         .one = {},
+         .two = {},
+         .p_minus_2 = {},
+         .sqrt = {},
+         .r = {},
+         .r2 = {},
+         .bits = 131,
+         .name = "ec2n131",
+     }},
+
     {"ecp131",
      {
+         .type = CurveType::PRIME,
          .p = {{0x194c43186b3abc0b, 0x8e1d43f293469e33, 0x4}},
+         .f = {},
          .a = {{0xe7f7f250cee8709a, 0xacd15fe1a8ec1522, 0x0}},
          .b = {{0xc85087e5ab4eca9e, 0xde124657d7ba5851, 0x2}},
          .n = {{0x7f7ed728f6b8e6f1, 0x8e1d43f293469e31, 0x4}},
@@ -31,7 +103,9 @@ std::map<std::string, CurveParameters> _curves = {
 
     {"ecp79",
      {
+         .type = CurveType::PRIME,
          .p = {{0x5177412aca899cf5, 0x62ce, 0x0}},
+         .f = {},
          .a = {{0x732c9b460e3c3d, 0x1bb7, 0x0}},
          .b = {{0xc88edfd7d5b44610, 0x250c, 0x0}},
          .n = {{0x5177407b7258dc31, 0x62ce, 0x0}},
@@ -53,7 +127,9 @@ std::map<std::string, CurveParameters> _curves = {
     {"ecp89",
 
      {
+         .type = CurveType::PRIME,
          .p = {{0x903f1643908ba955, 0x158685c, 0x0}},
+         .f = {},
          .a = {{0xb1ec24706b2573c1, 0x593048, 0x0}},
          .b = {{0x37717b7e1c0a25af, 0xc58c6, 0x0}},
          .n = {{0x903ef906d7f58d47, 0x158685c, 0x0}},
@@ -143,11 +219,26 @@ bool is_neg(const ecpoint_t& p, const ecpoint_t& q)
     return false;
   }
 
+  if(_params.type == CurveType::BINARY) {
+    return p.y == gf2::add(q.x, q.y);
+  }
+
   return p.y == mont::neg(q.y);
 }
 
 bool exists(const ecpoint_t& p)
 {
+  if(_params.type == CurveType::BINARY) {
+    // y^2 + xy = x^3 + ax^2 + b
+    uint131_t y2 = gf2::mul(p.y, p.y, _params.f);
+    uint131_t xy = gf2::mul(p.x, p.y, _params.f);
+    uint131_t x2 = gf2::mul(p.x, p.x, _params.f);
+    uint131_t x3 = gf2::mul(p.x, x2, _params.f);
+    uint131_t ax2 = gf2::mul(_params.a, x2, _params.f);
+
+    return gf2::add(y2, xy) == gf2::add(gf2::add(x3, ax2), _params.b);
+  }
+
   uint131_t y2 = mont::square(p.y);
   uint131_t x3 = mont::mul(p.x, mont::square(p.x));
   uint131_t ax = mont::mul(_params.a, p.x);
@@ -157,12 +248,30 @@ bool exists(const ecpoint_t& p)
   return y2 == rs;
 }
 
-ecpoint_t dbl(const ecpoint_t& p)
+static ecpoint_t dbl_binary(const ecpoint_t& p)
 {
-  if(is_infinity(p)) {
-    return p;
+  if(p.x == make_uint131(0)) {
+    return make_infinity();
   }
 
+  // lambda = x + y/x
+  uint131_t inverse_x = gf2::inv(p.x, _params.f);
+  uint131_t lambda = gf2::add(p.x, gf2::mul(p.y, inverse_x, _params.f));
+
+  // x3 = lambda^2 + lambda + a
+  uint131_t x =
+      gf2::add(gf2::add(gf2::mul(lambda, lambda, _params.f), lambda), _params.a);
+
+  // y3 = x1^2 + (lambda + 1)x3
+  uint131_t x2 = gf2::mul(p.x, p.x, _params.f);
+  uint131_t lambda_plus_one = gf2::add(lambda, make_uint131(1));
+  uint131_t y = gf2::add(x2, gf2::mul(lambda_plus_one, x, _params.f));
+
+  return ecpoint_t(x, y);
+}
+
+static ecpoint_t dbl_prime(const ecpoint_t& p)
+{
   // 3x^2 + a / 2y
 
   uint131_t x2 = mont::square(p.x);
@@ -175,6 +284,58 @@ ecpoint_t dbl(const ecpoint_t& p)
 
   uint131_t tmp1 = mont::sub(s2, p.x);
   uint131_t x = mont::sub(tmp1, p.x);
+
+  uint131_t tmp2 = mont::sub(p.x, x);
+  uint131_t tmp3 = mont::mul(s, tmp2);
+  uint131_t y = mont::sub(tmp3, p.y);
+
+  return ecc::ecpoint_t(x, y);
+}
+
+ecpoint_t dbl(const ecpoint_t& p)
+{
+  if(is_infinity(p)) {
+    return p;
+  }
+
+  if(_params.type == CurveType::BINARY) {
+    return dbl_binary(p);
+  }
+
+  return dbl_prime(p);
+}
+
+static ecpoint_t add_binary(const ecpoint_t& p, const ecpoint_t& q)
+{
+  // lambda = (y1 + y2) / (x1 + x2)
+  uint131_t rise = gf2::add(p.y, q.y);
+  uint131_t run = gf2::add(p.x, q.x);
+  uint131_t lambda = gf2::mul(rise, gf2::inv(run, _params.f), _params.f);
+
+  // x3 = lambda^2 + lambda + x1 + x2 + a
+  uint131_t x = gf2::add(gf2::mul(lambda, lambda, _params.f), lambda);
+  x = gf2::add(gf2::add(gf2::add(x, p.x), q.x), _params.a);
+
+  // y3 = lambda(x1 + x3) + x3 + y1
+  uint131_t y = gf2::mul(lambda, gf2::add(p.x, x), _params.f);
+  y = gf2::add(gf2::add(y, x), p.y);
+
+  return ecpoint_t(x, y);
+}
+
+static ecpoint_t add_prime(const ecpoint_t& p, const ecpoint_t& q)
+{
+  uint131_t rise = mont::sub(p.y, q.y);
+  uint131_t run = mont::sub(p.x, q.x);
+
+  // s = inv(rise / run)
+  uint131_t s = mont::inv(run);
+  s = mont::mul(s, rise);
+
+  uint131_t s2 = mont::square(s);
+
+  uint131_t tmp1 = mont::sub(s2, p.x);
+  uint131_t x = mont::sub(tmp1, q.x);
 
   uint131_t tmp2 = mont::sub(p.x, x);
   uint131_t tmp3 = mont::mul(s, tmp2);
@@ -201,23 +362,11 @@ ecpoint_t add(const ecpoint_t& p, const ecpoint_t& q)
     return make_infinity();
   }
 
-  uint131_t rise = mont::sub(p.y, q.y);
-  uint131_t run = mont::sub(p.x, q.x);
+  if(_params.type == CurveType::BINARY) {
+    return add_binary(p, q);
+  }
 
-  // s = inv(rise / run)
-  uint131_t s = mont::inv(run);
-  s = mont::mul(s, rise);
-
-  uint131_t s2 = mont::square(s);
-
-  uint131_t tmp1 = mont::sub(s2, p.x);
-  uint131_t x = mont::sub(tmp1, q.x);
-
-  uint131_t tmp2 = mont::sub(p.x, x);
-  uint131_t tmp3 = mont::mul(s, tmp2);
-  uint131_t y = mont::sub(tmp3, p.y);
-
-  return ecc::ecpoint_t(x, y);
+  return add_prime(p, q);
 }
 
 uint131_t genkey(RNG& rng)
