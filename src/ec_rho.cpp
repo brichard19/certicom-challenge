@@ -58,9 +58,10 @@ std::vector<RWPoint> get_rw_points()
                                {{0x50ee4ba255488040, 0x0000000000002f1d, 0x00000000}})},
   };
 
-  if(!ecc::is_equal(expected[name], sum)) {
+  auto expected_sum = expected.find(name);
+  if(expected_sum != expected.end() && !ecc::is_equal(expected_sum->second, sum)) {
     printf("ERROR: CHECKSUM FAILED\n");
-    assert(1);
+    assert(false);
   }
 
   return rw_vec;
