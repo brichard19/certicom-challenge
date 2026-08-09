@@ -259,8 +259,7 @@ static ecpoint_t dbl_binary(const ecpoint_t& p)
   uint131_t lambda = gf2::add(p.x, gf2::mul(p.y, inverse_x, _params.f));
 
   // x3 = lambda^2 + lambda + a
-  uint131_t x =
-      gf2::add(gf2::add(gf2::mul(lambda, lambda, _params.f), lambda), _params.a);
+  uint131_t x = gf2::add(gf2::add(gf2::mul(lambda, lambda, _params.f), lambda), _params.a);
 
   // y3 = x1^2 + (lambda + 1)x3
   uint131_t x2 = gf2::mul(p.x, p.x, _params.f);
