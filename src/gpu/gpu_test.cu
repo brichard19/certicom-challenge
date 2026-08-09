@@ -135,7 +135,7 @@ template <int CURVE> __device__ void kernel_inv_test_impl(const uint131_t* x, in
     uint131_t inverse = inv<CURVE>(k);
     uint131_t prod = mul<CURVE>(k, inverse);
 
-    if(CURVE == 131) {
+    if(CURVE == CURVE_ID_ECP131) {
       assert(equal(prod, _p131_one));
     } else {
       assert(equal(prod, _p79_one));
@@ -172,10 +172,10 @@ template <int CURVE> uint131_t gen_key()
   k.w.v1 = _rng.next();
   k.w.v2 = (uint32_t)_rng.next();
 
-  if(CURVE == 131) {
+  if(CURVE == CURVE_ID_ECP131) {
     k.w.v2 %= 5;
     k.w.v1 %= 0x8e1d43f293469e33;
-  } else if(CURVE == 79) {
+  } else if(CURVE == CURVE_ID_ECP79) {
     k.w.v2 = 0;
     k.w.v1 %= (0x62ce + 1);
     k.w.v0 %= 0x5177412aca899cf5;
@@ -324,18 +324,18 @@ int main(int argc, char** argv)
   std::cout << name << std::endl;
 
   std::cout << "Running P131 tests" << std::endl;
-  pass &= sub_test<131>();
-  pass &= mul_test<131>();
-  pass &= square_test<131>();
-  pass &= inv_test<131>();
-  pass &= mul_perf_test<131>();
+  pass &= sub_test<CURVE_ID_ECP131>();
+  pass &= mul_test<CURVE_ID_ECP131>();
+  pass &= square_test<CURVE_ID_ECP131>();
+  pass &= inv_test<CURVE_ID_ECP131>();
+  pass &= mul_perf_test<CURVE_ID_ECP131>();
 
   std::cout << "Running P79 tests" << std::endl;
-  pass &= sub_test<79>();
-  pass &= mul_test<79>();
-  pass &= square_test<79>();
-  pass &= inv_test<79>();
-  pass &= mul_perf_test<79>();
+  pass &= sub_test<CURVE_ID_ECP79>();
+  pass &= mul_test<CURVE_ID_ECP79>();
+  pass &= square_test<CURVE_ID_ECP79>();
+  pass &= inv_test<CURVE_ID_ECP79>();
+  pass &= mul_perf_test<CURVE_ID_ECP79>();
 
   return 0;
 }

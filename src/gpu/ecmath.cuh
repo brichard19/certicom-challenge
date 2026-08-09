@@ -38,63 +38,63 @@ __device__ uint131_t inv_p131(uint131_t& x)
 {
   uint131_t z, t0, t1, t2, t3, t4, t5;
 
-  t0 = square<131>(x);
-  t3 = mul<131>(x, t0);
-  t4 = mul<131>(x, t3);
-  t1 = mul<131>(x, t4);
-  t2 = mul<131>(t0, t1);
-  z = mul<131>(t0, t2);
-  t4 = mul<131>(t4, z);
-  t0 = mul<131>(t0, t4);
-  t5 = mul<131>(t3, t0);
-  t5 = square<131>(t5, 5);
-  t5 = mul<131>(t2, t5);
-  t5 = square<131>(t5, 7);
-  t5 = mul<131>(t2, t5);
-  t5 = square<131>(t5, 4);
-  t5 = mul<131>(t1, t5);
-  t5 = square<131>(t5, 8);
-  t5 = mul<131>(t0, t5);
-  t5 = square<131>(t5, 2);
-  t5 = mul<131>(t3, t5);
-  t5 = square<131>(t5, 5);
-  t5 = mul<131>(t1, t5);
-  t5 = square<131>(t5, 6);
-  t5 = mul<131>(z, t5);
-  t5 = square<131>(t5, 3);
-  t5 = mul<131>(t1, t5);
-  t5 = square<131>(t5, 7);
-  t5 = mul<131>(t4, t5);
-  t5 = square<131>(t5, 6);
-  t5 = mul<131>(t0, t5);
-  t5 = square<131>(t5, 5);
-  t5 = mul<131>(t3, t5);
-  t5 = square<131>(t5, 4);
-  t5 = mul<131>(t3, t5);
-  t5 = square<131>(t5, 5);
-  t5 = mul<131>(t3, t5);
-  t5 = square<131>(t5, 5);
-  t5 = mul<131>(t1, t5);
-  t5 = square<131>(t5, 4);
-  t5 = mul<131>(t3, t5);
-  t5 = square<131>(t5, 4);
-  t5 = mul<131>(x, t5);
-  t5 = square<131>(t5, 6);
-  t5 = mul<131>(t3, t5);
-  t5 = square<131>(t5, 5);
-  t5 = mul<131>(t3, t5);
-  t5 = square<131>(t5, 8);
-  t4 = mul<131>(t4, t5);
-  t4 = square<131>(t4, 3);
-  t3 = mul<131>(t3, t4);
-  t3 = square<131>(t3, 5);
-  t2 = mul<131>(t2, t3);
-  t2 = square<131>(t2, 4);
-  t1 = mul<131>(t1, t2);
-  t1 = square<131>(t1, 5);
-  t0 = mul<131>(t0, t1);
-  t0 = square<131>(t0, 10);
-  z = mul<131>(z, t0);
+  t0 = square<CURVE_ID_ECP131>(x);
+  t3 = mul<CURVE_ID_ECP131>(x, t0);
+  t4 = mul<CURVE_ID_ECP131>(x, t3);
+  t1 = mul<CURVE_ID_ECP131>(x, t4);
+  t2 = mul<CURVE_ID_ECP131>(t0, t1);
+  z = mul<CURVE_ID_ECP131>(t0, t2);
+  t4 = mul<CURVE_ID_ECP131>(t4, z);
+  t0 = mul<CURVE_ID_ECP131>(t0, t4);
+  t5 = mul<CURVE_ID_ECP131>(t3, t0);
+  t5 = square<CURVE_ID_ECP131>(t5, 5);
+  t5 = mul<CURVE_ID_ECP131>(t2, t5);
+  t5 = square<CURVE_ID_ECP131>(t5, 7);
+  t5 = mul<CURVE_ID_ECP131>(t2, t5);
+  t5 = square<CURVE_ID_ECP131>(t5, 4);
+  t5 = mul<CURVE_ID_ECP131>(t1, t5);
+  t5 = square<CURVE_ID_ECP131>(t5, 8);
+  t5 = mul<CURVE_ID_ECP131>(t0, t5);
+  t5 = square<CURVE_ID_ECP131>(t5, 2);
+  t5 = mul<CURVE_ID_ECP131>(t3, t5);
+  t5 = square<CURVE_ID_ECP131>(t5, 5);
+  t5 = mul<CURVE_ID_ECP131>(t1, t5);
+  t5 = square<CURVE_ID_ECP131>(t5, 6);
+  t5 = mul<CURVE_ID_ECP131>(z, t5);
+  t5 = square<CURVE_ID_ECP131>(t5, 3);
+  t5 = mul<CURVE_ID_ECP131>(t1, t5);
+  t5 = square<CURVE_ID_ECP131>(t5, 7);
+  t5 = mul<CURVE_ID_ECP131>(t4, t5);
+  t5 = square<CURVE_ID_ECP131>(t5, 6);
+  t5 = mul<CURVE_ID_ECP131>(t0, t5);
+  t5 = square<CURVE_ID_ECP131>(t5, 5);
+  t5 = mul<CURVE_ID_ECP131>(t3, t5);
+  t5 = square<CURVE_ID_ECP131>(t5, 4);
+  t5 = mul<CURVE_ID_ECP131>(t3, t5);
+  t5 = square<CURVE_ID_ECP131>(t5, 5);
+  t5 = mul<CURVE_ID_ECP131>(t3, t5);
+  t5 = square<CURVE_ID_ECP131>(t5, 5);
+  t5 = mul<CURVE_ID_ECP131>(t1, t5);
+  t5 = square<CURVE_ID_ECP131>(t5, 4);
+  t5 = mul<CURVE_ID_ECP131>(t3, t5);
+  t5 = square<CURVE_ID_ECP131>(t5, 4);
+  t5 = mul<CURVE_ID_ECP131>(x, t5);
+  t5 = square<CURVE_ID_ECP131>(t5, 6);
+  t5 = mul<CURVE_ID_ECP131>(t3, t5);
+  t5 = square<CURVE_ID_ECP131>(t5, 5);
+  t5 = mul<CURVE_ID_ECP131>(t3, t5);
+  t5 = square<CURVE_ID_ECP131>(t5, 8);
+  t4 = mul<CURVE_ID_ECP131>(t4, t5);
+  t4 = square<CURVE_ID_ECP131>(t4, 3);
+  t3 = mul<CURVE_ID_ECP131>(t3, t4);
+  t3 = square<CURVE_ID_ECP131>(t3, 5);
+  t2 = mul<CURVE_ID_ECP131>(t2, t3);
+  t2 = square<CURVE_ID_ECP131>(t2, 4);
+  t1 = mul<CURVE_ID_ECP131>(t1, t2);
+  t1 = square<CURVE_ID_ECP131>(t1, 5);
+  t0 = mul<CURVE_ID_ECP131>(t0, t1);
+  t0 = square<CURVE_ID_ECP131>(t0, 10);
+  z = mul<CURVE_ID_ECP131>(z, t0);
 
   return z;
 }
@@ -103,42 +103,42 @@ __device__ uint131_t inv_p79(uint131_t& x)
 {
   uint131_t z, t0, t1, t2, t3, t4, t5, t6, t7;
 
-  t6 = square<79>(x);
-  t0 = mul<79>(x, t6);
-  z = square<79>(t0);
-  t3 = mul<79>(t6, z);
-  t2 = mul<79>(t0, t3);
-  t7 = mul<79>(x, t2);
-  t0 = mul<79>(t3, t2);
-  t1 = mul<79>(t6, t0);
-  t5 = mul<79>(t6, t1);
-  t4 = mul<79>(z, t5);
-  t3 = mul<79>(t3, t4);
-  t7 = mul<79>(t7, t3);
-  t6 = mul<79>(t6, t7);
-  z = mul<79>(z, t6);
-  t7 = square<79>(t7, 7);
-  t6 = mul<79>(t6, t7);
-  t6 = square<79>(t6, 6);
-  t6 = mul<79>(t3, t6);
-  t6 = square<79>(t6, 8);
-  t5 = mul<79>(t5, t6);
-  t5 = square<79>(t5, 6);
-  t4 = mul<79>(t4, t5);
-  t4 = square<79>(t4, 11);
-  t3 = mul<79>(t3, t4);
-  t3 = square<79>(t3, 5);
-  t2 = mul<79>(t2, t3);
-  t2 = square<79>(t2, 7);
-  t1 = mul<79>(t1, t2);
-  t1 = square<79>(t1, 8);
-  t0 = mul<79>(t0, t1);
-  t0 = square<79>(t0, 8);
-  t0 = mul<79>(z, t0);
-  t0 = square<79>(t0, 6);
-  z = mul<79>(z, t0);
-  z = square<79>(z);
-  z = mul<79>(x, z);
+  t6 = square<CURVE_ID_ECP79>(x);
+  t0 = mul<CURVE_ID_ECP79>(x, t6);
+  z = square<CURVE_ID_ECP79>(t0);
+  t3 = mul<CURVE_ID_ECP79>(t6, z);
+  t2 = mul<CURVE_ID_ECP79>(t0, t3);
+  t7 = mul<CURVE_ID_ECP79>(x, t2);
+  t0 = mul<CURVE_ID_ECP79>(t3, t2);
+  t1 = mul<CURVE_ID_ECP79>(t6, t0);
+  t5 = mul<CURVE_ID_ECP79>(t6, t1);
+  t4 = mul<CURVE_ID_ECP79>(z, t5);
+  t3 = mul<CURVE_ID_ECP79>(t3, t4);
+  t7 = mul<CURVE_ID_ECP79>(t7, t3);
+  t6 = mul<CURVE_ID_ECP79>(t6, t7);
+  z = mul<CURVE_ID_ECP79>(z, t6);
+  t7 = square<CURVE_ID_ECP79>(t7, 7);
+  t6 = mul<CURVE_ID_ECP79>(t6, t7);
+  t6 = square<CURVE_ID_ECP79>(t6, 6);
+  t6 = mul<CURVE_ID_ECP79>(t3, t6);
+  t6 = square<CURVE_ID_ECP79>(t6, 8);
+  t5 = mul<CURVE_ID_ECP79>(t5, t6);
+  t5 = square<CURVE_ID_ECP79>(t5, 6);
+  t4 = mul<CURVE_ID_ECP79>(t4, t5);
+  t4 = square<CURVE_ID_ECP79>(t4, 11);
+  t3 = mul<CURVE_ID_ECP79>(t3, t4);
+  t3 = square<CURVE_ID_ECP79>(t3, 5);
+  t2 = mul<CURVE_ID_ECP79>(t2, t3);
+  t2 = square<CURVE_ID_ECP79>(t2, 7);
+  t1 = mul<CURVE_ID_ECP79>(t1, t2);
+  t1 = square<CURVE_ID_ECP79>(t1, 8);
+  t0 = mul<CURVE_ID_ECP79>(t0, t1);
+  t0 = square<CURVE_ID_ECP79>(t0, 8);
+  t0 = mul<CURVE_ID_ECP79>(z, t0);
+  t0 = square<CURVE_ID_ECP79>(t0, 6);
+  z = mul<CURVE_ID_ECP79>(z, t0);
+  z = square<CURVE_ID_ECP79>(z);
+  z = mul<CURVE_ID_ECP79>(x, z);
 
   return z;
 }
@@ -153,9 +153,9 @@ __device__ uint131_t inv_p89(uint131_t& x)
 
   for(int i = 0; i < 64; i++) {
     if(bits & 1) {
-      prod = mul<89>(prod, y);
+      prod = mul<CURVE_ID_ECP89>(prod, y);
     }
-    y = square<89>(y);
+    y = square<CURVE_ID_ECP89>(y);
 
     bits >>= 1;
   }
@@ -163,9 +163,9 @@ __device__ uint131_t inv_p89(uint131_t& x)
   bits = _p89_p.w.v1;
   for(int i = 0; i < 25; i++) {
     if(bits & 1) {
-      prod = mul<89>(prod, y);
+      prod = mul<CURVE_ID_ECP89>(prod, y);
     }
-    y = square<89>(y);
+    y = square<CURVE_ID_ECP89>(y);
 
     bits >>= 1;
   }
@@ -176,11 +176,11 @@ __device__ uint131_t inv_p89(uint131_t& x)
 template <int CURVE> __device__ uint131_t inv(uint131_t x)
 {
   uint131_t r;
-  if(CURVE == 131) {
+  if(CURVE == CURVE_ID_ECP131) {
     r = inv_p131(x);
-  } else if(CURVE == 79) {
+  } else if(CURVE == CURVE_ID_ECP79) {
     r = inv_p79(x);
-  } else if(CURVE == 89) {
+  } else if(CURVE == CURVE_ID_ECP89) {
     r = inv_p89(x);
   }
 

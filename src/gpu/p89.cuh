@@ -10,7 +10,7 @@ __constant__ uint131_t _p89_one = {{0x9e896dc839826cf6, 0x78c8ca, 0x0}};
 __constant__ uint131_t _p89_a = {{0xb1ec24706b2573c1, 0x593048, 0x0}};
 __constant__ uint131_t _p89_b = {{0x37717b7e1c0a25af, 0xc58c6, 0x0}};
 
-template <> struct Curve<89> {
+template <> struct Curve<CURVE_ID_ECP89> {
   __device__ static uint131_t p() { return _p89_p; };
   __device__ static uint131_t one() { return _p89_one; };
   __device__ static uint131_t a() { return _p89_a; };
@@ -21,7 +21,7 @@ template <> struct Curve<89> {
   __device__ static uint131_t mul(uint131_t x, uint131_t y);
 };
 
-__device__ uint131_t Curve<89>::sub(uint131_t x, uint131_t y)
+__device__ uint131_t Curve<CURVE_ID_ECP89>::sub(uint131_t x, uint131_t y)
 {
   uint131_t z = {{0}};
 
@@ -57,7 +57,7 @@ __device__ uint131_t Curve<89>::sub(uint131_t x, uint131_t y)
   return z;
 }
 
-__device__ uint131_t Curve<89>::add(uint131_t x, uint131_t y)
+__device__ uint131_t Curve<CURVE_ID_ECP89>::add(uint131_t x, uint131_t y)
 {
   uint131_t z = add_raw(x, y);
 
@@ -73,7 +73,7 @@ __device__ uint131_t Curve<89>::add(uint131_t x, uint131_t y)
 // p has only 3 significant limbs: p.v[3]=p.v[4]=0
 // b has only 3 significant limbs: b.v[3]=b.v[4]=0 (values < 2^89)
 // Outer loop i=3,4: multiply step is zero; still need reduction passes.
-__device__ uint131_t Curve<89>::mul(uint131_t a, uint131_t b)
+__device__ uint131_t Curve<CURVE_ID_ECP89>::mul(uint131_t a, uint131_t b)
 {
   const uint32_t mp = _p89_k.v[0]; // = 0x0d18f403, -p^{-1} mod 2^32
   const uint32_t p0 = _p89_p.v[0]; // = 0x908ba955

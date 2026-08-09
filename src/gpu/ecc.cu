@@ -296,19 +296,19 @@ extern "C" __global__ void reset_counters(uint64_t* start_pos, uint64_t value, i
 extern "C" __global__ void sanity_check_p131(uint131_t* global_px, uint131_t* global_py, int count,
                                              int* errors)
 {
-  sanity_check_impl<131>(global_px, global_py, count, errors);
+  sanity_check_impl<CURVE_ID_ECP131>(global_px, global_py, count, errors);
 }
 
 extern "C" __global__ void sanity_check_p79(uint131_t* global_px, uint131_t* global_py, int count,
                                             int* errors)
 {
-  sanity_check_impl<79>(global_px, global_py, count, errors);
+  sanity_check_impl<CURVE_ID_ECP79>(global_px, global_py, count, errors);
 }
 
 extern "C" __global__ void sanity_check_p89(uint131_t* global_px, uint131_t* global_py, int count,
                                             int* errors)
 {
-  sanity_check_impl<89>(global_px, global_py, count, errors);
+  sanity_check_impl<CURVE_ID_ECP89>(global_px, global_py, count, errors);
 }
 
 extern "C" __global__ void batch_multiply_p79(uint131_t* global_px, uint131_t* global_py,
@@ -316,7 +316,7 @@ extern "C" __global__ void batch_multiply_p79(uint131_t* global_px, uint131_t* g
                                               uint131_t* gx, uint131_t* gy, int priv_key_bit,
                                               int count)
 {
-  batch_multiply_step<79>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
+  batch_multiply_step<CURVE_ID_ECP79>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
 }
 
 extern "C" __global__ void do_step_p79(uint131_t* global_px, uint131_t* global_py,
@@ -325,7 +325,7 @@ extern "C" __global__ void do_step_p79(uint131_t* global_px, uint131_t* global_p
                                        ManagedStack<StagingPoint> staging, uint131_t* priv_key_a,
                                        uint64_t counter, uint64_t* start_pos, uint32_t dpmask)
 {
-  do_step_impl<79, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, result,
+  do_step_impl<CURVE_ID_ECP79, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, result,
                                       result_count, staging, priv_key_a, counter, start_pos,
                                       dpmask);
 }
@@ -335,7 +335,7 @@ extern "C" __global__ void batch_multiply_p131(uint131_t* global_px, uint131_t* 
                                                uint131_t* gx, uint131_t* gy, int priv_key_bit,
                                                int count)
 {
-  batch_multiply_step<131>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
+  batch_multiply_step<CURVE_ID_ECP131>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
 }
 
 extern "C" __global__ void do_step_p131(uint131_t* global_px, uint131_t* global_py,
@@ -344,7 +344,7 @@ extern "C" __global__ void do_step_p131(uint131_t* global_px, uint131_t* global_
                                         ManagedStack<StagingPoint> staging, uint131_t* priv_key_a,
                                         uint64_t counter, uint64_t* start_pos, uint32_t dpmask)
 {
-  do_step_impl<131, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, result,
+  do_step_impl<CURVE_ID_ECP131, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, result,
                                        result_count, staging, priv_key_a, counter, start_pos,
                                        dpmask);
 }
@@ -354,7 +354,7 @@ extern "C" __global__ void batch_multiply_p89(uint131_t* global_px, uint131_t* g
                                               uint131_t* gx, uint131_t* gy, int priv_key_bit,
                                               int count)
 {
-  batch_multiply_step<89>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
+  batch_multiply_step<CURVE_ID_ECP89>(global_px, global_py, private_keys, gx, gy, mbuf, priv_key_bit, count);
 }
 
 extern "C" __global__ void do_step_p89(uint131_t* global_px, uint131_t* global_py,
@@ -363,7 +363,7 @@ extern "C" __global__ void do_step_p89(uint131_t* global_px, uint131_t* global_p
                                        ManagedStack<StagingPoint> staging, uint131_t* priv_key_a,
                                        uint64_t counter, uint64_t* start_pos, uint32_t dpmask)
 {
-  do_step_impl<89, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, result,
+  do_step_impl<CURVE_ID_ECP89, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry, mbuf, result,
                                       result_count, staging, priv_key_a, counter, start_pos,
                                       dpmask);
 }
