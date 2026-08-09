@@ -22,7 +22,10 @@ template <int CURVE> __device__ uint131_t mul(uint131_t x, uint131_t y)
   return Curve<CURVE>::mul(x, y);
 }
 
-template <int CURVE> __device__ uint131_t square(uint131_t x) { return Curve<CURVE>::mul(x, x); }
+template <int CURVE> __device__ uint131_t square(uint131_t x)
+{
+  return Curve<CURVE>::mul(x, x);
+}
 
 template <int CURVE> __device__ uint131_t square(uint131_t x, int n)
 {
@@ -194,7 +197,7 @@ __device__ bool is_infinity(uint131_t x) { return (x.w.v2 & 0xff) == 0xff; }
 
 __device__ void set_point_at_infinity(uint131_t& x) { x.w.v2 = (uint32_t)-1; }
 
-template <int CURVE> __device__ bool point_exists(uint131_t& x, uint131_t& y)
+template <int CURVE> __device__ bool point_exists_prime(uint131_t& x, uint131_t& y)
 {
   uint131_t a = Curve<CURVE>::a();
   uint131_t b = Curve<CURVE>::b();
