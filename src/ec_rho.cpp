@@ -50,6 +50,12 @@ std::vector<RWPoint> get_rw_points()
 #endif
 
   std::map<std::string, ecc::ecpoint_t> expected = {
+      {"ec2n131", ecc::ecpoint_t({{0xd20b265607329d5d, 0xe6a643b2e2496494, 0x00000005}},
+                                  {{0x228b8df2aa22e76f, 0xac245876958569f3, 0x00000007}})},
+      {"ec2n89", ecc::ecpoint_t({{0x0b1aa980ec37502c, 0x0000000001ceebfb, 0x00000000}},
+                                 {{0xb6b0c8f0d7e30db3, 0x0000000000b4527a, 0x00000000}})},
+      {"ec2n79", ecc::ecpoint_t({{0x06446b5e23aaa7f3, 0x00000000000067aa, 0x00000000}},
+                                 {{0x407f96d5e0af7781, 0x0000000000005139, 0x00000000}})},
       {"ecp131", ecc::ecpoint_t({{0x991395bdb3af97ba, 0xc74c6e35add57bf0, 0x00000002}},
                                 {{0xf1fd45ecd69da948, 0xf8292e66fdd75b41, 0x00000001}})},
       {"ecp89", ecc::ecpoint_t({{0xa76f5de5725addf6, 0x000000000019c961, 0x00000000}},
@@ -91,8 +97,6 @@ EncodedDP encode_dp(const DistinguishedPoint& dp)
 
 std::vector<uint8_t> encode_dps(const std::vector<DistinguishedPoint>& dps, int curve, int dpbits)
 {
-
-  assert(curve == 79 || curve == 131 || curve == 89);
 
   BinaryEncoder encoder(dps.size() * sizeof(EncodedDP));
 
@@ -148,29 +152,6 @@ DistinguishedPoint decode_dp(const EncodedDP& dp, int dpbits, bool verify)
   return DistinguishedPoint(a, p, dpbits, length);
 }
 
-std::vector<DistinguishedPoint> decode_dps(const uint8_t* bytes, size_t size, bool verify)
-{
-  BinaryDecoder decoder(bytes, size);
-  DPHeader header = decoder.decode<DPHeader>();
-
-  assert(header.curve_id == 79 || header.curve_id == 131);
-
-  std::vector<DistinguishedPoint> dps;
-
-  int payload_size = size - sizeof(DPHeader);
-  assert(payload_size % header.count == 0);
-
-  int field_size = payload_size / header.count;
-
-  EncodedDP encoded;
-  for(int i = 0; i < header.count; i++) {
-
-    decoder.decode(&encoded, sizeof(encoded));
-    dps.push_back(decode_dp(encoded, header.dp_bits, verify));
-  }
-
-  return dps;
-}
 
 bool verify_dp(const DistinguishedPoint& dp)
 {
