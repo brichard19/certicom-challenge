@@ -86,10 +86,10 @@ LINKER_RHO=-lfmt
 CPP_MATH_TESTS := ecc.cpp montgomery.cpp uint131.cpp util.cpp
 CPP_MATH_TESTS := $(addprefix src/, $(CPP_MATH_TESTS))
 
-CPP_RHO := rho-main.cpp GPUPointFinder.cpp  ec_rho.cpp  ecc.cpp montgomery.cpp uint131.cpp  util.cpp
+CPP_RHO := rho-main.cpp GPUPointFinder.cpp CPUPointFinder.cpp ec_rho.cpp ecc.cpp montgomery.cpp uint131.cpp util.cpp
 
 CPP_RHO := $(addprefix src/, $(CPP_RHO))
-CPP_BENCH := benchmark.cpp GPUPointFinder.cpp  ec_rho.cpp ecc.cpp montgomery.cpp uint131.cpp  util.cpp
+CPP_BENCH := benchmark.cpp GPUPointFinder.cpp CPUPointFinder.cpp ec_rho.cpp ecc.cpp montgomery.cpp uint131.cpp util.cpp
 CPP_BENCH := $(addprefix src/, $(CPP_BENCH))
 
 CPP_DATABASE := rho-db.cpp ec_rho.cpp  ecc.cpp montgomery.cpp uint131.cpp  util.cpp
@@ -157,6 +157,7 @@ rho_solve:	third_party
 .PHONY: tests
 tests:
 	$(CXX) tests/math_tests.cpp $(CPP_MATH_TESTS) -o tests/math_tests $(INCLUDE)
+	$(CXX) tests/cpu_point_finder_tests.cpp src/CPUPointFinder.cpp src/ec_rho.cpp $(CPP_MATH_TESTS) -o tests/cpu_point_finder_tests $(INCLUDE)
 
 clean:
 	rm -v -rf src/*.o
@@ -166,5 +167,6 @@ clean:
 	rm -v -f rho-nvidia
 	rm -v -f benchmark-nvidia
 	rm -v -f tests/math_tests
+	rm -v -f tests/cpu_point_finder_tests
 	rm -v -f rho-db
 	rm -v -rf lib

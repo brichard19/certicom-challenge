@@ -305,57 +305,54 @@ bool test15()
 
 bool test16()
 {
-  // Standard GF(2^8) example using x^8 + x^4 + x^3 + x + 1.
-  uint131_t modulus = make_uint131(0x11b);
-  uint131_t product = gf2::mul(make_uint131(0x57), make_uint131(0x83), modulus);
-  return product == make_uint131(0xc1);
+  // x^79 = x^9 + 1 modulo x^79 + x^9 + 1.
+  uint131_t x78 = {};
+  x78.v[2] = uint32_t(1) << 14;
+  return gf2::mul(x78, make_uint131(2), gf2::Field::GF2_79) == make_uint131(0x201);
 }
 
 bool test17()
 {
-  // Verify reduction at the maximum supported degree:
-  // x^131 = x^3 + 1 mod (x^131 + x^3 + 1).
-  uint131_t modulus = make_uint131(9);
-  modulus.v[4] |= uint32_t(1) << 3;
-
+  // x^131 = x^13 + x^2 + x + 1 modulo the 131-bit field polynomial.
   uint131_t x130 = {};
   x130.v[4] = uint32_t(1) << 2;
-
-  return gf2::mul(x130, make_uint131(2), modulus) == make_uint131(9);
+  return gf2::mul(x130, make_uint131(2), gf2::Field::GF2_131) == make_uint131(0x2007);
 }
 
 bool test18()
 {
   // Multiplication distributes over addition.
-  uint131_t modulus = make_uint131(0x11b);
+  gf2::Field field = gf2::Field::GF2_89;
   uint131_t a = make_uint131(0x53);
   uint131_t b = make_uint131(0xca);
   uint131_t c = make_uint131(0x17);
 
-  uint131_t left = gf2::mul(gf2::add(a, b), c, modulus);
-  uint131_t right = gf2::add(gf2::mul(a, c, modulus), gf2::mul(b, c, modulus));
+  uint131_t left = gf2::mul(gf2::add(a, b), c, field);
+  uint131_t right = gf2::add(gf2::mul(a, c, field), gf2::mul(b, c, field));
   return left == right;
 }
 
 bool test19()
 {
-  // Known inverse in GF(2^8) modulo x^8 + x^4 + x^3 + x + 1.
-  uint131_t modulus = make_uint131(0x11b);
-  return gf2::inv(make_uint131(0x53), modulus) == make_uint131(0xca);
+  gf2::Field field = gf2::Field::GF2_89;
+  uint131_t value = make_uint131(0x53);
+  return gf2::mul(value, gf2::inv(value, field), field) == make_uint131(1);
 }
 
 bool test20()
 {
-  uint131_t modulus = make_uint131(0x11b);
-  for(uint32_t i = 1; i < 256; i++) {
-    uint131_t a = make_uint131(i);
-    uint131_t inverse = gf2::inv(a, modulus);
-    if(gf2::mul(a, inverse, modulus) != make_uint131(1)) {
-      return false;
+  const gf2::Field fields[] = {gf2::Field::GF2_79, gf2::Field::GF2_89, gf2::Field::GF2_131};
+  for(gf2::Field field : fields) {
+    for(uint32_t i = 1; i < 32; i++) {
+      uint131_t a = make_uint131(i);
+      uint131_t inverse = gf2::inv(a, field);
+      if(gf2::mul(a, inverse, field) != make_uint131(1))
+        return false;
     }
+    if(gf2::inv(make_uint131(0), field) != make_uint131(0))
+      return false;
   }
-
-  return gf2::inv(make_uint131(0), modulus) == make_uint131(0);
+  return true;
 }
 
 bool test21()

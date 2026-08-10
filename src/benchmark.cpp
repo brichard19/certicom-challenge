@@ -4,16 +4,32 @@
 #include <getopt.h>
 #include <hip/hip_runtime.h>
 #include <iostream>
+#include <memory>
+#include <optional>
 
+#include "CPUPointFinder.h"
 #include "GPUPointFinder.h"
 #include "ec_rho.h"
 #include "util.h"
 
 double _benchmark_run_time = 10.0;
 
-void benchmark(int hip_device)
+struct BenchmarkOptions {
+  bool cpu = false;
+  std::optional<int> gpu;
+};
+
+std::unique_ptr<DistinguishedPointFinder> create_point_finder(const BenchmarkOptions& options)
 {
-  DistinguishedPointFinder* pf = new GPUPointFinder(hip_device, 63, true);
+  if(options.cpu) {
+    return std::make_unique<CPUPointFinder>(63);
+  }
+  return std::make_unique<GPUPointFinder>(*options.gpu, 63, true);
+}
+
+void benchmark(const BenchmarkOptions& options)
+{
+  std::unique_ptr<DistinguishedPointFinder> pf = create_point_finder(options);
 
   pf->init();
 
@@ -67,24 +83,24 @@ void benchmark(int hip_device)
 
   std::cout << std::endl;
   std::cout << (avg / 1e6) << " MKeys/sec" << std::endl;
-
-  delete pf;
 }
 
 int main(int argc, char** argv)
 {
   std::string curve_name;
-  int device = 0;
+  BenchmarkOptions options;
 
   while(true) {
     static struct option long_options[] = {
         {"curve", required_argument, 0, 'c'},
         {"gpu", required_argument, 0, 'g'},
+        {"cpu", no_argument, 0, 'C'},
+        {NULL, 0, NULL, 0},
     };
 
     int opt_idx = 0;
 
-    int c = getopt_long(argc, argv, "c:g:", long_options, &opt_idx);
+    int c = getopt_long(argc, argv, "c:g:C", long_options, &opt_idx);
 
     if(c == -1) {
       break;
@@ -96,7 +112,11 @@ int main(int argc, char** argv)
       break;
 
     case 'g':
-      device = atoi(optarg);
+      options.gpu = atoi(optarg);
+      break;
+
+    case 'C':
+      options.cpu = true;
       break;
 
     case '?':
@@ -113,6 +133,11 @@ int main(int argc, char** argv)
     return 1;
   }
 
+  if(options.cpu == options.gpu.has_value()) {
+    std::cout << "Exactly one of --cpu or --gpu is required" << std::endl;
+    return 1;
+  }
+
   try {
     ecc::set_curve(curve_name);
   } catch(...) {
@@ -120,16 +145,17 @@ int main(int argc, char** argv)
     return 1;
   }
 
-  // Check device ID
-  int device_count = 0;
-  HIP_CALL(hipGetDeviceCount(&device_count));
+  if(options.gpu) {
+    int device_count = 0;
+    HIP_CALL(hipGetDeviceCount(&device_count));
 
-  if(device >= device_count) {
-    std::cout << "Invalid device " << device << std::endl;
-    return 1;
+    if(*options.gpu < 0 || *options.gpu >= device_count) {
+      std::cout << "Invalid device " << *options.gpu << std::endl;
+      return 1;
+    }
   }
 
-  benchmark(device);
+  benchmark(options);
 
   return 0;
 }

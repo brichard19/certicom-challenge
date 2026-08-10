@@ -3,6 +3,7 @@
 
 #include <string>
 
+#include "gf2.h"
 #include "uint131.h"
 
 enum class CurveType {
@@ -12,6 +13,7 @@ enum class CurveType {
 
 struct CurveParameters {
   CurveType type;
+  gf2::Field field;
   uint131_t p;
   uint131_t f;
   uint131_t a;

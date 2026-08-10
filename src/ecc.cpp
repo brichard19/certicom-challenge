@@ -12,6 +12,7 @@ std::map<std::string, CurveParameters> _curves = {
     {"ec2n79",
      {
          .type = CurveType::BINARY,
+         .field = gf2::Field::GF2_79,
          .p = {},
          .f = {{0x0000000000000201, 0x0000000000008000, 0x00000000}},
          .a = {{0x38a8f66d7f4c385f, 0x0000000000004a2e, 0x00000000}},
@@ -35,6 +36,7 @@ std::map<std::string, CurveParameters> _curves = {
     {"ec2n89",
      {
          .type = CurveType::BINARY,
+         .field = gf2::Field::GF2_89,
          .p = {},
          .f = {{0x0000004000000001, 0x0000000002000000, 0x00000000}},
          .a = {{0x660b75e77315e94e, 0x000000000095aa3e, 0x00000000}},
@@ -58,6 +60,7 @@ std::map<std::string, CurveParameters> _curves = {
     {"ec2n131",
      {
          .type = CurveType::BINARY,
+         .field = gf2::Field::GF2_131,
          .p = {},
          .f = {{0x0000000000002007, 0x0000000000000000, 0x00000008}},
          .a = {{0xa1a14f2c9e44352e, 0xebcb7eecc296a1c4, 0x00000007}},
@@ -81,6 +84,7 @@ std::map<std::string, CurveParameters> _curves = {
     {"ecp131",
      {
          .type = CurveType::PRIME,
+         .field = gf2::Field::NONE,
          .p = {{0x194c43186b3abc0b, 0x8e1d43f293469e33, 0x4}},
          .f = {},
          .a = {{0xe7f7f250cee8709a, 0xacd15fe1a8ec1522, 0x0}},
@@ -104,6 +108,7 @@ std::map<std::string, CurveParameters> _curves = {
     {"ecp79",
      {
          .type = CurveType::PRIME,
+         .field = gf2::Field::NONE,
          .p = {{0x5177412aca899cf5, 0x62ce, 0x0}},
          .f = {},
          .a = {{0x732c9b460e3c3d, 0x1bb7, 0x0}},
@@ -128,6 +133,7 @@ std::map<std::string, CurveParameters> _curves = {
 
      {
          .type = CurveType::PRIME,
+         .field = gf2::Field::NONE,
          .p = {{0x903f1643908ba955, 0x158685c, 0x0}},
          .f = {},
          .a = {{0xb1ec24706b2573c1, 0x593048, 0x0}},
@@ -230,11 +236,11 @@ bool exists(const ecpoint_t& p)
 {
   if(_params.type == CurveType::BINARY) {
     // y^2 + xy = x^3 + ax^2 + b
-    uint131_t y2 = gf2::mul(p.y, p.y, _params.f);
-    uint131_t xy = gf2::mul(p.x, p.y, _params.f);
-    uint131_t x2 = gf2::mul(p.x, p.x, _params.f);
-    uint131_t x3 = gf2::mul(p.x, x2, _params.f);
-    uint131_t ax2 = gf2::mul(_params.a, x2, _params.f);
+    uint131_t y2 = gf2::mul(p.y, p.y, _params.field);
+    uint131_t xy = gf2::mul(p.x, p.y, _params.field);
+    uint131_t x2 = gf2::mul(p.x, p.x, _params.field);
+    uint131_t x3 = gf2::mul(p.x, x2, _params.field);
+    uint131_t ax2 = gf2::mul(_params.a, x2, _params.field);
 
     return gf2::add(y2, xy) == gf2::add(gf2::add(x3, ax2), _params.b);
   }
@@ -255,16 +261,16 @@ static ecpoint_t dbl_binary(const ecpoint_t& p)
   }
 
   // lambda = x + y/x
-  uint131_t inverse_x = gf2::inv(p.x, _params.f);
-  uint131_t lambda = gf2::add(p.x, gf2::mul(p.y, inverse_x, _params.f));
+  uint131_t inverse_x = gf2::inv(p.x, _params.field);
+  uint131_t lambda = gf2::add(p.x, gf2::mul(p.y, inverse_x, _params.field));
 
   // x3 = lambda^2 + lambda + a
-  uint131_t x = gf2::add(gf2::add(gf2::mul(lambda, lambda, _params.f), lambda), _params.a);
+  uint131_t x = gf2::add(gf2::add(gf2::mul(lambda, lambda, _params.field), lambda), _params.a);
 
   // y3 = x1^2 + (lambda + 1)x3
-  uint131_t x2 = gf2::mul(p.x, p.x, _params.f);
+  uint131_t x2 = gf2::mul(p.x, p.x, _params.field);
   uint131_t lambda_plus_one = gf2::add(lambda, make_uint131(1));
-  uint131_t y = gf2::add(x2, gf2::mul(lambda_plus_one, x, _params.f));
+  uint131_t y = gf2::add(x2, gf2::mul(lambda_plus_one, x, _params.field));
 
   return ecpoint_t(x, y);
 }
@@ -309,14 +315,14 @@ static ecpoint_t add_binary(const ecpoint_t& p, const ecpoint_t& q)
   // lambda = (y1 + y2) / (x1 + x2)
   uint131_t rise = gf2::add(p.y, q.y);
   uint131_t run = gf2::add(p.x, q.x);
-  uint131_t lambda = gf2::mul(rise, gf2::inv(run, _params.f), _params.f);
+  uint131_t lambda = gf2::mul(rise, gf2::inv(run, _params.field), _params.field);
 
   // x3 = lambda^2 + lambda + x1 + x2 + a
-  uint131_t x = gf2::add(gf2::mul(lambda, lambda, _params.f), lambda);
+  uint131_t x = gf2::add(gf2::mul(lambda, lambda, _params.field), lambda);
   x = gf2::add(gf2::add(gf2::add(x, p.x), q.x), _params.a);
 
   // y3 = lambda(x1 + x3) + x3 + y1
-  uint131_t y = gf2::mul(lambda, gf2::add(p.x, x), _params.f);
+  uint131_t y = gf2::mul(lambda, gf2::add(p.x, x), _params.field);
   y = gf2::add(gf2::add(y, x), p.y);
 
   return ecpoint_t(x, y);
@@ -474,7 +480,7 @@ int get_bit(uint131_t x, int bit)
   }
 }
 
-std::vector<ecpoint_t> mul(const std::vector<uint131_t>& k, const ecpoint_t& q)
+static std::vector<ecpoint_t> batch_mul_prime(const std::vector<uint131_t>& k, const ecpoint_t& q)
 {
   // Create lookup table for Q, 2Q, 4Q... 2^131Q
   std::vector<ecpoint_t> qmul(_params.bits + 1);
@@ -573,6 +579,88 @@ std::vector<ecpoint_t> mul(const std::vector<uint131_t>& k, const ecpoint_t& q)
   }
 
   return p;
+}
+
+static std::vector<ecpoint_t> batch_mul_binary(const std::vector<uint131_t>& k, const ecpoint_t& q)
+{
+  if(k.empty()) {
+    return {};
+  }
+
+  std::vector<ecpoint_t> qmul(_params.bits + 1);
+  std::vector<ecpoint_t> p(k.size());
+  std::vector<uint131_t> chain(k.size());
+  const uint131_t one = make_uint131(1);
+
+  qmul[0] = q;
+  for(size_t i = 1; i < qmul.size(); i++) {
+    qmul[i] = ecc::dbl(qmul[i - 1]);
+  }
+
+  for(int b = 0; b < _params.bits; b++) {
+    uint131_t product = one;
+
+    for(size_t i = 0; i < k.size(); i++) {
+      bool bit = get_bit(k[i], b);
+      uint131_t denominator = one;
+
+      if(bit && !is_infinity(p[i]) && !is_equal(p[i], qmul[b]) && !is_neg(p[i], qmul[b])) {
+        denominator = gf2::add(qmul[b].x, p[i].x);
+      }
+
+      product = gf2::mul(product, denominator, _params.field);
+      chain[i] = product;
+    }
+
+    uint131_t inverse = gf2::inv(product, _params.field);
+
+    for(size_t i = k.size(); i-- > 0;) {
+      bool bit = get_bit(k[i], b);
+      if(!bit) {
+        continue;
+      }
+      if(is_infinity(p[i])) {
+        p[i] = qmul[b];
+        continue;
+      }
+      if(is_equal(p[i], qmul[b])) {
+        p[i] = qmul[b + 1];
+        continue;
+      }
+      if(is_neg(p[i], qmul[b])) {
+        p[i] = ecc::add(p[i], qmul[b]);
+        continue;
+      }
+
+      uint131_t denominator = gf2::add(qmul[b].x, p[i].x);
+      uint131_t denominator_inverse =
+          i == 0 ? inverse : gf2::mul(inverse, chain[i - 1], _params.field);
+      inverse = gf2::mul(inverse, denominator, _params.field);
+
+      uint131_t lambda = gf2::mul(gf2::add(qmul[b].y, p[i].y), denominator_inverse, _params.field);
+
+      uint131_t x = gf2::add(gf2::mul(lambda, lambda, _params.field), lambda);
+      x = gf2::add(gf2::add(gf2::add(x, p[i].x), qmul[b].x), _params.a);
+
+      uint131_t y = gf2::mul(lambda, gf2::add(p[i].x, x), _params.field);
+      y = gf2::add(gf2::add(y, x), p[i].y);
+
+      p[i] = ecpoint_t(x, y);
+    }
+  }
+
+  return p;
+}
+
+std::vector<ecpoint_t> mul(const std::vector<uint131_t>& k, const ecpoint_t& q)
+{
+  if(k.empty()) {
+    return {};
+  }
+  if(_params.type == CurveType::BINARY) {
+    return batch_mul_binary(k, q);
+  }
+  return batch_mul_prime(k, q);
 }
 
 // Calculate y from x and sign

@@ -74,7 +74,6 @@ public:
 
 std::vector<RWPoint> get_rw_points();
 
-std::vector<DistinguishedPoint> decode_dps(const uint8_t* bytes, size_t size, bool verify = false);
 DistinguishedPoint decode_dp(const EncodedDP& dp, int dpbits, bool verify = false);
 std::vector<uint8_t> encode_dps(const std::vector<DistinguishedPoint>& dps, int curve, int dpbits);
 bool verify_dp(const DistinguishedPoint& dp);
