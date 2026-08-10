@@ -2,10 +2,10 @@
 #ifndef _EC_MATH_CUH
 #define _EC_MATH_CUH
 
-#include "math_common.cuh"
+#include "ec2n131.cuh"
 #include "ec2n79.cuh"
 #include "ec2n89.cuh"
-#include "ec2n131.cuh"
+#include "math_common.cuh"
 #include "p131.cuh"
 #include "p79.cuh"
 #include "p89.cuh"
@@ -27,8 +27,7 @@ template <int CURVE> __device__ uint131_t mul(uint131_t x, uint131_t y)
 
 template <int CURVE> __device__ uint131_t square(uint131_t x)
 {
-  if constexpr(CURVE == CURVE_ID_EC2N79 || CURVE == CURVE_ID_EC2N89 ||
-               CURVE == CURVE_ID_EC2N131) {
+  if constexpr(CURVE == CURVE_ID_EC2N79 || CURVE == CURVE_ID_EC2N89 || CURVE == CURVE_ID_EC2N131) {
     return Curve<CURVE>::square(x);
   } else {
     return Curve<CURVE>::mul(x, x);
@@ -235,8 +234,7 @@ template <int CURVE> __device__ bool point_exists_binary(uint131_t& x, uint131_t
 
 template <int CURVE> __device__ bool point_exists(uint131_t& x, uint131_t& y)
 {
-  if constexpr(CURVE == CURVE_ID_EC2N79 || CURVE == CURVE_ID_EC2N89 ||
-               CURVE == CURVE_ID_EC2N131) {
+  if constexpr(CURVE == CURVE_ID_EC2N79 || CURVE == CURVE_ID_EC2N89 || CURVE == CURVE_ID_EC2N131) {
     return point_exists_binary<CURVE>(x, y);
   } else {
     return point_exists_prime<CURVE>(x, y);

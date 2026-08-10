@@ -35,10 +35,7 @@ __device__ uint131_t Curve<CURVE_ID_EC2N131>::add(uint131_t x, uint131_t y)
   return z;
 }
 
-__device__ uint131_t Curve<CURVE_ID_EC2N131>::sub(uint131_t x, uint131_t y)
-{
-  return add(x, y);
-}
+__device__ uint131_t Curve<CURVE_ID_EC2N131>::sub(uint131_t x, uint131_t y) { return add(x, y); }
 
 __device__ uint131_t Curve<CURVE_ID_EC2N131>::mul(uint131_t x, uint131_t y)
 {
@@ -58,8 +55,8 @@ __device__ uint131_t Curve<CURVE_ID_EC2N131>::mul(uint131_t x, uint131_t y)
     x.v[1] = (x.v[1] << 1) | (x.v[0] >> 31);
     x.v[0] <<= 1;
 
-    if(x.v[4] & 0x08){
-      //x = add(x, _ec2n131_f);
+    if(x.v[4] & 0x08) {
+      // x = add(x, _ec2n131_f);
       x.v[0] ^= 0x2007;
       x.v[4] ^= 0x08;
     }
@@ -96,10 +93,9 @@ __device__ uint131_t Curve<CURVE_ID_EC2N131>::square(uint131_t x)
   uint64_t h2 = w4 >> 3;
 
   uint64_t r0 = w0 ^ h0 ^ (h0 << 1) ^ (h0 << 2) ^ (h0 << 13);
-  uint64_t r1 = w1 ^ h1 ^ (h1 << 1) ^ (h0 >> 63) ^ (h1 << 2) ^ (h0 >> 62) ^
-                (h1 << 13) ^ (h0 >> 51);
-  uint64_t r2 = (w2 & 0x7) ^ h2 ^ (h2 << 1) ^ (h1 >> 63) ^ (h2 << 2) ^
-                (h1 >> 62) ^ (h2 << 13) ^ (h1 >> 51);
+  uint64_t r1 = w1 ^ h1 ^ (h1 << 1) ^ (h0 >> 63) ^ (h1 << 2) ^ (h0 >> 62) ^ (h1 << 13) ^ (h0 >> 51);
+  uint64_t r2 =
+      (w2 & 0x7) ^ h2 ^ (h2 << 1) ^ (h1 >> 63) ^ (h2 << 2) ^ (h1 >> 62) ^ (h2 << 13) ^ (h1 >> 51);
 
   // The first fold can only leave terms x^131 through x^142. Fold those
   // once more; their reductions all fit in the low 64-bit word.
