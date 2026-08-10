@@ -40,6 +40,8 @@ std::map<std::string, KernelInfo> _kernel_map = {
     {"ecp89", {(void*)do_step_p89, (void*)batch_multiply_p89, (void*)sanity_check_p89}},
     {"ecp131", {(void*)do_step_p131, (void*)batch_multiply_p131, (void*)sanity_check_p131}},
     {"ec2n131", {(void*)do_step_b131, (void*)batch_multiply_b131, (void*)sanity_check_b131}},
+    {"ec2n89", {(void*)do_step_b89, (void*)batch_multiply_b89, (void*)sanity_check_b89}},
+    {"ec2n79", {(void*)do_step_b79, (void*)batch_multiply_b79, (void*)sanity_check_b79}},
 };
 
 uint131_t load_uint131(const void* p, int idx, int n)

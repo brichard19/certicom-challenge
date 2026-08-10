@@ -30,6 +30,10 @@ extern "C" __global__ void sanity_check_p89(uint131_t* global_px, uint131_t* glo
                                             int* errors);
 extern "C" __global__ void sanity_check_b131(uint131_t* global_px, uint131_t* global_py, int count,
                                               int* errors);
+extern "C" __global__ void sanity_check_b89(uint131_t* global_px, uint131_t* global_py, int count,
+                                             int* errors);
+extern "C" __global__ void sanity_check_b79(uint131_t* global_px, uint131_t* global_py, int count,
+                                             int* errors);
 extern "C" __global__ void reset_counters(uint64_t* start_pos, uint64_t value, int count);
 
 extern "C" __global__ void do_step_p79(uint131_t* global_px, uint131_t* global_py,
@@ -55,6 +59,18 @@ extern "C" __global__ void do_step_b131(uint131_t* global_px, uint131_t* global_
                                          ManagedStack<StagingPoint> staging,
                                          uint131_t* priv_key_a, uint64_t counter,
                                          uint64_t* start_pos, uint32_t dpmask);
+extern "C" __global__ void do_step_b89(uint131_t* global_px, uint131_t* global_py,
+                                        uint131_t* global_rx, uint131_t* global_ry,
+                                        uint131_t* mbuf, DPResult* result, int* result_count,
+                                        ManagedStack<StagingPoint> staging,
+                                        uint131_t* priv_key_a, uint64_t counter,
+                                        uint64_t* start_pos, uint32_t dpmask);
+extern "C" __global__ void do_step_b79(uint131_t* global_px, uint131_t* global_py,
+                                        uint131_t* global_rx, uint131_t* global_ry,
+                                        uint131_t* mbuf, DPResult* result, int* result_count,
+                                        ManagedStack<StagingPoint> staging,
+                                        uint131_t* priv_key_a, uint64_t counter,
+                                        uint64_t* start_pos, uint32_t dpmask);
 
 extern "C" __global__ void batch_multiply_p79(uint131_t* global_px, uint131_t* global_py,
                                               uint131_t* private_keys, uint131_t* mbuf,
@@ -72,5 +88,13 @@ extern "C" __global__ void batch_multiply_b131(uint131_t* global_px, uint131_t* 
                                                 uint131_t* private_keys, uint131_t* mbuf,
                                                 uint131_t* gx, uint131_t* gy, int priv_key_bit,
                                                 int count);
+extern "C" __global__ void batch_multiply_b89(uint131_t* global_px, uint131_t* global_py,
+                                               uint131_t* private_keys, uint131_t* mbuf,
+                                               uint131_t* gx, uint131_t* gy, int priv_key_bit,
+                                               int count);
+extern "C" __global__ void batch_multiply_b79(uint131_t* global_px, uint131_t* global_py,
+                                               uint131_t* private_keys, uint131_t* mbuf,
+                                               uint131_t* gx, uint131_t* gy, int priv_key_bit,
+                                               int count);
 
 #endif
