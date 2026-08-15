@@ -53,6 +53,14 @@ inline void multiply(const uint131_t& a, const uint131_t& b, uint64_t product[6]
   }
 }
 
+inline void square(const uint131_t& a, uint64_t product[6])
+{
+  const uint64_t words[3] = {a.w.v0, a.w.v1, a.w.v2};
+  for(int i = 0; i < 3; i++) {
+    clmul64(words[i], words[i], product[2 * i], product[2 * i + 1]);
+  }
+}
+
 inline uint131_t reduce_131(const uint64_t product[6])
 {
   uint64_t h0 = (product[2] >> 3) | (product[3] << 61);
@@ -132,29 +140,89 @@ inline uint131_t mul(const uint131_t& a, const uint131_t& b, Field field)
   }
 }
 
-inline uint131_t inv(const uint131_t& a, Field field)
+inline uint131_t square(const uint131_t& a, Field field)
 {
-  if(a == make_uint131(0))
-    return {};
+  uint64_t product[6] = {};
+  detail::square(a, product);
 
-  int degree;
-  if(field == Field::GF2_131) {
-    degree = 131;
-  } else if(field == Field::GF2_89) {
-    degree = 89;
-  } else if(field == Field::GF2_79) {
-    degree = 79;
-  } else {
+  switch(field) {
+  case Field::GF2_131:
+    return detail::reduce_131(product);
+  case Field::GF2_89:
+    return detail::reduce_89(product);
+  case Field::GF2_79:
+    return detail::reduce_79(product);
+  default:
     throw std::invalid_argument("Unsupported binary field");
   }
+}
 
-  uint131_t result = make_uint131(1);
-  for(int i = degree - 1; i >= 0; i--) {
-    result = mul(result, result, field);
-    if(i != 0)
-      result = mul(result, a, field);
+namespace detail {
+
+inline uint131_t square_n(uint131_t value, int count, Field field)
+{
+  for(int i = 0; i < count; i++) value = square(value, field);
+  return value;
+}
+
+inline uint131_t inv_131(const uint131_t& x)
+{
+  // Optimal addition chain for 130: 1,2,4,8,16,32,64,128,130.
+  uint131_t x2 = mul(square_n(x, 1, Field::GF2_131), x, Field::GF2_131);
+  uint131_t x4 = mul(square_n(x2, 2, Field::GF2_131), x2, Field::GF2_131);
+  uint131_t x8 = mul(square_n(x4, 4, Field::GF2_131), x4, Field::GF2_131);
+  uint131_t x16 = mul(square_n(x8, 8, Field::GF2_131), x8, Field::GF2_131);
+  uint131_t x32 = mul(square_n(x16, 16, Field::GF2_131), x16, Field::GF2_131);
+  uint131_t x64 = mul(square_n(x32, 32, Field::GF2_131), x32, Field::GF2_131);
+  uint131_t x128 = mul(square_n(x64, 64, Field::GF2_131), x64, Field::GF2_131);
+  uint131_t x130 = mul(square_n(x128, 2, Field::GF2_131), x2, Field::GF2_131);
+  return square(x130, Field::GF2_131);
+}
+
+inline uint131_t inv_89(const uint131_t& x)
+{
+  // Optimal addition chain for 88: 1,2,4,8,16,32,64,80,88.
+  uint131_t x2 = mul(square_n(x, 1, Field::GF2_89), x, Field::GF2_89);
+  uint131_t x4 = mul(square_n(x2, 2, Field::GF2_89), x2, Field::GF2_89);
+  uint131_t x8 = mul(square_n(x4, 4, Field::GF2_89), x4, Field::GF2_89);
+  uint131_t x16 = mul(square_n(x8, 8, Field::GF2_89), x8, Field::GF2_89);
+  uint131_t x32 = mul(square_n(x16, 16, Field::GF2_89), x16, Field::GF2_89);
+  uint131_t x64 = mul(square_n(x32, 32, Field::GF2_89), x32, Field::GF2_89);
+  uint131_t x80 = mul(square_n(x64, 16, Field::GF2_89), x16, Field::GF2_89);
+  uint131_t x88 = mul(square_n(x80, 8, Field::GF2_89), x8, Field::GF2_89);
+  return square(x88, Field::GF2_89);
+}
+
+inline uint131_t inv_79(const uint131_t& x)
+{
+  // Optimal addition chain for 78: 1,2,3,6,12,24,48,72,78.
+  uint131_t x2 = mul(square_n(x, 1, Field::GF2_79), x, Field::GF2_79);
+  uint131_t x3 = mul(square_n(x2, 1, Field::GF2_79), x, Field::GF2_79);
+  uint131_t x6 = mul(square_n(x3, 3, Field::GF2_79), x3, Field::GF2_79);
+  uint131_t x12 = mul(square_n(x6, 6, Field::GF2_79), x6, Field::GF2_79);
+  uint131_t x24 = mul(square_n(x12, 12, Field::GF2_79), x12, Field::GF2_79);
+  uint131_t x48 = mul(square_n(x24, 24, Field::GF2_79), x24, Field::GF2_79);
+  uint131_t x72 = mul(square_n(x48, 24, Field::GF2_79), x24, Field::GF2_79);
+  uint131_t x78 = mul(square_n(x72, 6, Field::GF2_79), x6, Field::GF2_79);
+  return square(x78, Field::GF2_79);
+}
+
+} // namespace detail
+
+inline uint131_t inv(const uint131_t& a, Field field)
+{
+  if(a == make_uint131(0)) return {};
+
+  switch(field) {
+  case Field::GF2_131:
+    return detail::inv_131(a);
+  case Field::GF2_89:
+    return detail::inv_89(a);
+  case Field::GF2_79:
+    return detail::inv_79(a);
+  default:
+    throw std::invalid_argument("Unsupported binary field");
   }
-  return result;
 }
 
 } // namespace gf2

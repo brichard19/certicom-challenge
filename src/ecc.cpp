@@ -236,9 +236,9 @@ bool exists(const ecpoint_t& p)
 {
   if(_params.type == CurveType::BINARY) {
     // y^2 + xy = x^3 + ax^2 + b
-    uint131_t y2 = gf2::mul(p.y, p.y, _params.field);
+    uint131_t y2 = gf2::square(p.y, _params.field);
     uint131_t xy = gf2::mul(p.x, p.y, _params.field);
-    uint131_t x2 = gf2::mul(p.x, p.x, _params.field);
+    uint131_t x2 = gf2::square(p.x, _params.field);
     uint131_t x3 = gf2::mul(p.x, x2, _params.field);
     uint131_t ax2 = gf2::mul(_params.a, x2, _params.field);
 
@@ -265,10 +265,10 @@ static ecpoint_t dbl_binary(const ecpoint_t& p)
   uint131_t lambda = gf2::add(p.x, gf2::mul(p.y, inverse_x, _params.field));
 
   // x3 = lambda^2 + lambda + a
-  uint131_t x = gf2::add(gf2::add(gf2::mul(lambda, lambda, _params.field), lambda), _params.a);
+  uint131_t x = gf2::add(gf2::add(gf2::square(lambda, _params.field), lambda), _params.a);
 
   // y3 = x1^2 + (lambda + 1)x3
-  uint131_t x2 = gf2::mul(p.x, p.x, _params.field);
+  uint131_t x2 = gf2::square(p.x, _params.field);
   uint131_t lambda_plus_one = gf2::add(lambda, make_uint131(1));
   uint131_t y = gf2::add(x2, gf2::mul(lambda_plus_one, x, _params.field));
 
@@ -318,7 +318,7 @@ static ecpoint_t add_binary(const ecpoint_t& p, const ecpoint_t& q)
   uint131_t lambda = gf2::mul(rise, gf2::inv(run, _params.field), _params.field);
 
   // x3 = lambda^2 + lambda + x1 + x2 + a
-  uint131_t x = gf2::add(gf2::mul(lambda, lambda, _params.field), lambda);
+  uint131_t x = gf2::add(gf2::square(lambda, _params.field), lambda);
   x = gf2::add(gf2::add(gf2::add(x, p.x), q.x), _params.a);
 
   // y3 = lambda(x1 + x3) + x3 + y1
@@ -639,7 +639,7 @@ static std::vector<ecpoint_t> batch_mul_binary(const std::vector<uint131_t>& k, 
 
       uint131_t lambda = gf2::mul(gf2::add(qmul[b].y, p[i].y), denominator_inverse, _params.field);
 
-      uint131_t x = gf2::add(gf2::mul(lambda, lambda, _params.field), lambda);
+      uint131_t x = gf2::add(gf2::square(lambda, _params.field), lambda);
       x = gf2::add(gf2::add(gf2::add(x, p[i].x), qmul[b].x), _params.a);
 
       uint131_t y = gf2::mul(lambda, gf2::add(p[i].x, x), _params.field);
