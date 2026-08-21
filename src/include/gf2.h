@@ -19,8 +19,10 @@ enum class Field {
 inline uint131_t add(const uint131_t& a, const uint131_t& b)
 {
   uint131_t result = {};
-  for(int i = 0; i < 5; i++)
-    result.v[i] = a.v[i] ^ b.v[i];
+  result.w.v0 = a.w.v0 ^ b.w.v0;
+  result.w.v1 = a.w.v1 ^ b.w.v1;
+  result.w.v2 = a.w.v2 ^ b.w.v2;
+
   return result;
 }
 
@@ -37,31 +39,77 @@ clmul64(uint64_t a, uint64_t b, uint64_t& low, uint64_t& high)
   high = uint64_t(_mm_cvtsi128_si64(_mm_srli_si128(product, 8)));
 }
 
-inline void multiply(const uint131_t& a, const uint131_t& b, uint64_t product[6])
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((target("pclmul,sse2")))
+#endif
+inline void
+clmul64_lo(uint64_t a, uint64_t b, uint64_t& low)
+{
+  __m128i product = _mm_clmulepi64_si128(_mm_set_epi64x(0, a), _mm_set_epi64x(0, b), 0x00);
+  low = uint64_t(_mm_cvtsi128_si64(product));
+}
+
+inline void multiply(const uint131_t& a, const uint131_t& b, uint64_t product[5])
 {
   const uint64_t aw[3] = {a.w.v0, a.w.v1, a.w.v2};
   const uint64_t bw[3] = {b.w.v0, b.w.v1, b.w.v2};
 
-  for(int i = 0; i < 3; i++) {
-    for(int j = 0; j < 3; j++) {
-      uint64_t low;
-      uint64_t high;
-      clmul64(aw[i], bw[j], low, high);
-      product[i + j] ^= low;
-      product[i + j + 1] ^= high;
-    }
-  }
+  uint64_t low, high;
+
+  clmul64(aw[0], bw[0], low, high);
+  product[0] ^= low;
+  product[1] ^= high;
+
+  clmul64(aw[0], bw[1], low, high);
+  product[1] ^= low;
+  product[2] ^= high;
+
+  clmul64(aw[0], bw[2], low, high);
+  product[2] ^= low;
+  product[3] ^= high;
+
+  clmul64(aw[1], bw[0], low, high);
+  product[1] ^= low;
+  product[2] ^= high;
+
+  clmul64(aw[1], bw[1], low, high);
+  product[2] ^= low;
+  product[3] ^= high;
+
+  clmul64(aw[1], bw[2], low, high);
+  product[3] ^= low;
+  product[4] ^= high;
+
+  clmul64(aw[2], bw[0], low, high);
+  product[2] ^= low;
+  product[3] ^= high;
+
+  clmul64(aw[2], bw[1], low, high);
+  product[3] ^= low;
+  product[4] ^= high;
+
+  clmul64_lo(aw[2], bw[2], low);
+  product[4] ^= low;
 }
 
-inline void square(const uint131_t& a, uint64_t product[6])
+inline void square(const uint131_t& a, uint64_t product[5])
 {
   const uint64_t words[3] = {a.w.v0, a.w.v1, a.w.v2};
-  for(int i = 0; i < 3; i++) {
-    clmul64(words[i], words[i], product[2 * i], product[2 * i + 1]);
-  }
+  uint64_t low, high;
+
+  clmul64(words[0], words[0], low, high);
+  product[0] ^= low;
+  product[1] ^= high;
+
+  clmul64(words[1], words[1], low, high);
+  product[2] ^= low;
+  product[3] ^= high;
+
+  clmul64_lo(words[2], words[2], low);
+  product[4] ^= low;
 }
 
-inline uint131_t reduce_131(const uint64_t product[6])
+inline uint131_t reduce_131(const uint64_t product[5])
 {
   uint64_t h0 = (product[2] >> 3) | (product[3] << 61);
   uint64_t h1 = (product[3] >> 3) | (product[4] << 61);
@@ -84,7 +132,7 @@ inline uint131_t reduce_131(const uint64_t product[6])
   return result;
 }
 
-inline uint131_t reduce_89(const uint64_t product[6])
+inline uint131_t reduce_89(const uint64_t product[5])
 {
   uint64_t h0 = (product[1] >> 25) | (product[2] << 39);
   uint64_t h1 = product[2] >> 25;
@@ -103,7 +151,7 @@ inline uint131_t reduce_89(const uint64_t product[6])
   return result;
 }
 
-inline uint131_t reduce_79(const uint64_t product[6])
+inline uint131_t reduce_79(const uint64_t product[5])
 {
   uint64_t h0 = (product[1] >> 15) | (product[2] << 49);
   uint64_t h1 = product[2] >> 15;
@@ -125,7 +173,7 @@ inline uint131_t reduce_79(const uint64_t product[6])
 
 inline uint131_t mul(const uint131_t& a, const uint131_t& b, Field field)
 {
-  uint64_t product[6] = {};
+  uint64_t product[5] = {};
   detail::multiply(a, b, product);
 
   switch(field) {
@@ -142,7 +190,7 @@ inline uint131_t mul(const uint131_t& a, const uint131_t& b, Field field)
 
 inline uint131_t square(const uint131_t& a, Field field)
 {
-  uint64_t product[6] = {};
+  uint64_t product[5] = {};
   detail::square(a, product);
 
   switch(field) {

@@ -33,7 +33,7 @@ private:
   void load(const std::string& file);
 
 public:
-  explicit CPUPointFinder(int dpbits, size_t num_points = 1024);
+  explicit CPUPointFinder(int dpbits, size_t num_points = 128);
 
   void init() override;
   void init(const std::string& file) override;
