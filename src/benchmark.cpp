@@ -22,7 +22,7 @@ struct BenchmarkOptions {
 std::unique_ptr<DistinguishedPointFinder> create_point_finder(const BenchmarkOptions& options)
 {
   if(options.cpu) {
-    return std::make_unique<CPUPointFinder>(63);
+    return make_cpu_point_finder(63);
   }
   return std::make_unique<GPUPointFinder>(*options.gpu, 63, true);
 }
