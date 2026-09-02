@@ -22,10 +22,7 @@ template <int CURVE> __device__ uint131_t mul(uint131_t x, uint131_t y)
   return Curve<CURVE>::mul(x, y);
 }
 
-template <int CURVE> __device__ uint131_t square(uint131_t x)
-{
-  return Curve<CURVE>::mul(x, x);
-}
+template <int CURVE> __device__ uint131_t square(uint131_t x) { return Curve<CURVE>::mul(x, x); }
 
 template <int CURVE> __device__ uint131_t square(uint131_t x, int n)
 {

@@ -209,7 +209,8 @@ namespace detail {
 
 inline uint131_t square_n(uint131_t value, int count, Field field)
 {
-  for(int i = 0; i < count; i++) value = square(value, field);
+  for(int i = 0; i < count; i++)
+    value = square(value, field);
   return value;
 }
 
@@ -259,7 +260,8 @@ inline uint131_t inv_79(const uint131_t& x)
 
 inline uint131_t inv(const uint131_t& a, Field field)
 {
-  if(a == make_uint131(0)) return {};
+  if(a == make_uint131(0))
+    return {};
 
   switch(field) {
   case Field::GF2_131:

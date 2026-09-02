@@ -12,10 +12,7 @@ CPUPointFinderF2N::CPUPointFinderF2N(int dpbits, size_t num_points, bool benchma
 {
 }
 
-void CPUPointFinderF2N::init()
-{
-  init("");
-}
+void CPUPointFinderF2N::init() { init(""); }
 
 void CPUPointFinderF2N::init(const std::string& file)
 {
@@ -28,7 +25,7 @@ void CPUPointFinderF2N::do_step_binary(std::vector<DistinguishedPoint>& results)
   const uint131_t one = make_uint131(1);
 
   for(size_t i = 0; i < _num_points; i++) {
-    if(_benchmark == false &&(_x[i].w.v0 & _dpmask) == 0) {
+    if(_benchmark == false && (_x[i].w.v0 & _dpmask) == 0) {
       ecc::ecpoint_t point(_x[i], _y[i]);
       assert(ecc::exists(point));
       results.emplace_back(_priv[i], point, _dpbits, _walk_len[i]);
@@ -50,7 +47,8 @@ void CPUPointFinderF2N::do_step_binary(std::vector<DistinguishedPoint>& results)
     uint131_t qy = _ry[rw_index];
 
     uint131_t denominator = gf2::add(qx, px);
-    uint131_t denominator_inverse = i == 0 ? inverse : gf2::mul(inverse, _chain[i - 1], _params.field);
+    uint131_t denominator_inverse =
+        i == 0 ? inverse : gf2::mul(inverse, _chain[i - 1], _params.field);
     inverse = gf2::mul(inverse, denominator, _params.field);
 
     uint131_t lambda = gf2::mul(gf2::add(qy, py), denominator_inverse, _params.field);
