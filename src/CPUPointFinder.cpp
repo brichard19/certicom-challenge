@@ -1,6 +1,5 @@
 #include "CPUPointFinder.h"
 #include "CPUPointFinderF2N.h"
-#include "CPUPointFinderPrime.h"
 
 #include <cassert>
 #include <chrono>
@@ -208,10 +207,5 @@ void checked_read(std::ifstream& file, void* ptr, size_t size)
   // Factory implementation
   std::unique_ptr<CPUPointFinder> make_cpu_point_finder(int dpbits, size_t num_points)
   {
-    if(_params.type == CurveType::BINARY) {
       return std::make_unique<CPUPointFinderF2N>(dpbits, num_points);
-    }
-    return std::make_unique<CPUPointFinderPrime>(dpbits, num_points);
   }
-  // Implementations for CPUPointFinderPrime and CPUPointFinderF2N are in separate
-  // translation units: src/CPUPointFinderPrime.cpp and src/CPUPointFinderF2N.cpp
