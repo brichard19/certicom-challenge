@@ -19,7 +19,7 @@ INCLUDE=
 ifeq ($(DEBUG),1)
 CFLAGS+=-DDEBUG -g
 else
-DEFINES+=-O2
+CFLAGS+=-O2
 endif
 
 # MPI
