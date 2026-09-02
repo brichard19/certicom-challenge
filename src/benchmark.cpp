@@ -133,11 +133,6 @@ int main(int argc, char** argv)
     return 1;
   }
 
-  if(options.cpu == options.gpu.has_value()) {
-    std::cout << "Exactly one of --cpu or --gpu is required" << std::endl;
-    return 1;
-  }
-
   try {
     ecc::set_curve(curve_name);
   } catch(...) {
@@ -145,7 +140,7 @@ int main(int argc, char** argv)
     return 1;
   }
 
-  if(options.gpu) {
+  if(options.cpu == false) {
     int device_count = 0;
     HIP_CALL(hipGetDeviceCount(&device_count));
 
