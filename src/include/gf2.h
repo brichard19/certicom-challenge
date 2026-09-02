@@ -111,19 +111,29 @@ inline void square(const uint131_t& a, uint64_t product[5])
 
 inline uint131_t reduce_131(const uint64_t product[5])
 {
+  constexpr uint64_t reduction_polynomial =
+      (uint64_t(1) << 13) | (uint64_t(1) << 2) | (uint64_t(1) << 1) | uint64_t(1);
+
   uint64_t h0 = (product[2] >> 3) | (product[3] << 61);
   uint64_t h1 = (product[3] >> 3) | (product[4] << 61);
   uint64_t h2 = product[4] >> 3;
 
-  uint64_t r0 = product[0] ^ h0 ^ (h0 << 1) ^ (h0 << 2) ^ (h0 << 13);
-  uint64_t r1 =
-      product[1] ^ h1 ^ (h1 << 1) ^ (h0 >> 63) ^ (h1 << 2) ^ (h0 >> 62) ^ (h1 << 13) ^ (h0 >> 51);
-  uint64_t r2 = (product[2] & 0x7) ^ h2 ^ (h2 << 1) ^ (h1 >> 63) ^ (h2 << 2) ^ (h1 >> 62) ^
-                (h2 << 13) ^ (h1 >> 51);
+  uint64_t m0, m1, low, high;
+  clmul64(h0, reduction_polynomial, m0, m1);
+  clmul64(h1, reduction_polynomial, low, high);
+  m1 ^= low;
+  uint64_t m2 = high;
+  clmul64_lo(h2, reduction_polynomial, low);
+  m2 ^= low;
 
-  uint64_t high = r2 >> 3;
+  uint64_t r0 = product[0] ^ m0;
+  uint64_t r1 = product[1] ^ m1;
+  uint64_t r2 = (product[2] & 0x7) ^ m2;
+
+  high = r2 >> 3;
   r2 &= 0x7;
-  r0 ^= high ^ (high << 1) ^ (high << 2) ^ (high << 13);
+  clmul64_lo(high, reduction_polynomial, low);
+  r0 ^= low;
 
   uint131_t result = {};
   result.w.v0 = r0;
