@@ -10,6 +10,8 @@
 CPUPointFinderF2N::CPUPointFinderF2N(int dpbits, size_t num_points, bool benchmark)
     : CPUPointFinder(dpbits, num_points), _benchmark(benchmark)
 {
+  // Verify this is a binary curve
+  assert(ecc::is_binary_curve());
 }
 
 void CPUPointFinderF2N::init() { init(""); }

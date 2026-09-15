@@ -51,6 +51,8 @@ uint131_t b();
 uint131_t n();
 std::string curve_name();
 int curve_strength();
+bool is_binary_curve();
+bool is_prime_curve();
 
 uint131_t genkey();
 uint131_t genkey(RNG& rng);

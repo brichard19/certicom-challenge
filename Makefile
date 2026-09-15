@@ -86,11 +86,16 @@ LINKER_RHO=-lfmt
 CPP_MATH_TESTS := ecc.cpp montgomery.cpp uint131.cpp util.cpp
 CPP_MATH_TESTS := $(addprefix src/, $(CPP_MATH_TESTS))
 
-CPP_RHO := rho-main.cpp GPUPointFinder.cpp CPUPointFinder.cpp CPUPointFinderF2N.cpp ec_rho.cpp ecc.cpp montgomery.cpp uint131.cpp util.cpp
+CPP_RHO_GPU := rho-main.cpp GPUPointFinder.cpp ec_rho.cpp ecc.cpp montgomery.cpp uint131.cpp util.cpp
+CPP_RHO_CPU := rho-main.cpp CPUPointFinder.cpp CPUPointFinderF2N.cpp ec_rho.cpp ecc.cpp montgomery.cpp uint131.cpp util.cpp
 
-CPP_RHO := $(addprefix src/, $(CPP_RHO))
-CPP_BENCH := benchmark.cpp GPUPointFinder.cpp CPUPointFinder.cpp CPUPointFinderF2N.cpp ec_rho.cpp ecc.cpp montgomery.cpp uint131.cpp util.cpp
-CPP_BENCH := $(addprefix src/, $(CPP_BENCH))
+CPP_RHO_GPU := $(addprefix src/, $(CPP_RHO_GPU))
+CPP_RHO_CPU := $(addprefix src/, $(CPP_RHO_CPU))
+
+CPP_BENCH_GPU := benchmark.cpp GPUPointFinder.cpp ec_rho.cpp ecc.cpp montgomery.cpp uint131.cpp util.cpp
+CPP_BENCH_CPU := benchmark.cpp CPUPointFinder.cpp CPUPointFinderF2N.cpp ec_rho.cpp ecc.cpp montgomery.cpp uint131.cpp util.cpp
+CPP_BENCH_GPU := $(addprefix src/, $(CPP_BENCH_GPU))
+CPP_BENCH_CPU := $(addprefix src/, $(CPP_BENCH_CPU))
 
 CPP_DATABASE := rho-db.cpp ec_rho.cpp  ecc.cpp montgomery.cpp uint131.cpp  util.cpp
 CPP_DATABASE := $(addprefix src/, $(CPP_DATABASE))
@@ -106,7 +111,7 @@ export INCLUDE
 export CXX
 export CFLAGS
 
-TARGETS = tests
+TARGETS = tests benchmark_cpu
 
 # NVIDIA targets
 ifeq ($(filter nvidia,$(TARGET_PLATFORMS)),nvidia)
@@ -130,22 +135,29 @@ gpu_nvidia:
 gpu_amd:
 	mkdir -p $(OBJDIR)
 	HIP_PLATFORM=amd $(HIPCC) -c src/gpu/ecc.cu -o $(OBJDIR)/ecc_amd.co $(HIPCC_CFLAGS_AMD) -D__HIP_PLATFORM_AMD__ -Isrc -Isrc/gpu -Isrc/include
-
 benchmark_nvidia:	third_party gpu_nvidia
 	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=nvidia $(CXX) $(CFLAGS) $(CPP_BENCH) $(OBJDIR)/ecc_nvidia.co -o benchmark-nvidia $(CXX_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(NVIDIA_INCLUDE) $(INCLUDE) $(LINKER_NVIDIA) $(LIBS_NVIDIA) -lfmt
+	HIP_PLATFORM=nvidia $(CXX) $(CFLAGS) $(CPP_BENCH_GPU) $(OBJDIR)/ecc_nvidia.co -o benchmark-nvidia $(CXX_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(NVIDIA_INCLUDE) $(INCLUDE) $(LINKER_NVIDIA) $(LIBS_NVIDIA) -lfmt
 
 rho_nvidia:	third_party gpu_nvidia
 	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=nvidia $(CXX) $(CFLAGS) $(CPP_RHO) $(OBJDIR)/ecc_nvidia.co -o rho-nvidia $(CXX_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(NVIDIA_INCLUDE) $(INCLUDE) $(LINKER_NVIDIA) $(LIBS_NVIDIA) $(LINKER_RHO)
+	HIP_PLATFORM=nvidia $(CXX) $(CFLAGS) $(CPP_RHO_GPU) $(OBJDIR)/ecc_nvidia.co -o rho-nvidia $(CXX_CFLAGS_NVIDIA) -DBUILD_GPU -D__HIP_PLATFORM_NVIDIA__ -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(NVIDIA_INCLUDE) $(INCLUDE) $(LINKER_NVIDIA) $(LIBS_NVIDIA) $(LINKER_RHO)
 
 benchmark_amd:	third_party	gpu_amd
 	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=amd $(CXX) $(CFLAGS) $(CPP_BENCH) $(OBJDIR)/ecc_amd.co -o benchmark-amd $(CXX_CFLAGS_AMD) -Isrc -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LIBS_AMD) $(LINKER_AMD) -lfmt
+	HIP_PLATFORM=amd $(CXX) $(CFLAGS) $(CPP_BENCH_GPU) $(OBJDIR)/ecc_amd.co -o benchmark-amd $(CXX_CFLAGS_AMD) -DBUILD_GPU -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LIBS_AMD) $(LINKER_AMD) -lfmt
+
+benchmark_cpu:	third_party
+	mkdir -p $(OBJDIR)
+	$(CXX) $(CFLAGS) $(CPP_BENCH_CPU) -o benchmark-cpu $(CXX_CFLAGS_AMD) -DBUILD_CPU -Isrc -Isrc/include -L$(LIB_DIR) $(INCLUDE) -lfmt
 
 rho_amd:	third_party gpu_amd
 	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=amd $(CXX) $(CFLAGS) $(CPP_RHO) $(OBJDIR)/ecc_amd.co -o rho-amd $(CXX_CFLAGS_AMD) -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LINKER_AMD) $(LIBS_AMD) $(LINKER_RHO)
+	HIP_PLATFORM=amd $(CXX) $(CFLAGS) $(CPP_RHO_GPU) $(OBJDIR)/ecc_amd.co -o rho-amd $(CXX_CFLAGS_AMD) -DBUILD_GPU -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LINKER_AMD) $(LIBS_AMD) $(LINKER_RHO)
+
+rho_cpu:	third_party
+	mkdir -p $(OBJDIR)
+	$(CXX) $(CFLAGS) $(CPP_RHO_CPU) -o rho-cpu -DBUILD_CPU -Isrc -Isrc/include -Isrc -L$(LIB_DIR) $(INCLUDE) $(LINKER_RHO)
 
 rho_db:	third_party
 	$(CXX) $(CFLAGS) $(CPP_DATABASE) -o rho-db $(INCLUDE) -L$(LIB_DIR) -Isrc -Isrc/include -lfmt

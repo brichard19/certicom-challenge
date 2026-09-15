@@ -192,9 +192,3 @@ int CPUPointFinder::parallel_walks() { return int(_num_points); }
 
 // Define destructor to emit vtable in this translation unit.
 CPUPointFinder::~CPUPointFinder() = default;
-
-// Factory implementation
-std::unique_ptr<CPUPointFinder> make_cpu_point_finder(int dpbits, size_t num_points)
-{
-  return std::make_unique<CPUPointFinderF2N>(dpbits, num_points);
-}

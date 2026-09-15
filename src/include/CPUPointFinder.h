@@ -48,7 +48,4 @@ public:
   int parallel_walks() override;
 };
 
-// Factory: create the appropriate concrete CPUPointFinder for current curve
-std::unique_ptr<CPUPointFinder> make_cpu_point_finder(int dpbits, size_t num_points = 128);
-
 #endif

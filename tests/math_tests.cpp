@@ -392,7 +392,14 @@ int main(int argc, char** argv)
     std::cout << "Testing curve " << curve << std::endl;
     std::vector<std::function<bool(void)>> test_functions;
 
-    if(curve.rfind("ec2n", 0) == 0) {
+    bool expected_binary = curve.rfind("ec2n", 0) == 0;
+    bool expected_prime = !expected_binary;
+    if(ecc::is_binary_curve() != expected_binary || ecc::is_prime_curve() != expected_prime) {
+      std::cout << "    FAIL: incorrect curve type" << std::endl;
+      return 1;
+    }
+
+    if(ecc::is_binary_curve()) {
       test_functions.push_back(test21);
     } else {
       test_functions.push_back(test0);

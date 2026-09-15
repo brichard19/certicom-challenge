@@ -699,6 +699,10 @@ std::string curve_name() { return _params.name; }
 
 int curve_strength() { return _params.bits; }
 
+bool is_binary_curve() { return _params.type == CurveType::BINARY; }
+
+bool is_prime_curve() { return _params.type == CurveType::PRIME; }
+
 uint131_t add_priv_keys(uint131_t k1, uint131_t k2)
 {
   uint131_t sum = add_raw(k1, k2);

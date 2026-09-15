@@ -1,35 +1,42 @@
-#include "hip_helper.h"
 #include <algorithm>
 #include <cassert>
 #include <getopt.h>
-#include <hip/hip_runtime.h>
 #include <iostream>
 #include <memory>
 #include <optional>
 
-#include "CPUPointFinder.h"
+#if defined(BUILD_GPU)
 #include "GPUPointFinder.h"
+#include "hip_helper.h"
+#include <hip/hip_runtime.h>
+#endif
+
+#if defined(BUILD_CPU)
+#include "CPUPointFinder.h"
+#include "CPUPointFinderF2N.h"
+#endif
+
 #include "ec_rho.h"
 #include "util.h"
 
 double _benchmark_run_time = 10.0;
 
-struct BenchmarkOptions {
-  bool cpu = false;
-  std::optional<int> gpu;
-};
+int _hip_device = 0;
 
-std::unique_ptr<DistinguishedPointFinder> create_point_finder(const BenchmarkOptions& options)
+DistinguishedPointFinder* create_point_finder()
 {
-  if(options.cpu) {
-    return make_cpu_point_finder(63);
-  }
-  return std::make_unique<GPUPointFinder>(*options.gpu, 63, true);
+#if defined(BUILD_GPU)
+  return new GPUPointFinder(_hip_device, 20, true);
+#elif defined(BUILD_CPU)
+  return new CPUPointFinderF2N(20, 256, true);
+#else
+#error "Either BUILD_GPU or BUILD_CPU must be defined"
+#endif
 }
 
-void benchmark(const BenchmarkOptions& options)
+void benchmark()
 {
-  std::unique_ptr<DistinguishedPointFinder> pf = create_point_finder(options);
+  DistinguishedPointFinder* pf = create_point_finder();
 
   pf->init();
 
@@ -70,6 +77,8 @@ void benchmark(const BenchmarkOptions& options)
     }
   }
 
+  delete pf;
+
   // Remove lowest value then take the average
   std::sort(ara.begin(), ara.end());
 
@@ -88,12 +97,13 @@ void benchmark(const BenchmarkOptions& options)
 int main(int argc, char** argv)
 {
   std::string curve_name;
-  BenchmarkOptions options;
 
   while(true) {
     static struct option long_options[] = {
-        {"curve", required_argument, 0, 'c'},
+#if defined(BUILD_GPU)
         {"gpu", required_argument, 0, 'g'},
+#endif
+        {"curve", required_argument, 0, 'c'},
         {"cpu", no_argument, 0, 'C'},
         {NULL, 0, NULL, 0},
     };
@@ -112,11 +122,11 @@ int main(int argc, char** argv)
       break;
 
     case 'g':
-      options.gpu = atoi(optarg);
+      _hip_device = atoi(optarg);
       break;
 
     case 'C':
-      options.cpu = true;
+      // No action needed, as the default is CPU
       break;
 
     case '?':
@@ -140,17 +150,17 @@ int main(int argc, char** argv)
     return 1;
   }
 
-  if(options.cpu == false) {
-    int device_count = 0;
-    HIP_CALL(hipGetDeviceCount(&device_count));
+#if defined(BUILD_GPU)
+  int device_count = 0;
+  HIP_CALL(hipGetDeviceCount(&device_count));
 
-    if(*options.gpu < 0 || *options.gpu >= device_count) {
-      std::cout << "Invalid device " << *options.gpu << std::endl;
-      return 1;
-    }
+  if(_hip_device < 0 || _hip_device >= device_count) {
+    std::cout << "Invalid device " << _hip_device << std::endl;
+    return 1;
   }
+#endif
 
-  benchmark(options);
+  benchmark();
 
   return 0;
 }

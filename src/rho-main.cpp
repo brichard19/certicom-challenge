@@ -1,24 +1,38 @@
+#if defined(BUILD_GPU) && defined(BUILD_CPU)
+#error "BUILD_GPU and BUILD_CPU cannot both be defined"
+#elif !defined(BUILD_GPU) && !defined(BUILD_CPU)
+#error "One of BUILD_GPU or BUILD_CPU must be defined"
+#endif
+
 #include "fmt/format.h"
 #include <cassert>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <getopt.h>
-#include <hip/hip_runtime.h>
 #include <iostream>
 #include <map>
 #include <mutex>
 #include <thread>
 #include <vector>
 
-#include "GPUPointFinder.h"
 #include "binary_encoder.h"
 #include "ec_rho.h"
-#include "hip_helper.h"
 #include "log.h"
 #include "montgomery.h"
 #include "signal_handler.h"
 #include "util.h"
+
+#if defined(BUILD_GPU)
+#include "GPUPointFinder.h"
+#include "hip_helper.h"
+#include <hip/hip_runtime.h>
+#endif
+
+#if defined(BUILD_CPU)
+#include "CPUPointFinder.h"
+#include "CPUPointFinderF2N.h"
+#endif
 
 #ifdef BUILD_MPI
 #include "mpi_helper.h"
@@ -30,12 +44,7 @@ namespace {
 const double _save_interval = 60.0;
 const double _perf_interval = 5.0;
 
-int _port = 8080;
-
 volatile bool _running = true;
-
-HIPDeviceMap _device_map;
-int _hip_device = 0;
 
 std::string _data_file = "";
 std::string _data_dir = "";
@@ -50,7 +59,36 @@ volatile bool _mpi_thread_running = true;
 
 int _dpbits = 0;
 std::string _curve_name;
+
+#if defined(BUILD_GPU)
+HIPDeviceMap _device_map;
+int _hip_device = 0;
+#endif
+
+// Used for both CPU and GPU
+int _device_idx = 0;
+
 } // namespace
+
+std::string get_data_file_name()
+{
+#if defined(BUILD_GPU)
+  return fmt::format("GPU-{}.dat", _device_map[_device_idx].uuid);
+#elif defined(BUILD_CPU)
+  return fmt::format("CPU-{}.dat", _device_id);
+#endif
+}
+
+DistinguishedPointFinder* create_point_finder()
+{
+#if defined(BUILD_GPU)
+  return new GPUPointFinder(_hip_device, _dpbits);
+#elif defined(BUILD_CPU)
+  return new CPUPointFinderF2N(_dpbits);
+#else
+#error "Either BUILD_GPU or BUILD_CPU must be defined"
+#endif
+}
 
 // Saves distingusihed points to disk
 void save_to_disk(const std::vector<DistinguishedPoint>& dps)
@@ -137,7 +175,8 @@ void main_loop()
 
   std::string data_file_path = _data_dir + "/" + _hostname + "/" + _data_file;
 
-  DistinguishedPointFinder* pf = new GPUPointFinder(_hip_device, _dpbits);
+  // DistinguishedPointFinder* pf = new GPUPointFinder(_hip_device, _dpbits);
+  DistinguishedPointFinder* pf = create_point_finder();
 
   pf->init(data_file_path);
 
@@ -149,10 +188,10 @@ void main_loop()
   perf_timer.start();
   save_timer.start();
   size_t steps = 0;
-  double gpu_time = 0.0;
+  double accu_time = 0.0;
 
   while(_running) {
-    gpu_time += pf->step();
+    accu_time += pf->step();
     steps++;
 
     double t = perf_timer.elapsed();
@@ -161,8 +200,8 @@ void main_loop()
     if(t >= _perf_interval) {
       size_t total = pf->work_per_step() * steps;
 
-      double perf = (double)total / gpu_time;
-      double iters = (double)steps * pf->iters_per_step() / gpu_time;
+      double perf = (double)total / accu_time;
+      double iters = (double)steps * pf->iters_per_step() / accu_time;
 
       perf_timer.start();
 
@@ -170,7 +209,7 @@ void main_loop()
           iters, pf->parallel_walks());
 
       steps = 0;
-      gpu_time = 0;
+      accu_time = 0;
     }
 
     // Save data
@@ -231,13 +270,15 @@ int main(int argc, char** argv)
   bool gpu_flag = false;
 
   while(true) {
-    static struct option long_options[] = {{"gpu", required_argument, 0, 'g'},
-                                           {"data-dir", required_argument, 0, 'd'},
-                                           {"file", required_argument, 0, 'f'},
-                                           {"mpi", no_argument, 0, 'm'},
-                                           {"curve", required_argument, 0, 'c'},
-                                           {"dp-bits", required_argument, 0, 'b'},
-                                           {NULL, 0, NULL, 0}};
+    static struct option long_options[] = {
+#if defined(BUILD_GPU)
+        {"gpu", required_argument, 0, 'g'},
+#endif
+        {"data-dir", required_argument, 0, 'd'},
+        {"mpi", no_argument, 0, 'm'},
+        {"curve", required_argument, 0, 'c'},
+        {"dp-bits", required_argument, 0, 'b'},
+        {NULL, 0, NULL, 0}};
 
     int opt_idx = 0;
 
@@ -255,12 +296,12 @@ int main(int argc, char** argv)
     case 'd':
       _data_dir = std::string(optarg);
       break;
-
+#if defined(BUILD_GPU)
     case 'g':
       _hip_device = std::stoi(optarg);
       gpu_flag = true;
       break;
-
+#endif
     case 'b':
       _dpbits = std::stoi(optarg);
       break;
@@ -284,7 +325,9 @@ int main(int argc, char** argv)
     }
   }
 
+#if defined(BUILD_GPU)
   _device_map = get_device_map();
+#endif
 
   if(_curve_name.empty()) {
     std::cout << "--curve required" << std::endl;
@@ -313,13 +356,24 @@ int main(int argc, char** argv)
     return 1;
   }
 
+#if defined(BUILD_GPU)
+  if(ecc::is_prime_curve() == false) {
+    std::cout << "GPU builds only support prime curves" << std::endl;
+    return 1;
+  }
+#elif defined(BUILD_CPU)
+  if(ecc::is_binary_curve() == false) {
+    std::cout << "CPU builds only support binary curves" << std::endl;
+    return 1;
+  }
+#endif
+
   if(_use_mpi && gpu_flag) {
     std::cout << "-g flag incompable when using MPI" << std::endl;
     return 1;
   }
 
-  ecc::set_curve(_curve_name);
-
+#if defined(BUILD_GPU)
   // Check device ID
   int device_count = 0;
   HIP_CALL(hipGetDeviceCount(&device_count));
@@ -328,6 +382,7 @@ int main(int argc, char** argv)
     std::cout << "No GPUs available" << std::endl;
     return 1;
   }
+#endif
 
 #ifdef BUILD_MPI
 
@@ -360,17 +415,19 @@ int main(int argc, char** argv)
   }
 #endif
 
+#if defined(BUILD_GPU)
   if(_hip_device >= device_count) {
     std::cout << "Invalid device " << _hip_device << std::endl;
     return 1;
   }
+#endif
 
   if(!init_directories()) {
     return 1;
   }
 
   // Use device UUID for data file
-  _data_file = fmt::format("GPU-{}.dat", _device_map[_hip_device].uuid);
+  _data_file = get_data_file_name();
 
   // Set interrupt handler
   set_signal_handler(signal_handler);
@@ -395,9 +452,7 @@ int main(int argc, char** argv)
     // Stop msg receive thread
     _mpi_thread_running = false;
   }
-#endif
 
-#ifdef BUILD_MPI
   if(_use_mpi == true && _world_rank == 0) {
     mpi_thread.join();
   }

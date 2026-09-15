@@ -2,20 +2,21 @@
 #include <assert.h>
 #include <chrono>
 #include <fstream>
-#include <hip/hip_runtime.h>
 #include <map>
 #include <math.h>
 #include <sstream>
 #include <stdexcept>
 #include <stdint.h>
 
-#include "GPUPointFinder.h"
 #include "ec_rho.h"
-#include "ecc.cuh"
-#include "hip_helper.h"
 #include "log.h"
 #include "montgomery.h"
 #include "util.h"
+
+#include "GPUPointFinder.h"
+#include "ecc.cuh"
+#include "hip_helper.h"
+#include <hip/hip_runtime.h>
 
 namespace {
 
