@@ -41,6 +41,22 @@ __device__ uint131_t load_uint131(const void* p, int idx, int n)
   return x;
 }
 
+// 131-bit Rx and Ry have the 3 high bits set to 0, so we only need to load 128 bits
+// from memory
+__device__ uint131_t load_r(const void* p, int idx, int n)
+{
+  const uint128_t* p128 = (const uint128_t*)p;
+
+  uint128_t u128 = p128[idx];
+
+  uint131_t x;
+  x.w.v0 = (uint64_t)u128;
+  x.w.v1 = (uint64_t)(u128 >> 64);
+  x.w.v2 = 0;
+
+  return x;
+}
+
 __device__ void store_uint131(void* p, int idx, int n, uint131_t x)
 {
   uint128_t* p128 = (uint128_t*)p;

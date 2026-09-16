@@ -16,23 +16,28 @@ std::vector<RWPoint> get_rw_points()
   std::vector<uint131_t> b;
   DeterministicRNG rng(0x1234);
 
-  for(int i = 0; i < 32; i++) {
-    a.push_back(ecc::genkey(rng));
-  }
-  for(int i = 0; i < 32; i++) {
-    b.push_back(ecc::genkey(rng));
-  }
+  int count = 0;
 
-  for(int i = 0; i < 32; i++) {
-    RWPoint rw;
-    rw.a = a[i];
-    rw.b = b[i];
-    auto p1 = ecc::mul(a[i], ecc::g());
-    auto p2 = ecc::mul(b[i], ecc::q());
-    rw.p = ecc::add(p1, p2);
+  while(count < 32) {
 
-    assert(ecc::exists(rw.p));
-    rw_vec.push_back(rw);
+    uint131_t a = ecc::genkey(rng);
+    uint131_t b = ecc::genkey(rng);
+
+    auto p1 = ecc::mul(a, ecc::g());
+    auto p2 = ecc::mul(b, ecc::q());
+    auto p = ecc::add(p1, p2);
+
+    // We only want p where the high 3 bits of x and y are zero so that x and y both fit in 128 bits
+    if((p.x.w.v2 == 0) && (p.y.w.v2 == 0)) {
+      RWPoint rw;
+      rw.a = a;
+      rw.b = b;
+      rw.p = p;
+
+      assert(ecc::exists(rw.p));
+      rw_vec.push_back(rw);
+      count++;
+    }
   }
 
   // Verify
@@ -50,18 +55,23 @@ std::vector<RWPoint> get_rw_points()
 #endif
 
   std::map<std::string, ecc::ecpoint_t> expected = {
-      {"ec2n131", ecc::ecpoint_t({{0xd20b265607329d5d, 0xe6a643b2e2496494, 0x00000005}},
-                                 {{0x228b8df2aa22e76f, 0xac245876958569f3, 0x00000007}})},
-      {"ec2n89", ecc::ecpoint_t({{0x0b1aa980ec37502c, 0x0000000001ceebfb, 0x00000000}},
-                                {{0xb6b0c8f0d7e30db3, 0x0000000000b4527a, 0x00000000}})},
-      {"ec2n79", ecc::ecpoint_t({{0x06446b5e23aaa7f3, 0x00000000000067aa, 0x00000000}},
-                                {{0x407f96d5e0af7781, 0x0000000000005139, 0x00000000}})},
-      {"ecp131", ecc::ecpoint_t({{0x991395bdb3af97ba, 0xc74c6e35add57bf0, 0x00000002}},
-                                {{0xf1fd45ecd69da948, 0xf8292e66fdd75b41, 0x00000001}})},
-      {"ecp89", ecc::ecpoint_t({{0xa76f5de5725addf6, 0x000000000019c961, 0x00000000}},
-                               {{0x801887d44f65fbc6, 0x00000000003d6ba5, 0x00000000}})},
-      {"ecp79", ecc::ecpoint_t({{0xe02a1c4e11d34a22, 0x0000000000000608, 0x00000000}},
-                               {{0x50ee4ba255488040, 0x0000000000002f1d, 0x00000000}})},
+      {"ec2n131", ecc::ecpoint_t({{0xa81d4846a24d3869, 0x7aaa68638b9ecc4e, 0x00000000}},
+                                 {{0x4281ad579379762d, 0x81d07eaffd9a8e89, 0x00000007}})},
+
+      {"ec2n89", ecc::ecpoint_t({{0x7c638e4ed3b0eef7, 0x00000000017f17f2, 0x00000000}},
+                                {{0x789575e57d671fb4, 0x00000000002a3fab, 0x00000000}})},
+
+      {"ec2n79", ecc::ecpoint_t({{0xec000b39c2afd195, 0x0000000000007f1b, 0x00000000}},
+                                {{0x3d13df6ced2b1989, 0x0000000000003041, 0x00000000}})},
+
+      {"ecp131", ecc::ecpoint_t({{0x35d0286229b66c14, 0x749c0f06a7121cbc, 0x00000000}},
+                                {{0x5f4c3aa56f0fb31d, 0x3286b1bd2be15ecf, 0x00000001}})},
+
+      {"ecp89", ecc::ecpoint_t({{0x17d5a9d43f7ae3ef, 0x00000000001e1c5d, 0x00000000}},
+                               {{0xeef7866b17c91b37, 0x0000000000e637ce, 0x00000000}})},
+
+      {"ecp79", ecc::ecpoint_t({{0x352235cf969c42c8, 0x00000000000057d4, 0x00000000}},
+                               {{0x8c539fa7274f69a0, 0x00000000000055ec, 0x00000000}})},
   };
 
   auto expected_sum = expected.find(name);

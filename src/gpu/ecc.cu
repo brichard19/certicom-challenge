@@ -27,7 +27,8 @@ __device__ void do_step_prime_impl(uint131_t* global_px, uint131_t* global_py, u
                                    uint131_t* priv_key_a, uint64_t counter, uint64_t* start_pos,
                                    uint32_t dpmask)
 {
-  const int rmask = 0x1f;
+  constexpr int rpoint_count = 32;
+  constexpr uint64_t rmask = rpoint_count - 1;
   const int gid = get_global_id();
   const int dim = get_global_size();
   const int count = gridDim.x * blockDim.x * N;
@@ -66,10 +67,9 @@ __device__ void do_step_prime_impl(uint131_t* global_px, uint131_t* global_py, u
       store_uint131(global_py, i, count, new_y);
     }
 
-    // TODO: Proper mask
     int idx = px.w.v0 & rmask;
 
-    uint131_t rx = load_uint131(global_rx, idx, 32);
+    uint131_t rx = load_r(global_rx, idx, rpoint_count);
 
     // Point addition, rx - px
     uint131_t t = sub<CURVE>(rx, px);
@@ -94,8 +94,8 @@ __device__ void do_step_prime_impl(uint131_t* global_px, uint131_t* global_py, u
 
     int idx = px.w.v0 & rmask;
 
-    uint131_t rx = load_uint131(global_rx, idx, 32);
-    uint131_t ry = load_uint131(global_ry, idx, 32);
+    uint131_t rx = load_r(global_rx, idx, rpoint_count);
+    uint131_t ry = load_r(global_ry, idx, rpoint_count);
 
     uint131_t s;
 
