@@ -111,7 +111,7 @@ export INCLUDE
 export CXX
 export CFLAGS
 
-TARGETS = tests benchmark_cpu
+TARGETS = tests benchmark_cpu rho_cpu
 
 # NVIDIA targets
 ifeq ($(filter nvidia,$(TARGET_PLATFORMS)),nvidia)

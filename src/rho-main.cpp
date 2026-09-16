@@ -34,7 +34,7 @@
 #include "CPUPointFinderF2N.h"
 #endif
 
-#ifdef BUILD_MPI
+#if defined(BUILD_MPI)
 #include "mpi_helper.h"
 #include <mpi.h>
 #endif
@@ -62,7 +62,6 @@ std::string _curve_name;
 
 #if defined(BUILD_GPU)
 HIPDeviceMap _device_map;
-int _hip_device = 0;
 #endif
 
 // Used for both CPU and GPU
@@ -75,18 +74,16 @@ std::string get_data_file_name()
 #if defined(BUILD_GPU)
   return fmt::format("GPU-{}.dat", _device_map[_device_idx].uuid);
 #elif defined(BUILD_CPU)
-  return fmt::format("CPU-{}.dat", _device_id);
+  return fmt::format("CPU-{}.dat", _device_idx);
 #endif
 }
 
 DistinguishedPointFinder* create_point_finder()
 {
 #if defined(BUILD_GPU)
-  return new GPUPointFinder(_hip_device, _dpbits);
+  return new GPUPointFinder(_device_idx, _dpbits);
 #elif defined(BUILD_CPU)
-  return new CPUPointFinderF2N(_dpbits);
-#else
-#error "Either BUILD_GPU or BUILD_CPU must be defined"
+  return new CPUPointFinderF2N(_dpbits, 256);
 #endif
 }
 
@@ -119,63 +116,14 @@ void dp_callback(const std::vector<DistinguishedPoint>& dps)
     assert((dp.p.x.w.v0 & dpmask) == 0);
   }
 
-  if(_use_mpi == false || (_use_mpi == true && _world_rank == 0)) {
-    save_to_disk(dps);
-  } else {
-#ifdef BUILD_MPI
-    LOG("Rank {} reporting {} points", _world_rank, dps.size());
-    MPI_CALL(MPI_Send(dps.data(), dps.size() * sizeof(dps[0]), MPI_BYTE, 0, 0, MPI_COMM_WORLD));
-#endif
-  }
+  save_to_disk(dps);
 }
-
-#ifdef BUILD_MPI
-void mpi_recv_thread_function()
-{
-  int buf_size = 1024 * 1024 * sizeof(DistinguishedPoint);
-  std::vector<char> buf(buf_size);
-
-  LOG("MPI thread started");
-
-  MPI_Request request;
-
-  // Async request
-  MPI_CALL(MPI_Irecv(buf.data(), buf_size, MPI_BYTE, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &request));
-
-  while(_mpi_thread_running == true) {
-    int flag = 0;
-    MPI_Status status;
-    MPI_CALL(MPI_Test(&request, &flag, &status));
-    if(flag) {
-      int num_bytes;
-      MPI_CALL(MPI_Get_count(&status, MPI_BYTE, &num_bytes));
-
-      printf("MPI: Received %d bytes\n", num_bytes);
-
-      assert(num_bytes % sizeof(DistinguishedPoint) == 0);
-
-      int num_points = num_bytes / sizeof(DistinguishedPoint);
-      std::vector<DistinguishedPoint> dps(num_points);
-
-      memcpy(dps.data(), buf.data(), num_bytes);
-
-      save_to_disk(dps);
-
-      // New async request
-      MPI_CALL(
-          MPI_Irecv(buf.data(), buf_size, MPI_BYTE, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &request));
-    }
-    std::this_thread::sleep_for(std::chrono::seconds(3));
-  }
-}
-#endif
 
 void main_loop()
 {
 
   std::string data_file_path = _data_dir + "/" + _hostname + "/" + _data_file;
 
-  // DistinguishedPointFinder* pf = new GPUPointFinder(_hip_device, _dpbits);
   DistinguishedPointFinder* pf = create_point_finder();
 
   pf->init(data_file_path);
@@ -298,7 +246,7 @@ int main(int argc, char** argv)
       break;
 #if defined(BUILD_GPU)
     case 'g':
-      _hip_device = std::stoi(optarg);
+      _device_idx = std::stoi(optarg);
       gpu_flag = true;
       break;
 #endif
@@ -307,7 +255,7 @@ int main(int argc, char** argv)
       break;
 
     case 'm':
-#ifdef BUILD_MPI
+#if defined(BUILD_MPI)
       _use_mpi = true;
 #else
       std::cout << "Error: using --mpi but not built with MPI support!" << std::endl;
@@ -384,7 +332,7 @@ int main(int argc, char** argv)
   }
 #endif
 
-#ifdef BUILD_MPI
+#if defined(BUILD_MPI)
 
   // Initialize MPI, select device
   if(_use_mpi) {
@@ -405,19 +353,21 @@ int main(int argc, char** argv)
     MPI_CALL(MPI_Comm_rank(local_comm, &local_rank));
     MPI_CALL(MPI_Comm_free(&local_comm));
 
+#if defined(BUILD_GPU)
     // One GPU per rank
     if(local_rank >= device_count) {
       MPI_Finalize();
       return 1;
     }
+#endif
 
-    _hip_device = local_rank;
+    _device_idx = local_rank;
   }
 #endif
 
 #if defined(BUILD_GPU)
-  if(_hip_device >= device_count) {
-    std::cout << "Invalid device " << _hip_device << std::endl;
+  if(_device_idx >= device_count) {
+    std::cout << "Invalid device " << _device_idx << std::endl;
     return 1;
   }
 #endif
@@ -432,31 +382,10 @@ int main(int argc, char** argv)
   // Set interrupt handler
   set_signal_handler(signal_handler);
 
-#ifdef BUILD_MPI
-  // Thread for receiving MPI messages
-  std::thread mpi_thread;
-  if(_use_mpi == true && _world_rank == 0) {
-    mpi_thread = std::thread(mpi_recv_thread_function);
-  }
-#endif
-
   // Run main loop
   main_loop();
 
-#ifdef BUILD_MPI
-  if(_use_mpi == true) {
-    // Wait for all MPI processes to finish
-    // TODO: This will wait for ALL MPI processes. If any died, this will block forever
-    std::cout << "Waiting for MPI processes to finish..." << std::endl;
-    MPI_Barrier(MPI_COMM_WORLD);
-    // Stop msg receive thread
-    _mpi_thread_running = false;
-  }
-
-  if(_use_mpi == true && _world_rank == 0) {
-    mpi_thread.join();
-  }
-
+#if defined(BUILD_MPI)
   // Cleanup MPI
   if(_use_mpi) {
     MPI_Finalize();
