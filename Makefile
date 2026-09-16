@@ -1,12 +1,20 @@
 
 TARGET_PLATFORMS ?= nvidia amd
 
+# Default to all available processors; honor explicit jobs and inherited jobservers.
+ifeq ($(MAKELEVEL),0)
+# GNU make can omit environment job flags from MAKEFLAGS while parsing.
+ifeq ($(filter -j% --jobs% --jobserver%,$(MAKEFLAGS) $(shell printf '%s' "$$MAKEFLAGS")),)
+MAKEFLAGS += -j$(shell nproc)
+endif
+endif
+
 VALID_PLATFORMS = amd nvidia
 INVALID_PLATFORMS := $(filter-out $(VALID_PLATFORMS),$(TARGET_PLATFORMS))
 
 # Fail early if invalids exist
-ifneq ($(strip $(INVALID_TARGETS)),)
-$(error Invalid TARGETS: $(INVALID_PLATFORMS). Valid options are: $(VALID_PLATFORMS))
+ifneq ($(strip $(INVALID_PLATFORMS)),)
+$(error Invalid TARGET_PLATFORMS: $(INVALID_PLATFORMS). Valid options are: $(VALID_PLATFORMS))
 endif
 
 CXX=g++
@@ -65,7 +73,7 @@ HIPCC=$(ROCM_HOME)/bin/hipcc
 CFLAGS+=-std=c++20
 
 # Directories
-CUR_DIR=$(shell pwd)
+CUR_DIR:=$(CURDIR)
 BUILD_DIR=$(CUR_DIR)
 LIB_DIR=$(CUR_DIR)/lib
 BIN_DIR=$(CUR_DIR)/bin
@@ -83,102 +91,132 @@ endif
 
 LINKER_RHO=-lfmt
 
-CPP_MATH_TESTS := ecc.cpp montgomery.cpp uint131.cpp util.cpp
-CPP_MATH_TESTS := $(addprefix src/, $(CPP_MATH_TESTS))
+# Keep backend-independent objects shared by tools, benchmarks, and tests.
+MATH_SOURCES := ecc montgomery uint131 util
+COMMON_OBJECTS := $(addprefix $(OBJDIR)/common/,$(addsuffix .o,ec_rho $(MATH_SOURCES)))
+MATH_OBJECTS := $(addprefix $(OBJDIR)/common/,$(addsuffix .o,$(MATH_SOURCES)))
+CPU_OBJECTS := $(addprefix $(OBJDIR)/common/,CPUPointFinder.o CPUPointFinderF2N.o)
+FMT_OBJECTS := $(addprefix $(OBJDIR)/fmt/,format.o os.o)
+FMT_LIBRARY := $(LIB_DIR)/libfmt.a
 
-CPP_RHO_GPU := rho-main.cpp GPUPointFinder.cpp ec_rho.cpp ecc.cpp montgomery.cpp uint131.cpp util.cpp
-CPP_RHO_CPU := rho-main.cpp CPUPointFinder.cpp CPUPointFinderF2N.cpp ec_rho.cpp ecc.cpp montgomery.cpp uint131.cpp util.cpp
-
-CPP_RHO_GPU := $(addprefix src/, $(CPP_RHO_GPU))
-CPP_RHO_CPU := $(addprefix src/, $(CPP_RHO_CPU))
-
-CPP_BENCH_GPU := benchmark.cpp GPUPointFinder.cpp ec_rho.cpp ecc.cpp montgomery.cpp uint131.cpp util.cpp
-CPP_BENCH_CPU := benchmark.cpp CPUPointFinder.cpp CPUPointFinderF2N.cpp ec_rho.cpp ecc.cpp montgomery.cpp uint131.cpp util.cpp
-CPP_BENCH_GPU := $(addprefix src/, $(CPP_BENCH_GPU))
-CPP_BENCH_CPU := $(addprefix src/, $(CPP_BENCH_CPU))
-
-CPP_DATABASE := rho-db.cpp ec_rho.cpp  ecc.cpp montgomery.cpp uint131.cpp  util.cpp
-CPP_DATABASE := $(addprefix src/, $(CPP_DATABASE))
-
-CPP_SOLVE := rho-solve.cpp ec_rho.cpp  ecc.cpp montgomery.cpp uint131.cpp  util.cpp
-CPP_SOLVE := $(addprefix src/, $(CPP_SOLVE))
-
-export BUILD_DIR
-export BIN_PREFIX=certicom-
-export LIB_DIR
-export BIN_DIR
-export INCLUDE
-export CXX
-export CFLAGS
+CPU_FLAGS = -DBUILD_CPU
+AMD_FLAGS = $(CXX_CFLAGS_AMD) -DBUILD_GPU $(ROCM_INCLUDE)
+NVIDIA_FLAGS = $(CXX_CFLAGS_NVIDIA) -DBUILD_GPU $(ROCM_INCLUDE) $(NVIDIA_INCLUDE)
+HOST_FLAGS = $(CPPFLAGS) $(CFLAGS) $(INCLUDE) -Isrc
+DEPFLAGS = -MMD -MP -MF $(@:.o=.d) -MT $@
 
 TARGETS = tests benchmark_cpu rho_cpu
-
-# NVIDIA targets
-ifeq ($(filter nvidia,$(TARGET_PLATFORMS)),nvidia)
+ifneq ($(filter nvidia,$(TARGET_PLATFORMS)),)
 TARGETS += benchmark_nvidia rho_nvidia
 endif
-
-ifeq ($(filter amd,$(TARGET_PLATFORMS)),amd)
+ifneq ($(filter amd,$(TARGET_PLATFORMS)),)
 TARGETS += benchmark_amd rho_amd
 endif
 
-all:	$(TARGETS) rho_db rho_solve
+.DEFAULT_GOAL := all
+.DELETE_ON_ERROR:
+.PHONY: all third_party tests clean FORCE gpu_amd gpu_nvidia \
+        benchmark_cpu benchmark_amd benchmark_nvidia rho_cpu rho_amd rho_nvidia rho_db rho_solve
 
-.PHONY: third_party
-third_party:
-	make -C third_party/fmt
+all: $(TARGETS) rho_db rho_solve
 
-gpu_nvidia:
-	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=nvidia $(HIPCC) -c src/gpu/ecc.cu -o $(OBJDIR)/ecc_nvidia.co $(HIPCC_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -Isrc/gpu -I/usr/local/cuda/include -Isrc/include
+# Preserve the existing command names; real output files control rebuilds.
+third_party: $(FMT_LIBRARY)
+gpu_amd: $(OBJDIR)/ecc_amd.co
+gpu_nvidia: $(OBJDIR)/ecc_nvidia.co
+benchmark_cpu: benchmark-cpu
+benchmark_amd: benchmark-amd
+benchmark_nvidia: benchmark-nvidia
+rho_cpu: rho-cpu
+rho_amd: rho-amd
+rho_nvidia: rho-nvidia
+rho_db: rho-db
+rho_solve: rho-solve
+tests: tests/math_tests tests/cpu_point_finder_tests
 
-gpu_amd:
-	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=amd $(HIPCC) -c src/gpu/ecc.cu -o $(OBJDIR)/ecc_amd.co $(HIPCC_CFLAGS_AMD) -D__HIP_PLATFORM_AMD__ -Isrc -Isrc/gpu -Isrc/include
-benchmark_nvidia:	third_party gpu_nvidia
-	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=nvidia $(CXX) $(CFLAGS) $(CPP_BENCH_GPU) $(OBJDIR)/ecc_nvidia.co -o benchmark-nvidia $(CXX_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(NVIDIA_INCLUDE) $(INCLUDE) $(LINKER_NVIDIA) $(LIBS_NVIDIA) -lfmt
+# Changing compilers or flags must invalidate cached objects. Keep the timestamp
+# unchanged on ordinary builds so the dependency graph remains incremental.
+CONFIG := $(OBJDIR)/build-config
+CONFIG_VARS := CXX CPPFLAGS CFLAGS INCLUDE CPU_FLAGS AMD_FLAGS NVIDIA_FLAGS HIPCC \
+               HIPCC_CFLAGS_AMD HIPCC_CFLAGS_NVIDIA CUDA_HOME ROCM_HOME \
+               LDFLAGS LDLIBS LINKER_AMD LIBS_AMD LINKER_NVIDIA LIBS_NVIDIA \
+               LINKER_RHO MPI_LINKER MPI_LIBS AR
+shell_quote = '$(subst ','"'"',$(1))'
+$(CONFIG): FORCE
+	@mkdir -p $(@D)
+	@printf '%s\n' $(foreach var,$(CONFIG_VARS),$(call shell_quote,$(var)=$($(var)))) > $@.tmp
+	@cmp -s $@.tmp $@ && rm -f $@.tmp || mv -f $@.tmp $@
 
-rho_nvidia:	third_party gpu_nvidia
-	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=nvidia $(CXX) $(CFLAGS) $(CPP_RHO_GPU) $(OBJDIR)/ecc_nvidia.co -o rho-nvidia $(CXX_CFLAGS_NVIDIA) -DBUILD_GPU -D__HIP_PLATFORM_NVIDIA__ -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(NVIDIA_INCLUDE) $(INCLUDE) $(LINKER_NVIDIA) $(LIBS_NVIDIA) $(LINKER_RHO)
+$(OBJDIR)/common/%.o: src/%.cpp $(CONFIG) Makefile
+	@mkdir -p $(@D)
+	$(CXX) $(HOST_FLAGS) $(DEPFLAGS) -c $< -o $@
 
-benchmark_amd:	third_party	gpu_amd
-	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=amd $(CXX) $(CFLAGS) $(CPP_BENCH_GPU) $(OBJDIR)/ecc_amd.co -o benchmark-amd $(CXX_CFLAGS_AMD) -DBUILD_GPU -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LIBS_AMD) $(LINKER_AMD) -lfmt
+$(OBJDIR)/cpu/%.o: src/%.cpp $(CONFIG) Makefile
+	@mkdir -p $(@D)
+	$(CXX) $(HOST_FLAGS) $(CPU_FLAGS) $(DEPFLAGS) -c $< -o $@
 
-benchmark_cpu:	third_party
-	mkdir -p $(OBJDIR)
-	$(CXX) $(CFLAGS) $(CPP_BENCH_CPU) -o benchmark-cpu $(CXX_CFLAGS_AMD) -DBUILD_CPU -Isrc -Isrc/include -L$(LIB_DIR) $(INCLUDE) -lfmt
+$(OBJDIR)/amd/%.o: src/%.cpp $(CONFIG) Makefile
+	@mkdir -p $(@D)
+	HIP_PLATFORM=amd $(CXX) $(HOST_FLAGS) $(AMD_FLAGS) $(DEPFLAGS) -c $< -o $@
 
-rho_amd:	third_party gpu_amd
-	mkdir -p $(OBJDIR)
-	HIP_PLATFORM=amd $(CXX) $(CFLAGS) $(CPP_RHO_GPU) $(OBJDIR)/ecc_amd.co -o rho-amd $(CXX_CFLAGS_AMD) -DBUILD_GPU -Isrc -Isrc/include -Isrc -L$(LIB_DIR) -L$(ROCM_LIB) $(ROCM_INCLUDE) $(INCLUDE) $(LINKER_AMD) $(LIBS_AMD) $(LINKER_RHO)
+$(OBJDIR)/nvidia/%.o: src/%.cpp $(CONFIG) Makefile
+	@mkdir -p $(@D)
+	HIP_PLATFORM=nvidia $(CXX) $(HOST_FLAGS) $(NVIDIA_FLAGS) $(DEPFLAGS) -c $< -o $@
 
-rho_cpu:	third_party
-	mkdir -p $(OBJDIR)
-	$(CXX) $(CFLAGS) $(CPP_RHO_CPU) -o rho-cpu -DBUILD_CPU -Isrc -Isrc/include -Isrc -L$(LIB_DIR) $(INCLUDE) $(LINKER_RHO)
+$(OBJDIR)/tests/%.o: tests/%.cpp $(CONFIG) Makefile
+	@mkdir -p $(@D)
+	$(CXX) $(HOST_FLAGS) $(DEPFLAGS) -c $< -o $@
 
-rho_db:	third_party
-	$(CXX) $(CFLAGS) $(CPP_DATABASE) -o rho-db $(INCLUDE) -L$(LIB_DIR) -Isrc -Isrc/include -lfmt
+$(OBJDIR)/fmt/%.o: third_party/fmt/src/%.cc $(CONFIG) Makefile
+	@mkdir -p $(@D)
+	$(CXX) $(HOST_FLAGS) $(DEPFLAGS) -c $< -o $@
 
-rho_solve:	third_party
-	$(CXX) $(CFLAGS) $(CPP_SOLVE) -o rho-solve $(INCLUDE) -L$(LIB_DIR) -Isrc -Isrc/include -lfmt
+$(FMT_LIBRARY): $(FMT_OBJECTS)
+	@mkdir -p $(@D)
+	$(AR) rcs $@ $^
 
+$(OBJDIR)/ecc_amd.co: src/gpu/ecc.cu $(CONFIG) Makefile
+	@mkdir -p $(@D)
+	HIP_PLATFORM=amd $(HIPCC) $(HIPCC_CFLAGS_AMD) -D__HIP_PLATFORM_AMD__ -Isrc -Isrc/gpu -Isrc/include -MMD -MP -MF $(@:.co=.d) -MT $@ -c $< -o $@
 
-.PHONY: tests
-tests:
-	$(CXX) tests/math_tests.cpp $(CPP_MATH_TESTS) -o tests/math_tests $(INCLUDE)
-	$(CXX) tests/cpu_point_finder_tests.cpp src/CPUPointFinder.cpp src/CPUPointFinderF2N.cpp src/ec_rho.cpp $(CPP_MATH_TESTS) -o tests/cpu_point_finder_tests $(INCLUDE)
+$(OBJDIR)/ecc_nvidia.co: src/gpu/ecc.cu $(CONFIG) Makefile
+	@mkdir -p $(@D)
+	HIP_PLATFORM=nvidia $(HIPCC) $(HIPCC_CFLAGS_NVIDIA) -D__HIP_PLATFORM_NVIDIA__ -Isrc -Isrc/gpu $(NVIDIA_INCLUDE) -Isrc/include -MMD -MP -MF $(@:.co=.d) -MT $@ -c $< -o $@
+
+benchmark-cpu: $(OBJDIR)/cpu/benchmark.o $(CPU_OBJECTS) $(COMMON_OBJECTS) $(FMT_LIBRARY)
+	$(CXX) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+
+rho-cpu: $(OBJDIR)/cpu/rho-main.o $(CPU_OBJECTS) $(COMMON_OBJECTS) $(FMT_LIBRARY)
+	$(CXX) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(MPI_LINKER) $(MPI_LIBS) $(LDLIBS)
+
+benchmark-amd: $(OBJDIR)/amd/benchmark.o $(OBJDIR)/amd/GPUPointFinder.o $(COMMON_OBJECTS) $(OBJDIR)/ecc_amd.co $(FMT_LIBRARY)
+	$(CXX) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(LINKER_AMD) $(LIBS_AMD) $(LDLIBS)
+
+rho-amd: $(OBJDIR)/amd/rho-main.o $(OBJDIR)/amd/GPUPointFinder.o $(COMMON_OBJECTS) $(OBJDIR)/ecc_amd.co $(FMT_LIBRARY)
+	$(CXX) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(LINKER_AMD) $(LIBS_AMD) $(MPI_LINKER) $(MPI_LIBS) $(LDLIBS)
+
+benchmark-nvidia: $(OBJDIR)/nvidia/benchmark.o $(OBJDIR)/nvidia/GPUPointFinder.o $(COMMON_OBJECTS) $(OBJDIR)/ecc_nvidia.co $(FMT_LIBRARY)
+	$(CXX) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(LINKER_NVIDIA) $(LIBS_NVIDIA) $(LDLIBS)
+
+rho-nvidia: $(OBJDIR)/nvidia/rho-main.o $(OBJDIR)/nvidia/GPUPointFinder.o $(COMMON_OBJECTS) $(OBJDIR)/ecc_nvidia.co $(FMT_LIBRARY)
+	$(CXX) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(LINKER_NVIDIA) $(LIBS_NVIDIA) $(MPI_LINKER) $(MPI_LIBS) $(LDLIBS)
+
+rho-db: $(OBJDIR)/common/rho-db.o $(COMMON_OBJECTS) $(FMT_LIBRARY)
+	$(CXX) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+
+rho-solve: $(OBJDIR)/common/rho-solve.o $(COMMON_OBJECTS) $(FMT_LIBRARY)
+	$(CXX) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+
+tests/math_tests: $(OBJDIR)/tests/math_tests.o $(MATH_OBJECTS)
+	$(CXX) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+
+tests/cpu_point_finder_tests: $(OBJDIR)/tests/cpu_point_finder_tests.o $(CPU_OBJECTS) $(COMMON_OBJECTS)
+	$(CXX) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+
+-include $(wildcard $(OBJDIR)/*/*.d $(OBJDIR)/*.d)
 
 clean:
-	rm -v -rf src/*.o
-	rm -v -rf obj
-	rm -v -f rho-amd
-	rm -v -f benchmark-amd
-	rm -v -f rho-nvidia
-	rm -v -f benchmark-nvidia
-	rm -v -f tests/math_tests
-	rm -v -f tests/cpu_point_finder_tests
-	rm -v -f rho-db
-	rm -v -rf lib
+	$(RM) -r $(OBJDIR) $(LIB_DIR)
+	$(RM) src/*.o third_party/fmt/*.o
+	$(RM) rho-amd benchmark-amd rho-nvidia benchmark-nvidia rho-cpu benchmark-cpu
+	$(RM) tests/math_tests tests/cpu_point_finder_tests rho-db rho-solve

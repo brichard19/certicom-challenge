@@ -63,9 +63,19 @@ Usage:
 
 # Building
 
-Build target controlled by `TARGET_PLATFORM`. Default is "amd nvidia".
+Build targets are controlled by `TARGET_PLATFORMS`. The default is "amd nvidia".
+Build only the GPU backend you need. Builds use `nproc` parallel jobs by default;
+override this with `-jN` (for example, `-j4` or `-j1` for a serial build).
 
-`make TARGET_PLATFORMS=amd`or `make TARGET_PLATFORMS=nvidia`
+```sh
+make TARGET_PLATFORMS=amd
+# Or: make TARGET_PLATFORMS=nvidia
+# CPU-only: make TARGET_PLATFORMS=
+```
+
+Objects are shared between executables where possible. Subsequent builds only
+recompile changed sources and their header dependents; unchanged builds skip
+compilation and linking. Compiler and flag changes also trigger rebuilding.
 
   
 Outputs:
