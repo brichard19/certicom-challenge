@@ -45,16 +45,13 @@ __device__ uint131_t Curve<CURVE_ID_ECP131>::sub(uint131_t x, uint131_t y)
       "v_add_co_ci_u32 %[z2], %[cc], %[z2], %[p2], %[cc]\n\t"
       "v_add_co_ci_u32 %[z3], %[cc], %[z3], %[p3], %[cc]\n\t"
       "v_add_co_ci_u32 %[z4], %[cc], %[z4], %[p4], %[cc]"
-      : [z0] "=&v"(z.v[0]), [z1] "=&v"(z.v[1]), [z2] "=&v"(z.v[2]),
-        [z3] "=&v"(z.v[3]), [z4] "=&v"(z.v[4]), [cc] "=&s"(carry),
-        [p0] "=&v"(p0), [p1] "=&v"(p1), [p2] "=&v"(p2),
+      : [z0] "=&v"(z.v[0]), [z1] "=&v"(z.v[1]), [z2] "=&v"(z.v[2]), [z3] "=&v"(z.v[3]),
+        [z4] "=&v"(z.v[4]), [cc] "=&s"(carry), [p0] "=&v"(p0), [p1] "=&v"(p1), [p2] "=&v"(p2),
         [p3] "=&v"(p3), [p4] "=&v"(p4)
-      : [x0] "v"(x.v[0]), [x1] "v"(x.v[1]), [x2] "v"(x.v[2]),
-        [x3] "v"(x.v[3]), [x4] "v"(x.v[4]),
-        [y0] "v"(y.v[0]), [y1] "v"(y.v[1]), [y2] "v"(y.v[2]),
-        [y3] "v"(y.v[3]), [y4] "v"(y.v[4]),
-        [mod0] "s"(p().v[0]), [mod1] "s"(p().v[1]), [mod2] "s"(p().v[2]),
-        [mod3] "s"(p().v[3]), [mod4] "s"(p().v[4]));
+      : [x0] "v"(x.v[0]), [x1] "v"(x.v[1]), [x2] "v"(x.v[2]), [x3] "v"(x.v[3]), [x4] "v"(x.v[4]),
+        [y0] "v"(y.v[0]), [y1] "v"(y.v[1]), [y2] "v"(y.v[2]), [y3] "v"(y.v[3]), [y4] "v"(y.v[4]),
+        [mod0] "s"(p().v[0]), [mod1] "s"(p().v[1]), [mod2] "s"(p().v[2]), [mod3] "s"(p().v[3]),
+        [mod4] "s"(p().v[4]));
   return z;
 #else
 
@@ -101,10 +98,9 @@ __device__ uint131_t mod_p(uint131_t x)
         "v_cndmask_b32 %[z2], %[z2], %[x2], %[cc]\n\t"
         "v_cndmask_b32 %[z3], %[z3], %[x3], %[cc]\n\t"
         "v_cndmask_b32 %[z4], %[z4], %[x4], %[cc]"
-        : [z0] "=&v"(z.v[0]), [z1] "=&v"(z.v[1]), [z2] "=&v"(z.v[2]),
-          [z3] "=&v"(z.v[3]), [z4] "=&v"(z.v[4]), [cc] "=&s"(borrow)
-        : [x0] "v"(x.v[0]), [x1] "v"(x.v[1]), [x2] "v"(x.v[2]),
-          [x3] "v"(x.v[3]), [x4] "v"(x.v[4]),
+        : [z0] "=&v"(z.v[0]), [z1] "=&v"(z.v[1]), [z2] "=&v"(z.v[2]), [z3] "=&v"(z.v[3]),
+          [z4] "=&v"(z.v[4]), [cc] "=&s"(borrow)
+        : [x0] "v"(x.v[0]), [x1] "v"(x.v[1]), [x2] "v"(x.v[2]), [x3] "v"(x.v[3]), [x4] "v"(x.v[4]),
           [p0] "s"(_p131_p.v[0]), [p1] "s"(_p131_p.v[1]), [p2] "s"(_p131_p.v[2]),
           [p3] "s"(_p131_p.v[3]), [p4] "s"(_p131_p.v[4]));
     return z;
@@ -202,15 +198,16 @@ __device__ uint131_t Curve<CURVE_ID_ECP131>::square(uint131_t a)
   c += ((uint128_t)((uint64_t)a.v[0] * a.v[2]) << 1) + (uint128_t)((uint64_t)a.v[1] * a.v[1]);
   t[2] = (uint32_t)c;
   c >>= 32;
-  c += ((uint128_t)((uint64_t)a.v[0] * a.v[3]) << 1) + ((uint128_t)((uint64_t)a.v[1] * a.v[2]) << 1);
+  c +=
+      ((uint128_t)((uint64_t)a.v[0] * a.v[3]) << 1) + ((uint128_t)((uint64_t)a.v[1] * a.v[2]) << 1);
   t[3] = (uint32_t)c;
   c >>= 32;
   c += ((uint128_t)((uint64_t)a.v[0] * a.v[4]) << 1) +
-       ((uint128_t)((uint64_t)a.v[1] * a.v[3]) << 1) +
-       (uint128_t)((uint64_t)a.v[2] * a.v[2]);
+       ((uint128_t)((uint64_t)a.v[1] * a.v[3]) << 1) + (uint128_t)((uint64_t)a.v[2] * a.v[2]);
   t[4] = (uint32_t)c;
   c >>= 32;
-  c += ((uint128_t)((uint64_t)a.v[1] * a.v[4]) << 1) + ((uint128_t)((uint64_t)a.v[2] * a.v[3]) << 1);
+  c +=
+      ((uint128_t)((uint64_t)a.v[1] * a.v[4]) << 1) + ((uint128_t)((uint64_t)a.v[2] * a.v[3]) << 1);
   t[5] = (uint32_t)c;
   c >>= 32;
   c += ((uint128_t)((uint64_t)a.v[2] * a.v[4]) << 1) + (uint128_t)((uint64_t)a.v[3] * a.v[3]);

@@ -139,8 +139,10 @@ GPUPointFinder::GPUPointFinder(int device, int dpbits, bool benchmark)
     HIP_CALL(hipEventCreate(&_step_start_event));
     HIP_CALL(hipEventCreate(&_step_stop_event));
   } catch(...) {
-    if(_step_start_event) HIP_IGNORE(hipEventDestroy(_step_start_event));
-    if(_step_stop_event) HIP_IGNORE(hipEventDestroy(_step_stop_event));
+    if(_step_start_event)
+      HIP_IGNORE(hipEventDestroy(_step_start_event));
+    if(_step_stop_event)
+      HIP_IGNORE(hipEventDestroy(_step_stop_event));
     stack_destroy(_staging);
     throw;
   }
