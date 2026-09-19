@@ -22,6 +22,9 @@ private:
 
   bool _first_run = true;
 
+  hipEvent_t _step_start_event = nullptr;
+  hipEvent_t _step_stop_event = nullptr;
+
   uint32_t _num_points = 1024 * 1024;
   int _NUM_R_POINTS = 32;
 

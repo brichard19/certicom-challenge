@@ -134,10 +134,22 @@ GPUPointFinder::GPUPointFinder(int device, int dpbits, bool benchmark)
   _staging_buf_size = (int)(((double)_num_points * prob + 1.0) * iters);
 
   _staging = stack_create<StagingPoint>(_staging_buf_size);
+
+  try {
+    HIP_CALL(hipEventCreate(&_step_start_event));
+    HIP_CALL(hipEventCreate(&_step_stop_event));
+  } catch(...) {
+    if(_step_start_event) HIP_IGNORE(hipEventDestroy(_step_start_event));
+    if(_step_stop_event) HIP_IGNORE(hipEventDestroy(_step_stop_event));
+    stack_destroy(_staging);
+    throw;
+  }
 }
 
 GPUPointFinder::~GPUPointFinder()
 {
+  HIP_IGNORE(hipEventDestroy(_step_start_event));
+  HIP_IGNORE(hipEventDestroy(_step_stop_event));
   stack_destroy(_staging);
   free_buffers();
 }
@@ -436,25 +448,20 @@ double GPUPointFinder::step()
   // We don't need result buf for benchmark
   DPResult* result_buf = _benchmark ? nullptr : _result_buf;
 
-  hipEvent_t start;
-  hipEvent_t stop;
   float elapsed = 0.0f;
 
-  HIP_CALL(hipEventCreate(&start));
-  HIP_CALL(hipEventCreate(&stop));
-
-  HIP_CALL(hipEventRecord(start));
+  HIP_CALL(hipEventRecord(_step_start_event));
   for(int i = 0; i < _iters_per_step; i++) {
     HIP_CALL(hipLaunchKernel(_do_step_ptr, dim3(_blocks), dim3(_threads_per_block), 0, _dev_x,
                              _dev_y, _dev_rx, _dev_ry, _mbuf, result_buf, _result_count, _staging,
                              _priv_key_a, _counter, _walk_start, _dpmask));
     _counter++;
   }
-  HIP_CALL(hipEventRecord(stop));
+  HIP_CALL(hipEventRecord(_step_stop_event));
 
   HIP_CALL(hipDeviceSynchronize());
 
-  HIP_CALL(hipEventElapsedTime(&elapsed, start, stop));
+  HIP_CALL(hipEventElapsedTime(&elapsed, _step_start_event, _step_stop_event));
 
   if(_first_run || _verify_points) {
     HIP_CALL(hipLaunchKernel((void*)_sanity_check_ptr, dim3(_blocks), dim3(_threads_per_block), 0,
