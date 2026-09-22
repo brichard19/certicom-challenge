@@ -145,6 +145,18 @@ int main(int argc, char** argv)
 
   try {
     ecc::set_curve(curve_name);
+#if defined(BUILD_GPU)
+    if(ecc::is_prime_curve() == false) {
+      std::cout << "Curve " << curve_name << " is not supported on GPU" << std::endl;
+      return 1;
+    }
+#endif
+#if defined(BUILD_CPU)
+    if(ecc::is_binary_curve() == false) {
+      std::cout << "Curve " << curve_name << " is not supported on CPU" << std::endl;
+      return 1;
+    }
+#endif
   } catch(...) {
     std::cout << "Invalid curve name" << std::endl;
     return 1;
