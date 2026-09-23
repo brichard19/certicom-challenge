@@ -5,20 +5,16 @@
 #endif
 
 #include "fmt/format.h"
-#include <atomic>
 #include <cassert>
-#include <cctype>
-#include <cerrno>
 #include <chrono>
-#include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <getopt.h>
 #include <iostream>
 #include <map>
 #include <mutex>
-#include <system_error>
+#include <random>
 #include <thread>
-#include <unistd.h>
 #include <vector>
 
 #include "binary_encoder.h"
@@ -92,100 +88,27 @@ DistinguishedPointFinder* create_point_finder()
 #endif
 }
 
-namespace {
-
-std::atomic<uint64_t> _result_file_sequence = 0;
-
-void write_all(int fd, const uint8_t* data, size_t size)
-{
-  size_t offset = 0;
-  while(offset < size) {
-    ssize_t written = ::write(fd, data + offset, size - offset);
-    if(written < 0) {
-      if(errno == EINTR) {
-        continue;
-      }
-      throw std::system_error(errno, std::generic_category(), "Unable to write result file");
-    }
-    if(written == 0) {
-      throw std::runtime_error("Unable to write result file: write returned zero");
-    }
-    offset += static_cast<size_t>(written);
-  }
-}
-
-std::string filename_component(std::string value)
-{
-  for(char& ch : value) {
-    unsigned char c = static_cast<unsigned char>(ch);
-    if(!std::isalnum(c) && ch != '-' && ch != '_' && ch != '.') {
-      ch = '_';
-    }
-  }
-  if(value.empty()) {
-    return "unknown-host";
-  }
-  if(value.size() > 64) {
-    value.resize(64);
-  }
-  return value;
-}
-
-} // namespace
-
-// Saves distinguished points to disk
+// Saves distingusihed points to disk
 void save_to_disk(const std::vector<DistinguishedPoint>& dps)
 {
+  std::random_device random;
+  std::uniform_int_distribution<uint64_t> distribution;
+  uint64_t high = distribution(random);
+  uint64_t low = distribution(random);
+  std::string id = fmt::format("{:016x}{:016x}", high, low);
+
+  // Use a temp file when writing since another thread periodically picks up all the
+  // .dat files
+  std::string tmp_name = fmt::format("{}/{}.tmp", _results_dir, id);
+  std::string file_name = fmt::format("{}/{}.dat", _results_dir, id);
+
   auto encoded = encode_dps(dps, ecc::curve_strength(), _dpbits);
+  std::ofstream of(tmp_name, std::ios::binary);
 
-  // Include the host as well as the process in the name because the results
-  // directory may be shared by multiple machines. mkstemps adds an exclusive
-  // random suffix, providing a final guard against simultaneous creation.
-  auto now = std::chrono::system_clock::now().time_since_epoch();
-  auto timestamp = std::chrono::duration_cast<std::chrono::nanoseconds>(now).count();
-  uint64_t sequence = _result_file_sequence.fetch_add(1, std::memory_order_relaxed);
-  std::string name_template =
-      fmt::format("{}/result-{}-{}-{}-{}-XXXXXX.tmp", _results_dir, filename_component(_hostname),
-                  getpid(), timestamp, sequence);
-  std::vector<char> mutable_name(name_template.begin(), name_template.end());
-  mutable_name.push_back('\0');
+  of.write((const char*)encoded.data(), encoded.size());
+  of.close();
 
-  int fd = mkstemps(mutable_name.data(), 4);
-  if(fd < 0) {
-    throw std::system_error(errno, std::generic_category(), "Unable to create result file");
-  }
-
-  std::filesystem::path tmp_name(mutable_name.data());
-  try {
-    write_all(fd, encoded.data(), encoded.size());
-    if(::close(fd) != 0) {
-      fd = -1;
-      throw std::system_error(errno, std::generic_category(), "Unable to close result file");
-    }
-    fd = -1;
-
-    std::filesystem::path file_name = tmp_name;
-    file_name.replace_extension(".dat");
-
-    // Rename within the same directory so consumers either see the complete
-    // file or do not see it at all. This works on shared filesystems that do not
-    // support hard links.
-    std::error_code err;
-    if(std::filesystem::exists(file_name, err)) {
-      throw std::runtime_error("Refusing to replace existing result file: " + file_name.string());
-    }
-    if(err) {
-      throw std::filesystem::filesystem_error("Unable to check result file", file_name, err);
-    }
-    std::filesystem::rename(tmp_name, file_name);
-  } catch(...) {
-    if(fd >= 0) {
-      ::close(fd);
-    }
-    std::error_code ignored;
-    std::filesystem::remove(tmp_name, ignored);
-    throw;
-  }
+  std::filesystem::rename(tmp_name, file_name);
 }
 
 void dp_callback(const std::vector<DistinguishedPoint>& dps)
