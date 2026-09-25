@@ -53,9 +53,36 @@ __device__ uint131_t Curve<CURVE_ID_ECP131>::sub(uint131_t x, uint131_t y)
         [mod0] "s"(p().v[0]), [mod1] "s"(p().v[1]), [mod2] "s"(p().v[2]), [mod3] "s"(p().v[3]),
         [mod4] "s"(p().v[4]));
   return z;
+#elif defined(__HIP_DEVICE_COMPILE__) && defined(__gfx90a__)
+  uint32_t p0, p1, p2, p3, p4;
+  // CDNA2 uses the wave64 VCC pair for per-lane borrow and carry state.
+  asm volatile("v_sub_co_u32 %[z0], vcc, %[x0], %[y0]\n\t"
+               "v_subb_co_u32 %[z1], vcc, %[x1], %[y1], vcc\n\t"
+               "v_subb_co_u32 %[z2], vcc, %[x2], %[y2], vcc\n\t"
+               "v_subb_co_u32 %[z3], vcc, %[x3], %[y3], vcc\n\t"
+               "v_subb_co_u32 %[z4], vcc, %[x4], %[y4], vcc\n\t"
+               "v_cndmask_b32 %[p0], 0, %[mod0], vcc\n\t"
+               "v_cndmask_b32 %[p1], 0, %[mod1], vcc\n\t"
+               "v_cndmask_b32 %[p2], 0, %[mod2], vcc\n\t"
+               "v_cndmask_b32 %[p3], 0, %[mod3], vcc\n\t"
+               "v_cndmask_b32 %[p4], 0, %[mod4], vcc\n\t"
+               "v_add_co_u32 %[z0], vcc, %[z0], %[p0]\n\t"
+               "v_addc_co_u32 %[z1], vcc, %[z1], %[p1], vcc\n\t"
+               "v_addc_co_u32 %[z2], vcc, %[z2], %[p2], vcc\n\t"
+               "v_addc_co_u32 %[z3], vcc, %[z3], %[p3], vcc\n\t"
+               "v_addc_co_u32 %[z4], vcc, %[z4], %[p4], vcc"
+               : [z0] "=&v"(z.v[0]), [z1] "=&v"(z.v[1]), [z2] "=&v"(z.v[2]), [z3] "=&v"(z.v[3]),
+                 [z4] "=&v"(z.v[4]), [p0] "=&v"(p0), [p1] "=&v"(p1), [p2] "=&v"(p2), [p3] "=&v"(p3),
+                 [p4] "=&v"(p4)
+               : [x0] "v"(x.v[0]), [x1] "v"(x.v[1]), [x2] "v"(x.v[2]), [x3] "v"(x.v[3]),
+                 [x4] "v"(x.v[4]), [y0] "v"(y.v[0]), [y1] "v"(y.v[1]), [y2] "v"(y.v[2]),
+                 [y3] "v"(y.v[3]), [y4] "v"(y.v[4]), [mod0] "v"(p().v[0]), [mod1] "v"(p().v[1]),
+                 [mod2] "v"(p().v[2]), [mod3] "v"(p().v[3]), [mod4] "v"(p().v[4])
+               : "vcc");
+  return z;
 #else
 
-  // Portable fallback for NVIDIA, older AMD GPUs, and wave64 compilation.
+  // Portable fallback for NVIDIA and other AMD GPU architectures.
   // A 128-bit intermediate preserves borrow even when y's limb plus borrow wraps.
   uint128_t diff = (uint128_t)x.w.v0 - y.w.v0;
   z.w.v0 = (uint64_t)diff;
@@ -105,6 +132,26 @@ __device__ uint131_t mod_p(uint131_t x)
           [p3] "s"(_p131_p.v[3]), [p4] "s"(_p131_p.v[4]));
     return z;
   }
+#elif defined(__HIP_DEVICE_COMPILE__) && defined(__gfx90a__)
+  uint131_t z;
+  // Select x on underflow, otherwise x - P (including x == P).
+  asm volatile("v_sub_co_u32 %[z0], vcc, %[x0], %[p0]\n\t"
+               "v_subb_co_u32 %[z1], vcc, %[x1], %[p1], vcc\n\t"
+               "v_subb_co_u32 %[z2], vcc, %[x2], %[p2], vcc\n\t"
+               "v_subb_co_u32 %[z3], vcc, %[x3], %[p3], vcc\n\t"
+               "v_subb_co_u32 %[z4], vcc, %[x4], %[p4], vcc\n\t"
+               "v_cndmask_b32 %[z0], %[z0], %[x0], vcc\n\t"
+               "v_cndmask_b32 %[z1], %[z1], %[x1], vcc\n\t"
+               "v_cndmask_b32 %[z2], %[z2], %[x2], vcc\n\t"
+               "v_cndmask_b32 %[z3], %[z3], %[x3], vcc\n\t"
+               "v_cndmask_b32 %[z4], %[z4], %[x4], vcc"
+               : [z0] "=&v"(z.v[0]), [z1] "=&v"(z.v[1]), [z2] "=&v"(z.v[2]), [z3] "=&v"(z.v[3]),
+                 [z4] "=&v"(z.v[4])
+               : [x0] "v"(x.v[0]), [x1] "v"(x.v[1]), [x2] "v"(x.v[2]), [x3] "v"(x.v[3]),
+                 [x4] "v"(x.v[4]), [p0] "v"(_p131_p.v[0]), [p1] "v"(_p131_p.v[1]),
+                 [p2] "v"(_p131_p.v[2]), [p3] "v"(_p131_p.v[3]), [p4] "v"(_p131_p.v[4])
+               : "vcc");
+  return z;
 #endif
   if(!is_less_than(x, _p131_p)) {
     x = sub_raw(x, _p131_p);
