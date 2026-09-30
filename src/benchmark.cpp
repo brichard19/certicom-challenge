@@ -104,7 +104,6 @@ int main(int argc, char** argv)
         {"gpu", required_argument, 0, 'g'},
 #endif
         {"curve", required_argument, 0, 'c'},
-        {"cpu", no_argument, 0, 'C'},
         {NULL, 0, NULL, 0},
     };
 
@@ -120,15 +119,11 @@ int main(int argc, char** argv)
     case 'c':
       curve_name = std::string(optarg);
       break;
-
+#if defined(BUILD_GPU)
     case 'g':
       _hip_device = atoi(optarg);
       break;
-
-    case 'C':
-      // No action needed, as the default is CPU
-      break;
-
+#endif
     case '?':
       break;
 
@@ -158,7 +153,7 @@ int main(int argc, char** argv)
     }
 #endif
   } catch(...) {
-    std::cout << "Invalid curve name" << std::endl;
+    std::cout << "Invalid curve name " << "'" << curve_name << "'" << std::endl;
     return 1;
   }
 
