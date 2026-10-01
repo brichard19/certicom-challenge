@@ -81,6 +81,33 @@ std::map<std::string, CurveParameters> _curves = {
          .name = "ec2n131",
      }},
 
+    {"ecp109",
+     {
+         .type = CurveType::PRIME,
+         .field = gf2::Field::NONE,
+         .p = {{0x0b5b521e6d9fb599, 0x00001bd579792b38, 0x0}},
+         .f = {},
+         .a = {{0x0bc15e225a5ee910, 0x00000dc462a14129, 0x0}},
+         .b = {{0xb52890719eff9942, 0x0000052e3b8cfeee, 0x0}},
+         .n = {{0x0b049c4d13a75ae5, 0x00001bd579792b38, 0x0}},
+         .gx = {{0xa7bab6bb7c9cb952, 0x0000051f08db5ebe, 0x0}},
+         .gy = {{0x53800bcc8fb867ae, 0x00000cdc8f89784d, 0x0}},
+         .qx = {{0x7245e07cbb81bb41, 0x00000c1c8b028cdc, 0x0}},
+         .qy = {{0x04cb97f51d709598, 0x00001281cd54a017, 0x0}},
+         .k = {{0x95f4da11710f3157, 0x2a9b9beb62e06384, 0x7bc599a4}},
+         .one = {{0xb2ec742432d0a6bf, 0x00000accf5a4e730, 0x0}},
+         .two = {{0x65d8e84865a14d7e, 0x00001599eb49ce61, 0x0}},
+         .p_minus_2 = {{0x0b5b521e6d9fb597, 0x00001bd579792b38, 0x0}},
+         // Odd part of p - 1, used by the Tonelli-Shanks square root path.
+         .sqrt = {{0x016b6a43cdb3f6b3, 0x0000037aaf2f2567, 0x0}},
+         .sqrt_nonresidue = {{0x0d6a0a4e2ad23ea4, 0x0000049167758a5a, 0x0}},
+         .sqrt_power = 3,
+         .r = {{0xb2ec742432d0a6bf, 0x00000accf5a4e730, 0x0}},
+         .r2 = {{0x9d299450718aebd1, 0x00001584fb54a8de, 0x0}},
+         .bits = 109,
+         .name = "ecp109",
+     }},
+
     {"ecp131",
      {
          .type = CurveType::PRIME,

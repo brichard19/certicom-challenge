@@ -3,6 +3,7 @@
 #define _EC_MATH_CUH
 
 #include "math_common.cuh"
+#include "p109.cuh"
 #include "p131.cuh"
 #include "p79.cuh"
 #include "p89.cuh"
@@ -180,6 +181,33 @@ __device__ uint131_t inv_p89(uint131_t& x)
   return prod;
 }
 
+// TODO: Optimize
+__device__ uint131_t inv_p109(uint131_t& x)
+{
+  uint131_t prod = _p109_one;
+  uint131_t y = x;
+
+  uint64_t bits = _p109_p.w.v0 - 2;
+  for(int i = 0; i < 64; i++) {
+    if(bits & 1) {
+      prod = mul<CURVE_ID_ECP109>(prod, y);
+    }
+    y = square<CURVE_ID_ECP109>(y);
+    bits >>= 1;
+  }
+
+  bits = _p109_p.w.v1;
+  for(int i = 0; i < 45; i++) {
+    if(bits & 1) {
+      prod = mul<CURVE_ID_ECP109>(prod, y);
+    }
+    y = square<CURVE_ID_ECP109>(y);
+    bits >>= 1;
+  }
+
+  return prod;
+}
+
 template <int CURVE> __device__ uint131_t inv(uint131_t x)
 {
   uint131_t r;
@@ -189,6 +217,8 @@ template <int CURVE> __device__ uint131_t inv(uint131_t x)
     r = inv_p79(x);
   } else if constexpr(CURVE == CURVE_ID_ECP89) {
     r = inv_p89(x);
+  } else if constexpr(CURVE == CURVE_ID_ECP109) {
+    r = inv_p109(x);
   }
 
   return r;

@@ -39,6 +39,7 @@ struct KernelInfo {
 std::map<std::string, KernelInfo> _kernel_map = {
     {"ecp79", {(void*)do_step_p79, (void*)batch_multiply_p79, (void*)sanity_check_p79}},
     {"ecp89", {(void*)do_step_p89, (void*)batch_multiply_p89, (void*)sanity_check_p89}},
+    {"ecp109", {(void*)do_step_p109, (void*)batch_multiply_p109, (void*)sanity_check_p109}},
     {"ecp131", {(void*)do_step_p131, (void*)batch_multiply_p131, (void*)sanity_check_p131}},
 };
 

@@ -367,6 +367,10 @@ uint131_t inv(uint131_t x) { return pow(x, _params.p_minus_2); }
 
 uint131_t sqrt(uint131_t x)
 {
+  if(x == make_uint131(0)) {
+    return x;
+  }
+
   if(_params.p.v[0] % 4 == 3) {
     return pow(x, _params.sqrt);
   } else if(_params.p.v[0] % 8 == 5) {
@@ -378,7 +382,57 @@ uint131_t sqrt(uint131_t x)
 
     return mul(xv, sub(i, _params.one));
   } else {
-    throw std::runtime_error("Invalid curve name");
+    // Tonelli-Shanks for odd primes not covered by the two shortcuts above.
+    uint131_t q = _params.sqrt;
+    uint131_t z = _params.sqrt_nonresidue;
+    int s = _params.sqrt_power;
+
+    if(s == 0 || z == make_uint131(0)) {
+      q = sub_raw(_params.p, make_uint131(1));
+      while(!is_odd(q)) {
+        q = rshift(q, 1);
+        ++s;
+      }
+
+      const uint131_t legendre_exponent = rshift(sub_raw(_params.p, make_uint131(1)), 1);
+      const uint131_t minus_one = sub(_params.p, _params.one);
+      for(uint32_t candidate = 2;; ++candidate) {
+        z = to(make_uint131(candidate));
+        if(pow(z, legendre_exponent) == minus_one) {
+          break;
+        }
+      }
+    }
+
+    uint131_t c = pow(z, q);
+    uint131_t r = pow(x, rshift(add_raw(q, make_uint131(1)), 1));
+    uint131_t t = pow(x, q);
+    int m = s;
+
+    while(t != _params.one) {
+      uint131_t t2 = t;
+      int i = 0;
+      do {
+        t2 = square(t2);
+        ++i;
+      } while(t2 != _params.one && i < m);
+
+      if(i == m) {
+        throw std::runtime_error("Value is not a quadratic residue");
+      }
+
+      uint131_t b = c;
+      for(int j = 0; j < m - i - 1; ++j) {
+        b = square(b);
+      }
+
+      r = mul(r, b);
+      c = square(b);
+      t = mul(t, c);
+      m = i;
+    }
+
+    return r;
   }
 }
 

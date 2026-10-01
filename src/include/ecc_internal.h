@@ -29,6 +29,8 @@ struct CurveParameters {
   uint131_t two;
   uint131_t p_minus_2;
   uint131_t sqrt;
+  uint131_t sqrt_nonresidue;
+  int sqrt_power;
   uint131_t r;
   uint131_t r2;
   int bits;
