@@ -151,34 +151,56 @@ __device__ uint131_t inv_p79(uint131_t& x)
   return z;
 }
 
-// TODO: Optimize
 __device__ uint131_t inv_p89(uint131_t& x)
 {
-  uint131_t prod = _p89_one;
-  uint131_t y = x;
+  uint131_t t10 = square<CURVE_ID_ECP89>(x);
+  uint131_t t11 = mul<CURVE_ID_ECP89>(x, t10);
+  uint131_t t101 = mul<CURVE_ID_ECP89>(t10, t11);
+  uint131_t t111 = mul<CURVE_ID_ECP89>(t10, t101);
+  uint131_t t1001 = mul<CURVE_ID_ECP89>(t10, t111);
+  uint131_t t1011 = mul<CURVE_ID_ECP89>(t10, t1001);
+  uint131_t t1101 = mul<CURVE_ID_ECP89>(t10, t1011);
+  uint131_t t10100 = mul<CURVE_ID_ECP89>(t111, t1101);
+  uint131_t t101000 = square<CURVE_ID_ECP89>(t10100);
+  uint131_t t101011 = mul<CURVE_ID_ECP89>(t11, t101000);
 
-  uint64_t bits = _p89_p.w.v0 - 2;
+  uint131_t i32 = square<CURVE_ID_ECP89>(t101011, 8);
+  i32 = mul<CURVE_ID_ECP89>(i32, t1101);
+  i32 = square<CURVE_ID_ECP89>(i32, 8);
+  i32 = mul<CURVE_ID_ECP89>(i32, t1011);
+  i32 = square<CURVE_ID_ECP89>(i32, 4);
 
-  for(int i = 0; i < 64; i++) {
-    if(bits & 1) {
-      prod = mul<CURVE_ID_ECP89>(prod, y);
-    }
-    y = square<CURVE_ID_ECP89>(y);
+  uint131_t i48 = mul<CURVE_ID_ECP89>(t1001, i32);
+  i48 = square<CURVE_ID_ECP89>(i48, 3);
+  i48 = mul<CURVE_ID_ECP89>(i48, x);
+  i48 = square<CURVE_ID_ECP89>(i48, 10);
+  i48 = mul<CURVE_ID_ECP89>(i48, t1101);
 
-    bits >>= 1;
-  }
+  uint131_t i62 = square<CURVE_ID_ECP89>(i48, 2);
+  i62 = mul<CURVE_ID_ECP89>(i62, t1011);
+  i62 = square<CURVE_ID_ECP89>(i62, 7);
+  i62 = mul<CURVE_ID_ECP89>(i62, t1011);
+  i62 = square<CURVE_ID_ECP89>(i62, 3);
 
-  bits = _p89_p.w.v1;
-  for(int i = 0; i < 25; i++) {
-    if(bits & 1) {
-      prod = mul<CURVE_ID_ECP89>(prod, y);
-    }
-    y = square<CURVE_ID_ECP89>(y);
+  uint131_t i75 = mul<CURVE_ID_ECP89>(x, i62);
+  i75 = square<CURVE_ID_ECP89>(i75, 7);
+  i75 = mul<CURVE_ID_ECP89>(i75, t111);
+  i75 = square<CURVE_ID_ECP89>(i75, 3);
+  i75 = mul<CURVE_ID_ECP89>(i75, x);
 
-    bits >>= 1;
-  }
+  uint131_t i92 = square<CURVE_ID_ECP89>(i75, 5);
+  i92 = mul<CURVE_ID_ECP89>(i92, x);
+  i92 = square<CURVE_ID_ECP89>(i92, 7);
+  i92 = mul<CURVE_ID_ECP89>(i92, t1011);
+  i92 = square<CURVE_ID_ECP89>(i92, 3);
 
-  return prod;
+  uint131_t i104 = mul<CURVE_ID_ECP89>(t101, i92);
+  i104 = square<CURVE_ID_ECP89>(i104, 5);
+  i104 = mul<CURVE_ID_ECP89>(i104, t1001);
+  i104 = square<CURVE_ID_ECP89>(i104, 4);
+  i104 = mul<CURVE_ID_ECP89>(i104, t101);
+
+  return mul<CURVE_ID_ECP89>(square<CURVE_ID_ECP89>(i104, 4), t11);
 }
 
 __device__ uint131_t inv_p109(uint131_t& x)
