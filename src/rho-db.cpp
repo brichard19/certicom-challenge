@@ -206,7 +206,8 @@ private:
         }
       }
       if(buckets_checked > 0) {
-        std::cout << "Checked " << buckets_checked << " buckets in " << timer.elapsed() << "s" << std::endl;
+        std::cout << "Checked " << buckets_checked << " buckets in " << timer.elapsed() << "s"
+                  << std::endl;
       }
     }
 
