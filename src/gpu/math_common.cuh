@@ -5,6 +5,7 @@
 
 inline constexpr int CURVE_ID_ECP79 = 79;
 inline constexpr int CURVE_ID_ECP89 = 89;
+inline constexpr int CURVE_ID_ECP97 = 97;
 inline constexpr int CURVE_ID_ECP109 = 109;
 inline constexpr int CURVE_ID_ECP131 = 131;
 

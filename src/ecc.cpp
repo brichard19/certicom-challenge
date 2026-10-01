@@ -81,6 +81,31 @@ std::map<std::string, CurveParameters> _curves = {
          .name = "ec2n131",
      }},
 
+    {"ecp97",
+     {
+         .type = CurveType::PRIME,
+         .field = gf2::Field::NONE,
+         .p = {{0xd21ae4d8d8420e35, 0x000000016ea1595e, 0x0}},
+         .f = {},
+         .a = {{0xe70dfa2b17b6219b, 0x000000000c67550b, 0x0}},
+         .b = {{0x1f7dcb83d5672e73, 0x000000006fa1fd6b, 0x0}},
+         .n = {{0xd21ae98fb6cca20d, 0x000000016ea1595e, 0x0}},
+         .gx = {{0x5474327dbf11c1bb, 0x000000004a0e7c36, 0x0}},
+         .gy = {{0xf7e7f7dece054487, 0x00000000d1d077e4, 0x0}},
+         .qx = {{0x5e67881a669a5f8d, 0x0000000121f8af3a, 0x0}},
+         .qy = {{0x93c19852beb1f55b, 0x0000000015998c2f, 0x0}},
+         .k = {{0xf43b959a2430abe3, 0x2f3f04919f944fee, 0xc92cff94}},
+         .one = {{0x04cdd5cb195c818e, 0x000000005308c4bf, 0x0}},
+         .two = {{0x099bab9632b9031c, 0x00000000a611897e, 0x0}},
+         .p_minus_2 = {{0xd21ae4d8d8420e33, 0x000000016ea1595e, 0x0}},
+         //(p - 5) // 8
+         .sqrt = {{0xda435c9b1b0841c6, 0x000000002dd42b2b, 0x0}},
+         .r = {{0x04cdd5cb195c818e, 0x000000005308c4bf, 0x0}},
+         .r2 = {{0x9fbf569acfe42f0e, 0x000000004699c815, 0x0}},
+         .bits = 97,
+         .name = "ecp97",
+     }},
+
     {"ecp109",
      {
          .type = CurveType::PRIME,

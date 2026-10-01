@@ -311,6 +311,12 @@ extern "C" __global__ void sanity_check_p89(uint131_t* global_px, uint131_t* glo
   sanity_check_impl<CURVE_ID_ECP89>(global_px, global_py, count, errors);
 }
 
+extern "C" __global__ void sanity_check_p97(uint131_t* global_px, uint131_t* global_py, int count,
+                                            int* errors)
+{
+  sanity_check_impl<CURVE_ID_ECP97>(global_px, global_py, count, errors);
+}
+
 extern "C" __global__ void sanity_check_p109(uint131_t* global_px, uint131_t* global_py, int count,
                                              int* errors)
 {
@@ -373,6 +379,26 @@ extern "C" __global__ void do_step_p89(uint131_t* global_px, uint131_t* global_p
                                        uint64_t counter, uint64_t* start_pos, uint32_t dpmask)
 {
   do_step_prime_impl<CURVE_ID_ECP89, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry,
+                                                        mbuf, result, result_count, staging,
+                                                        priv_key_a, counter, start_pos, dpmask);
+}
+
+extern "C" __global__ void batch_multiply_p97(uint131_t* global_px, uint131_t* global_py,
+                                              uint131_t* private_keys, uint131_t* mbuf,
+                                              uint131_t* gx, uint131_t* gy, int priv_key_bit,
+                                              int count)
+{
+  batch_multiply_prime_step<CURVE_ID_ECP97>(global_px, global_py, private_keys, gx, gy, mbuf,
+                                            priv_key_bit, count);
+}
+
+extern "C" __global__ void do_step_p97(uint131_t* global_px, uint131_t* global_py,
+                                       uint131_t* global_rx, uint131_t* global_ry, uint131_t* mbuf,
+                                       DPResult* result, int* result_count,
+                                       ManagedStack<StagingPoint> staging, uint131_t* priv_key_a,
+                                       uint64_t counter, uint64_t* start_pos, uint32_t dpmask)
+{
+  do_step_prime_impl<CURVE_ID_ECP97, POINTS_PER_THREAD>(global_px, global_py, global_rx, global_ry,
                                                         mbuf, result, result_count, staging,
                                                         priv_key_a, counter, start_pos, dpmask);
 }

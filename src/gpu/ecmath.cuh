@@ -7,6 +7,7 @@
 #include "p131.cuh"
 #include "p79.cuh"
 #include "p89.cuh"
+#include "p97.cuh"
 
 template <int CURVE> __device__ uint131_t sub(uint131_t x, uint131_t y)
 {
@@ -203,6 +204,44 @@ __device__ uint131_t inv_p89(uint131_t& x)
   return mul<CURVE_ID_ECP89>(square<CURVE_ID_ECP89>(i104, 4), t11);
 }
 
+__device__ uint131_t inv_p97(uint131_t& x)
+{
+  uint131_t t10 = square<CURVE_ID_ECP97>(x);
+  uint131_t t11 = mul<CURVE_ID_ECP97>(x, t10);
+  uint131_t t110 = square<CURVE_ID_ECP97>(t11);
+  uint131_t t111 = mul<CURVE_ID_ECP97>(x, t110);
+  uint131_t t1001 = mul<CURVE_ID_ECP97>(t10, t111);
+  uint131_t t1010 = mul<CURVE_ID_ECP97>(x, t1001);
+  uint131_t t1100 = mul<CURVE_ID_ECP97>(t10, t1010);
+  uint131_t t11000 = square<CURVE_ID_ECP97>(t1100);
+  uint131_t t11001 = mul<CURVE_ID_ECP97>(x, t11000);
+  uint131_t t11011 = mul<CURVE_ID_ECP97>(t10, t11001);
+  uint131_t t100001 = mul<CURVE_ID_ECP97>(t110, t11011);
+  uint131_t t101011 = mul<CURVE_ID_ECP97>(t1010, t100001);
+  uint131_t t101101 = mul<CURVE_ID_ECP97>(t10, t101011);
+  uint131_t t110011 = mul<CURVE_ID_ECP97>(t110, t101101);
+  uint131_t t110101 = mul<CURVE_ID_ECP97>(t10, t110011);
+
+  uint131_t i41 = mul<CURVE_ID_ECP97>(square<CURVE_ID_ECP97>(t101101, 6), t110101);
+  i41 = mul<CURVE_ID_ECP97>(square<CURVE_ID_ECP97>(i41, 10), t101011);
+  i41 = square<CURVE_ID_ECP97>(i41, 8);
+
+  uint131_t i54 = mul<CURVE_ID_ECP97>(t101011, i41);
+  i54 = mul<CURVE_ID_ECP97>(square<CURVE_ID_ECP97>(i54, 5), t11011);
+  i54 = mul<CURVE_ID_ECP97>(square<CURVE_ID_ECP97>(i54, 5), t1001);
+
+  uint131_t i78 = mul<CURVE_ID_ECP97>(square<CURVE_ID_ECP97>(i54, 10), t110101);
+  i78 = mul<CURVE_ID_ECP97>(square<CURVE_ID_ECP97>(i78, 5), t11001);
+  i78 = square<CURVE_ID_ECP97>(i78, 7);
+
+  uint131_t i99 = mul<CURVE_ID_ECP97>(t11011, i78);
+  i99 = mul<CURVE_ID_ECP97>(square<CURVE_ID_ECP97>(i99, 8), t11011);
+  i99 = mul<CURVE_ID_ECP97>(square<CURVE_ID_ECP97>(i99, 10), t100001);
+
+  uint131_t result = mul<CURVE_ID_ECP97>(square<CURVE_ID_ECP97>(i99, 8), t111);
+  return mul<CURVE_ID_ECP97>(square<CURVE_ID_ECP97>(result, 9), t110011);
+}
+
 __device__ uint131_t inv_p109(uint131_t& x)
 {
   uint131_t t10 = square<CURVE_ID_ECP109>(x);
@@ -277,6 +316,8 @@ template <int CURVE> __device__ uint131_t inv(uint131_t x)
     r = inv_p79(x);
   } else if constexpr(CURVE == CURVE_ID_ECP89) {
     r = inv_p89(x);
+  } else if constexpr(CURVE == CURVE_ID_ECP97) {
+    r = inv_p97(x);
   } else if constexpr(CURVE == CURVE_ID_ECP109) {
     r = inv_p109(x);
   }

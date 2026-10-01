@@ -73,6 +73,9 @@ std::vector<RWPoint> get_rw_points()
       {"ecp89", ecc::ecpoint_t({{0x17d5a9d43f7ae3ef, 0x00000000001e1c5d, 0x00000000}},
                                {{0xeef7866b17c91b37, 0x0000000000e637ce, 0x00000000}})},
 
+      {"ecp97", ecc::ecpoint_t({{0x352fb9f35fc08c5e, 0x00000000d6cbead1, 0x00000000}},
+                               {{0x22eb76cf929de71a, 0x000000012095e15f, 0x00000000}})},
+
       {"ecp79", ecc::ecpoint_t({{0x352235cf969c42c8, 0x00000000000057d4, 0x00000000}},
                                {{0x8c539fa7274f69a0, 0x00000000000055ec, 0x00000000}})},
   };
