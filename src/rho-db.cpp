@@ -519,14 +519,18 @@ void signal_handler(int signal)
 void usage()
 {
   std::cout << "USAGE:" << std::endl;
-  std::cout << "rho-db --create --db-dir <DIR> --curve <CURVE> --bits <BITS" << std::endl;
-  std::cout << "rho-db --input-dir <DIR> --db-dir <DIR> --curve <CURVE> --bits <BITS" << std::endl;
+  std::cout << "rho-db --create --db-dir <DIR> --curve <CURVE> --bits <BITS>" << std::endl;
+  std::cout << "rho-db --run --input-dir <DIR> --db-dir <DIR>" << std::endl;
 }
 
 int main(int argc, char** argv)
 {
 
   bool create = false;
+  bool run = false;
+  bool db_dir_provided = false;
+  bool curve_provided = false;
+  bool bits_provided = false;
   std::string curve;
   int dp_bits = 0;
 
@@ -539,6 +543,7 @@ int main(int argc, char** argv)
     static struct option long_options[] = {{"input-dir", required_argument, 0, 'i'},
                                            {"db-dir", required_argument, 0, 'd'},
                                            {"create", no_argument, 0, 'c'},
+                                           {"run", no_argument, 0, 'r'},
                                            {"curve", required_argument, 0, 'u'},
                                            {"bits", required_argument, 0, 'b'},
 
@@ -558,17 +563,24 @@ int main(int argc, char** argv)
 
     case 'd':
       _db_dir = std::string(optarg);
+      db_dir_provided = true;
       break;
 
     case 'c':
       create = true;
       break;
 
+    case 'r':
+      run = true;
+      break;
+
     case 'u':
       curve = std::string(optarg);
+      curve_provided = true;
       break;
     case 'b':
       dp_bits = atoi(optarg);
+      bits_provided = true;
       break;
     case '?':
       return 1;
@@ -579,9 +591,16 @@ int main(int argc, char** argv)
     }
   }
 
+  if(create && run) {
+    std::cout << "--create and --run cannot be used together" << std::endl;
+    usage();
+    return 1;
+  }
+
   if(create) {
-    if(curve.empty() || _db_dir.empty() || dp_bits == 0) {
-      std::cout << "--curve and --bits and --db-dir required" << std::endl;
+    if(!db_dir_provided || !curve_provided || !bits_provided || _db_dir.empty() ||
+       curve.empty() || dp_bits == 0) {
+      std::cout << "--db-dir, --curve, and --bits are required with --create" << std::endl;
       return 1;
     }
 
@@ -589,14 +608,19 @@ int main(int argc, char** argv)
     return 0;
   }
 
-  if(_data_dir.empty() || _db_dir.empty()) {
-    std::cout << "--input-dir and --db-dir required" << std::endl;
-    return 1;
+  if(run) {
+    if(_data_dir.empty() || !db_dir_provided || _db_dir.empty()) {
+      std::cout << "--db-dir and --input-dir are required with --run" << std::endl;
+      return 1;
+    }
+
+    set_signal_handler(signal_handler);
+
+    main_loop();
+
+    return 0;
   }
 
-  set_signal_handler(signal_handler);
-
-  main_loop();
-
-  return 0;
+  usage();
+  return 1;
 }
