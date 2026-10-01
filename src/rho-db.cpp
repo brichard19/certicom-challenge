@@ -141,9 +141,6 @@ private:
       _cache_locks[bucket].unlock();
       return;
     }
-    std::cout << "Checking " << fname << " for collisions   ";
-
-    util::Timer timer;
 
     IFSTREAM_CALL(f.seekg(0, std::ios::end));
     size_t count = f.tellg() / sizeof(DBRecord);
@@ -155,8 +152,6 @@ private:
     f.close();
 
     _cache_locks[bucket].unlock();
-
-    std::cout << count << " items  ";
 
     if(count >= 2) {
       // Sort the records
@@ -177,7 +172,6 @@ private:
         }
       }
     }
-    std::cout << fmt::format("{:.3f}s", timer.elapsed()) << std::endl;
   }
 
   void thread_function()
@@ -190,22 +184,33 @@ private:
     while(_running) {
       sleep(5);
 
-      for(int bucket = 0; _running && bucket < NUM_BUCKETS; bucket++) {
-        // Flush to disk every 5 minutes
-        if(util::get_time() - last_flush >= 300.0) {
-          flush_cache(true);
-          last_flush = util::get_time();
-        } else {
-          flush_cache(false);
-        }
+      // Flush to disk every 5 minutes
+      if(util::get_time() - last_flush >= 300.0) {
+        // Flush all buckets to disk
+        std::cout << "Flushing all buckets to disk...";
+        flush_cache(true);
+        last_flush = util::get_time();
+      } else {
+        // Only flush full buckets
+        flush_cache(false);
+      }
 
+      int buckets_checked = 0;
+      util::Timer timer;
+      for(int bucket = 0; _running && bucket < NUM_BUCKETS; bucket++) {
+        // Check for collision if bucket was written to since last check.
         if(_dirty[bucket]) {
           check_for_collision(bucket);
           _dirty[bucket] = false;
+          buckets_checked++;
         }
+      }
+      if(buckets_checked > 0) {
+        std::cout << "Checked " << buckets_checked << " buckets in " << timer.elapsed() << "s" << std::endl;
       }
     }
 
+    // Flush all buckets to disk before exiting
     flush_cache(true);
   }
 
