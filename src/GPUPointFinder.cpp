@@ -1,6 +1,7 @@
 #include "fmt/format.h"
 #include <assert.h>
 #include <chrono>
+#include <filesystem>
 #include <fstream>
 #include <map>
 #include <math.h>
@@ -165,9 +166,13 @@ void GPUPointFinder::report_points()
       ecc::ecpoint_t p(x, y);
 
       // Do a quick verification
-      assert(ecc::exists(p));
+      if(!ecc::exists(p)) {
+        throw std::runtime_error("GPU reported a point that is not on the curve");
+      }
 
-      assert((p.x.w.v0 & _dpmask) == 0);
+      if((p.x.w.v0 & _dpmask) != 0) {
+        throw std::runtime_error("GPU reported a point that is not distinguished");
+      }
 
       dps.push_back(DistinguishedPoint(a, p, _dpbits, length));
     }
@@ -518,56 +523,56 @@ int GPUPointFinder::parallel_walks() { return _num_points; }
 
 void GPUPointFinder::save_progress(const std::string& file_name)
 {
-
   report_points();
 
   LOG("Saving progress to {}", file_name);
 
-  std::ofstream file;
+  const std::string temporary_file_name = file_name + ".tmp";
 
-  file.open(file_name, std::ios::binary);
+  try {
+    std::ofstream file(temporary_file_name, std::ios::binary | std::ios::trunc);
 
-  if(!file.good()) {
-    LOG("File not good");
-    return;
+    if(!file.good()) {
+      throw std::runtime_error("Unable to open temporary progress file for writing");
+    }
+
+    const uint64_t count = _num_points;
+
+    OFSTREAM_CALL(file.write((char*)&count, sizeof(count)));
+
+    // Write the counter
+    OFSTREAM_CALL(file.write((char*)&_counter, sizeof(_counter)));
+
+    // Private keys a
+    OFSTREAM_CALL(file.write((char*)_priv_key_a, sizeof(uint131_t) * count));
+
+    std::vector<char> tmp(sizeof(vec_uint131_t) * count);
+    // Points X
+    HIP_CALL(hipMemcpy(tmp.data(), _dev_x, sizeof(vec_uint131_t) * count, hipMemcpyDeviceToHost));
+    OFSTREAM_CALL(file.write(tmp.data(), sizeof(vec_uint131_t) * count));
+
+    // Points Y
+    HIP_CALL(hipMemcpy(tmp.data(), _dev_y, sizeof(vec_uint131_t) * count, hipMemcpyDeviceToHost));
+    OFSTREAM_CALL(file.write(tmp.data(), sizeof(vec_uint131_t) * count));
+
+    // Write starting counters
+    memcpy(tmp.data(), _walk_start, sizeof(uint64_t) * count);
+    OFSTREAM_CALL(file.write(tmp.data(), sizeof(uint64_t) * count));
+
+    OFSTREAM_CALL(file.flush());
+
+    errno = 0;
+    file.close();
+    if(!file.good()) {
+      ofstream_call_detail::throw_error(file, "file.close()", __FILE__, __LINE__, errno);
+    }
+
+    std::filesystem::rename(temporary_file_name, file_name);
+  } catch(...) {
+    std::error_code error;
+    std::filesystem::remove(temporary_file_name, error);
+    throw;
   }
-
-  size_t count = _num_points;
-
-  file.write((char*)&count, sizeof(count));
-  if(!file.good()) {
-    LOG("File not good");
-    return;
-  }
-
-  // Write the counter
-  file.write((char*)&_counter, sizeof(_counter));
-  if(!file.good()) {
-    LOG("File not good");
-    return;
-  }
-
-  // Private keys a
-  file.write((char*)_priv_key_a, sizeof(uint131_t) * count);
-  if(!file.good()) {
-    LOG("File not good");
-    return;
-  }
-
-  std::vector<char> tmp(sizeof(vec_uint131_t) * count);
-  // Points X
-  HIP_CALL(hipMemcpy(tmp.data(), _dev_x, sizeof(vec_uint131_t) * count, hipMemcpyDeviceToHost));
-  file.write(tmp.data(), sizeof(vec_uint131_t) * count);
-
-  // Points Y
-  HIP_CALL(hipMemcpy(tmp.data(), _dev_y, sizeof(vec_uint131_t) * count, hipMemcpyDeviceToHost));
-  file.write(tmp.data(), sizeof(vec_uint131_t) * count);
-
-  // Write starting counters
-  memcpy(tmp.data(), _walk_start, sizeof(uint64_t) * count);
-  file.write(tmp.data(), sizeof(uint64_t) * count);
-
-  file.close();
 }
 
 void GPUPointFinder::load(const std::string& file_name)
@@ -581,11 +586,16 @@ void GPUPointFinder::load(const std::string& file_name)
   }
 
   // Load the count
-  size_t count = 0;
+  uint64_t count = 0;
 
   IFSTREAM_CALL(file.read((char*)&count, sizeof(count)));
 
-  assert(count == _num_points);
+  if(count != _num_points) {
+    throw std::runtime_error(fmt::format(
+        "Progress file contains {} points, but this GPU configuration requires {}",
+        count,
+        _num_points));
+  }
 
   // Load counter
   IFSTREAM_CALL(file.read((char*)&_counter, sizeof(_counter)));
