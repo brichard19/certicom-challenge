@@ -1,6 +1,7 @@
 
 #include "ec_rho.h"
 #include "fmt/format.h"
+#include "fstream_helper.h"
 #include "signal_handler.h"
 #include "util.h"
 #include <algorithm>
@@ -12,7 +13,6 @@
 #include <iostream>
 #include <mutex>
 #include <queue>
-#include <sstream>
 #include <string.h>
 #include <thread>
 #include <unistd.h>
@@ -21,24 +21,6 @@
 // rho-db --db-dir <db-dir> --input <input-dir>
 
 typedef unsigned __int128 uint128_t;
-
-#define IFSTREAM_CALL(condition)                                                                   \
-  {                                                                                                \
-    auto& ref = condition;                                                                         \
-    if(!ref) {                                                                                     \
-      std::stringstream ss;                                                                        \
-      ss << "FILE error " << " " << __FILE__ << ":" << __LINE__ << ": ";                           \
-      if(ref.bad()) {                                                                              \
-        ss << "I/O error";                                                                         \
-      } else if(ref.eof()) {                                                                       \
-        ss << "End of file";                                                                       \
-      } else {                                                                                     \
-        ss << "Read failed";                                                                       \
-      }                                                                                            \
-      ss << std::endl;                                                                             \
-      throw std::runtime_error(ss.str());                                                          \
-    }                                                                                              \
-  }
 
 struct JobInfo {
   uint64_t num_dps = 0;

@@ -67,7 +67,7 @@ void benchmark()
 
       steps = 0;
       gpu_time = 0;
-      std::cout << (perf / 1e6) << " MKeys/sec (" << iters << " iters/sec)" << std::endl;
+      std::cout << (perf / 1e6) << " M EC group ops/sec (" << iters << " iters/sec)" << std::endl;
 
       ara.push_back(perf);
     }
@@ -91,7 +91,7 @@ void benchmark()
   double avg = sum / (ara.size() - 1);
 
   std::cout << std::endl;
-  std::cout << (avg / 1e6) << " MKeys/sec" << std::endl;
+  std::cout << (avg / 1e6) << " M EC group ops/sec" << std::endl;
 }
 
 int main(int argc, char** argv)

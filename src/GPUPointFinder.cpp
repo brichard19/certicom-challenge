@@ -4,11 +4,11 @@
 #include <fstream>
 #include <map>
 #include <math.h>
-#include <sstream>
 #include <stdexcept>
 #include <stdint.h>
 
 #include "ec_rho.h"
+#include "fstream_helper.h"
 #include "log.h"
 #include "montgomery.h"
 #include "util.h"
@@ -19,15 +19,6 @@
 #include <hip/hip_runtime.h>
 
 namespace {
-
-#define IFSTREAM_CALL(condition)                                                                   \
-  {                                                                                                \
-    if(!condition) {                                                                               \
-      std::stringstream ss;                                                                        \
-      ss << "FILE error " << __LINE__ << std::endl;                                                \
-      throw std::runtime_error(ss.str());                                                          \
-    }                                                                                              \
-  }
 
 struct KernelInfo {
   void* do_step;
