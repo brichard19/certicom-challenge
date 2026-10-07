@@ -43,7 +43,7 @@
 namespace {
 
 const double _save_interval = 60.0;
-const double _perf_interval = 5.0;
+const double _perf_interval = 8.0;
 
 volatile bool _running = true;
 
@@ -160,7 +160,7 @@ void main_loop()
 
       perf_timer.start();
 
-      LOG("Perf: {:.2f} MKeys/sec | Iters: {:.2f} iters/sec | Parallel walks: {}", perf / 1e6,
+      LOG("Perf: {:.2f} Mops/sec | {:.2f} its/sec | Parallel walks: {}", perf / 1e6,
           iters, pf->parallel_walks());
 
       steps = 0;
